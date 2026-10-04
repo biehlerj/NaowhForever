@@ -475,12 +475,11 @@ local function MatchingLockout(instance)
     end
 end
 
--- The client's reset is a countdown from the last time this was read, not from now.
--- The clock tooltip and this module both read the list from here.
+-- The client's reset is a countdown from the last UPDATE_INSTANCE_INFO, not from now.
+-- Only that event stamps the clock. The tooltip and this module both read the list here.
 local savedReadAt, savedRaw
 
 function ns.RefreshSavedInstances()
-    savedReadAt = GetTime()
     savedRaw = {}
     if not GetNumSavedInstances or not GetSavedInstanceInfo then return end
     local count = GetNumSavedInstances()
@@ -515,8 +514,14 @@ function ns.RefreshSavedInstances()
     end
 end
 
+-- Stamp the countdown only when the client has just refreshed instance info.
+function ns.NoteInstanceInfo()
+    savedReadAt = GetTime()
+    ns.RefreshSavedInstances()
+end
+
 function ns.SavedInstances()
-    if savedReadAt == nil then ns.RefreshSavedInstances() end
+    if savedReadAt == nil or savedRaw == nil then return {} end
     local elapsed = GetTime() - savedReadAt
     local now, list = time(), {}
     for i = 1, #savedRaw do
@@ -534,7 +539,6 @@ function ns.SavedInstances()
 end
 
 local function ReadLockouts()
-    ns.RefreshSavedInstances()
     local list = {}
     for _, lock in ipairs(ns.SavedInstances()) do
         if lock.locked then
@@ -546,7 +550,9 @@ local function ReadLockouts()
 end
 
 local function SaveLockouts()
-    if not On() then return end
+    -- Nothing to store until UPDATE_INSTANCE_INFO. A login or profile switch before
+    -- that must not replace the saved countdown with an empty list.
+    if not On() or savedReadAt == nil then return end
     local row = TouchChar()
     if not row then return end
     row.lockouts = ReadLockouts()
@@ -1924,6 +1930,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         SyncZone(not login and not reload)
         QueueSheet()
     elseif event == "UPDATE_INSTANCE_INFO" then
+        ns.NoteInstanceInfo()
         SaveLockouts()
     elseif event == "PLAYER_LOGOUT" then
         TouchChar()

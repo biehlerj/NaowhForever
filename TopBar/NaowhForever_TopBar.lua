@@ -105,7 +105,7 @@ local function FmtCD(sec)
 end
 
 -- Saved instances, soonest reset first. The countdown is ns.SavedInstances, shared with
--- Instance Tracker and stamped when the client refreshes the list.
+-- Instance Tracker and stamped on UPDATE_INSTANCE_INFO.
 local function Lockouts()
     local out = {}
     local list = ns.SavedInstances()
@@ -934,7 +934,7 @@ events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_UPDATE_RESTING" then
         UpdateResting()
     elseif event == "UPDATE_INSTANCE_INFO" then
-        ns.RefreshSavedInstances()
+        ns.NoteInstanceInfo()
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         if event == "PLAYER_ENTERING_WORLD" then RequestRaidInfo() end
         -- PLAYER_ENTERING_WORLD comes after every addon's login, so late brokers exist by then.

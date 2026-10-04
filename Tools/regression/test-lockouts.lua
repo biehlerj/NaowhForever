@@ -21,8 +21,8 @@ local code = preamble
     .. "\nreturn Lockouts\n"
 
 -- Saved instances as GetSavedInstanceInfo returns them: name, reset, locked, extended, total, done.
-local function Fixture(saved, now, updatedAt)
-    local clock = updatedAt
+local function World(saved, start)
+    local clock = start or 0
     local env = {
         ns = { Shared = { Parts = { Fraction = function(part, whole)
             return part .. "/" .. whole
@@ -37,10 +37,18 @@ local function Fixture(saved, now, updatedAt)
     }
     setmetatable(env, { __index = _G })
     local chunk = assert(loadstring(code)); setfenv(chunk, env)
-    local Lockouts = chunk()
-    env.ns.RefreshSavedInstances()
-    clock = now
-    return Lockouts()
+    return {
+        Lockouts = chunk(),
+        Note = function() env.ns.NoteInstanceInfo() end,
+        Refresh = function() env.ns.RefreshSavedInstances() end,
+        At = function(t) clock = t end,
+    }
+end
+local function Fixture(saved, now, updatedAt)
+    local world = World(saved, updatedAt)
+    world.Note()
+    world.At(now)
+    return world.Lockouts()
 end
 local function Lines(list)
     local out = {}
@@ -60,6 +68,21 @@ end)
 Case("the reset counts down from the last update", function()
     local list = Fixture({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100 + 3600, 100)
     assert(Lines(list) == "Onyxia's Lair 1/1 in 2h 0m", Lines(list))
+end)
+Case("a later read does not push the countdown", function()
+    local world = World({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100)
+    world.Note()
+    world.At(100 + 40 * 60)
+    world.Refresh()
+    local list = world.Lockouts()
+    assert(Lines(list) == "Onyxia's Lair 1/1 in 2h 20m", Lines(list))
+end)
+Case("a read before the instance update does not start the countdown", function()
+    local world = World({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100)
+    world.Refresh()
+    world.At(100 + 40 * 60)
+    local list = world.Lockouts()
+    assert(#list == 0, Lines(list))
 end)
 Case("expired and unlocked instances are left out; extended ones stay", function()
     local list = Fixture({
