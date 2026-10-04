@@ -318,7 +318,13 @@ function View:FillFloors()
         table.sort(floors)
     end
     if #floors == 0 then
-        for n = 1, J.Maps[dungeon.key].floors do floors[n] = n end
+        local map = J.Maps[dungeon.key]
+        -- A dungeon on one floor of shared art (map.floor) offers only that one.
+        if map.floor then
+            floors[1] = map.floor
+        else
+            for n = 1, map.floors do floors[n] = n end
+        end
     end
     if not self:FloorAt(self.floor) then self.floor = floors[1] end
 end
@@ -426,7 +432,8 @@ end
 
 local function Copy(dungeon)
     local map = J.Maps[dungeon.key]
-    local lines = { ("    %s = { art = %q, floors = %d,"):format(dungeon.key, map.art, map.floors) }
+    local lines = { ("    %s = { art = %q, floors = %d,%s"):format(dungeon.key, map.art, map.floors,
+        map.floor and (" floor = %d,"):format(map.floor) or "") }
     if map.names then
         local names = {}
         for i, name in ipairs(map.names) do names[i] = ("%q"):format(name) end
@@ -508,7 +515,7 @@ local function Place(from)
 end
 
 local function Paint()
-    window.backdrop:Paint(S.Get("windowAlpha") or 1)
+    window.backdrop:Paint(S.Get("mapAlpha") or 1)
 end
 
 -- The pin: the accent while pinned, muted while not, white under the mouse.
@@ -1125,7 +1132,7 @@ S.OnChange(function(key)
     if key == "enabled" and not S.Get("enabled") then
         if window then window:Hide() end
         if overlay then overlay:Hide() end
-    elseif key == "windowAlpha" and window then
+    elseif key == "mapAlpha" and window then
         Paint()
     end
 end)

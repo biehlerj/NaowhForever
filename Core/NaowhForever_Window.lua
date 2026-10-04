@@ -67,7 +67,9 @@ local MODULES = {
       command = "journal", alias = "dj", short = "Journal", icon = "Interface\\Icons\\INV_Misc_Book_09",
       subtitle = "Every dungeon and raid: what drops, your quests, and more.",
       tabs = {
-          { name = "Settings", reuse = true },
+          { name = "Journal", reuse = true },
+          { name = "Quest Tracker", reuse = true },
+          { name = "Map", reuse = true },
       } },
     { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
