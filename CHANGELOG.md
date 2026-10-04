@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Instance Tracker (off by default, /nfinstance): saved lockouts, each dungeon or raid visit,
+  and how many new instances this character has entered this hour, toward a cap of 10.
 - Macros > Consumables: Food & Drink Bar (off by default), two buttons for the best food and the
   best drink in your bags, conjured first. Click to eat or drink; move it in Unlock Mode.
 - Training Planner (/nftraining, or its minimap and top bar button): a window with what your

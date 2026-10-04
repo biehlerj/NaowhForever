@@ -12,6 +12,8 @@ local S = ns.InstanceTrackerSettings
 local LINE_H = 20          -- one visit line, and the shortest a wrapped line may be
 local LINE_FONT = 12       -- the row's text; also the shortest a wrapped string may measure
 local LINE_INSET = 4       -- text from a row's edges
+local COUNT_GAP = 12       -- between the visit facts and the group count on the right
+local HOVER = 0.08         -- the visit under the cursor, so the names belong to it
 local FALLBACK_W = 960     -- used when the page has no width yet
 local GROUP_GAP = 6        -- under a character, an hour list, or an in-progress visit
 
@@ -45,7 +47,7 @@ local function Line(parent, y, text)
 end
 
 -- A second line under a visit. One line stays the same height as the rows above it;
--- a long raid wraps instead of running off the page. Padding is the inset on both sides.
+-- a long one wraps instead of running off the page. Padding is the inset on both sides.
 local function WrapLine(parent, y, text)
     if UI.searchScan then return y - LINE_H end
     local row = UI.Keep(parent, "wrap", function(p)
@@ -172,24 +174,117 @@ local function RunLine(run)
     return text
 end
 
--- Other people who were in the group during the visit. This character is already named above.
-local function GroupText(group)
-    if type(group) ~= "table" then return end
-    local names = {}
+-- Reputation gained during the visit. Same shape as the leave summary: faction, then
+-- the amount, factions in order. Left out when none was gained.
+local function RepText(rep)
+    if type(rep) ~= "table" then return end
+    local parts = {}
+    for faction, amount in pairs(rep) do
+        if type(faction) == "string" and (amount or 0) > 0 then
+            parts[#parts + 1] = faction .. " +" .. BreakUpLargeNumbers(amount)
+        end
+    end
+    if #parts == 0 then return end
+    table.sort(parts)
+    return "    " .. ns.Color("muted", table.concat(parts, ", "))
+end
+
+local function RepLine(parent, y, rep)
+    local text = RepText(rep)
+    if not text then return y end
+    return WrapLine(parent, y, text)
+end
+
+-- Other people kept on the visit. This character is already named on the line.
+local function GroupCount(group)
+    if type(group) ~= "table" then return 0 end
+    local n = 0
     for i = 1, #group do
         local member = group[i]
         if type(member) == "table" and type(member.name) == "string" and member.name ~= "" then
-            names[#names + 1] = ns.ClassColoredName(member.name, member.class)
+            n = n + 1
         end
     end
-    if #names == 0 then return end
-    return "    " .. ns.Color("muted", "with") .. " " .. table.concat(names, ns.Color("muted", ", "))
+    return n
 end
 
-local function GroupLine(parent, y, group)
-    local text = GroupText(group)
-    if not text then return y end
-    return WrapLine(parent, y, text)
+-- One name a line, in class color. A paragraph of names is what made the page tall.
+local function GroupTip(group)
+    if type(group) ~= "table" then return end
+    local lines = {}
+    for i = 1, #group do
+        local member = group[i]
+        if type(member) == "table" and type(member.name) == "string" and member.name ~= "" then
+            lines[#lines + 1] = ns.ClassColoredName(member.name, member.class)
+        end
+    end
+    if #lines == 0 then return end
+    return table.concat(lines, "\n")
+end
+
+local function ShowGroup(row)
+    local text = GroupTip(row.group)
+    if not text then return end
+    UI.ShowWidgetTooltip(row, text, { anchor = "cursor", justify = "LEFT" })
+end
+
+-- A visit. The facts stay on the left. How many other people were there sits on the right,
+-- and pointing at the row lists them. A visit with no one else is an ordinary line.
+local function VisitLine(parent, y, text, group)
+    if UI.searchScan then return y - LINE_H end
+    local row = UI.Keep(parent, "visit", function(p)
+        local f = CreateFrame("Frame", nil, p)
+        f:SetHeight(LINE_H)
+        f.text = ns.Font(f, LINE_FONT, nil, T.fg)
+        f.text:SetJustifyH("LEFT")
+        f.text:SetWordWrap(false)
+        f.count = ns.Font(f, LINE_FONT, nil, T.muted)
+        f.count:SetPoint("RIGHT", -LINE_INSET, 0)
+        f.count:SetJustifyH("RIGHT")
+        f.hover = ns.Solid(f, "BACKGROUND", T.fg, HOVER)
+        f.hover:SetAllPoints()
+        f.hover:Hide()
+        f:SetScript("OnEnter", function(self)
+            self.hover:Show()
+            ShowGroup(self)
+        end)
+        f:SetScript("OnLeave", function(self)
+            self.hover:Hide()
+            UI.HideWidgetTooltip()
+        end)
+        return f
+    end)
+    local n = GroupCount(group)
+    row.group = n > 0 and group or nil
+    row:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, y)
+    row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -UI.CONTENT_PAD, y)
+    row:SetHeight(LINE_H)
+    row.text:SetFont(UI.FontPath(""), LINE_FONT, "")
+    row.text:SetTextColor(T.fg.r, T.fg.g, T.fg.b, 1)
+    row.text:ClearAllPoints()
+    row.text:SetPoint("LEFT", LINE_INSET, 0)
+    row.text:SetText(text)
+    row.count:SetFont(UI.FontPath(""), LINE_FONT, "")
+    row.count:SetTextColor(T.muted.r, T.muted.g, T.muted.b, 1)
+    if n > 0 then
+        row.count:SetText("with " .. n)
+        row.count:Show()
+        row.text:SetPoint("RIGHT", row.count, "LEFT", -COUNT_GAP, 0)
+        row:EnableMouse(true)
+        if row:IsMouseOver() then
+            row.hover:Show()
+            ShowGroup(row)
+        else
+            row.hover:Hide()
+        end
+    else
+        row.count:Hide()
+        row.text:SetPoint("RIGHT", -LINE_INSET, 0)
+        row:EnableMouse(false)
+        row.hover:Hide()
+        if row:IsMouseOver() then UI.HideWidgetTooltip() end
+    end
+    return y - LINE_H
 end
 
 function ns.BuildInstanceLockoutsPage(parent, y)
@@ -286,8 +381,9 @@ function ns.BuildInstanceHistoryPage(parent, y)
     local _, h
     _, h = W:Note(parent, OffText()
         .. "Each dungeon or raid visit while Instance Tracker is on: how long you were "
-        .. "inside, the coins you looted and the experience you gained. Who else was in "
-        .. "the group is listed under the visit. Coming back "
+        .. "inside, the coins you looted and the experience you gained. Reputation gained "
+        .. "is listed under the visit. Who else was in the group is a count on the right; "
+        .. "point at the line for the names. Coming back "
         .. "before you reset it continues that visit, and the time outside is not counted. "
         .. "Other characters "
         .. "are kept only when Track Alts is on. Repairs and vendor sales are not counted. "
@@ -303,10 +399,11 @@ function ns.BuildInstanceHistoryPage(parent, y)
     local open = IT.Open()
     if open and open.instance then
         local elapsed = IT.Duration(IT.Elapsed(open))
-        y = Line(parent, y, "In progress   " .. ns.ClassColoredName(open.char or "?", open.class)
+        y = VisitLine(parent, y, "In progress   " .. ns.ClassColoredName(open.char or "?", open.class)
             .. "   " .. PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
-            .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP")
-        y = GroupLine(parent, y, open.group)
+            .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP",
+            open.group)
+        y = RepLine(parent, y, open.rep)
         y = y - GROUP_GAP
     end
 
@@ -317,8 +414,8 @@ function ns.BuildInstanceHistoryPage(parent, y)
     end
     local shown = math.min(#runs, IT.PAGE_RUNS)
     for i = 1, shown do
-        y = Line(parent, y, RunLine(runs[i]))
-        y = GroupLine(parent, y, runs[i].group)
+        y = VisitLine(parent, y, RunLine(runs[i]), runs[i].group)
+        y = RepLine(parent, y, runs[i].rep)
     end
     if #runs > shown then
         _, h = W:Note(parent, "Showing the latest " .. shown .. " of " .. #runs .. ".", y)

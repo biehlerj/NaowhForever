@@ -12,14 +12,6 @@
 --  Lockouts and visits are account data, so a profile switch does not wipe them.
 --  A character is stored under the full name, first and surname. UnitName is only the
 --  first name on Forever, so two alts who share it would otherwise be one record.
---
---  TODO when coming back to this module:
---  - Interoperate with Nova Instance Tracker. Speak its addon communications for
---    instance resets and the related group messages, so a group mixed with Nova
---    still shares those.
---  - Reputation gained during a visit is already recorded here (open.rep, stored on
---    the run, and an optional leave-summary line). Loot Feed also shows each gain
---    live. Nothing further to add unless the History page should print it too.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local UI = ns.UI
@@ -964,9 +956,10 @@ end
 
 -------------------------------------------------------------------------------
 --  Hourly instance entries. A new dungeon or raid instance counts. Walking back into
---  one this character has not reset does not. The client's own reset line is what
---  clears that memory. The cap is 10 new instances in a rolling hour, for this
---  character. Another character on the account has their own 10.
+--  one this character has not reset does not. The client's own reset line clears that
+--  memory, and so does a reset a Nova Instance Tracker group leader announces. The cap
+--  is 10 new instances in a rolling hour, for this character. Another character on the
+--  account has their own 10.
 -------------------------------------------------------------------------------
 local expiryGen = 0
 
@@ -1153,31 +1146,350 @@ local function NoteInstanceEntry(name, mapID, difficulty, countIt)
     ScheduleExpiry()
 end
 
-local resetPattern
-local function OnResetMessage(text)
-    if type(text) ~= "string" or Secret(text) or type(INSTANCE_RESET_SUCCESS) ~= "string" then return end
-    local resetName
-    if INSTANCE_RESET_SUCCESS:find("%s", 1, true) then
-        if not resetPattern then
-            local pattern = INSTANCE_RESET_SUCCESS:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
-            resetPattern = "^" .. pattern:gsub("%%%%s", "(.+)") .. "$"
-        end
-        resetName = text:match(resetPattern)
-        if not resetName then return end
-    elseif text ~= INSTANCE_RESET_SUCCESS then
+-------------------------------------------------------------------------------
+--  Nova Instance Tracker, prefix "NIT". A reset is the text
+--  "<command> <version> <instance>" (the name keeps its spaces), then LibSerialize,
+--  LibDeflate at level 9, and the addon-channel encoding. Version 1 is the oldest
+--  Nova still reads, and it is not newer than a current copy, so Nova does not tell
+--  that player to update.
+--
+--  instanceReset rides with a "[NIT] " line in party or raid chat. Nova's handler for
+--  that command does nothing, because the chat line is what the group sees.
+--  instanceResetNoMsg is the same reset with the chat line left out, and Nova prints
+--  it. instanceResetOther is that print from Nova World Buffs, on this same prefix.
+--  Nova reset wire format. The block through ClearNamedCopy is loaded by the regression.
+-------------------------------------------------------------------------------
+local NIT_PREFIX = "NIT"
+local NIT_VERSION = "1"
+local NIT_STILL_INSIDE = "has been reset (Players still inside old instance can zone out and enter new)."
+local NIT_RESET = {
+    instanceReset = true,
+    instanceResetNoMsg = true,
+    instanceResetOther = true,
+}
+local NIT_CHANNELS = { PARTY = true, RAID = true, INSTANCE_CHAT = true }
+
+local function NitCodec()
+    local LS = LibStub and LibStub("LibSerialize", true)
+    local LD = LibStub and LibStub("LibDeflate", true)
+    if not LS or not LD then return end
+    return LS, LD
+end
+
+-- One addon message. AceComm treats a leading control byte as its own framing, so a
+-- reset that starts with one is sent with the escape byte in front.
+local function NitEncode(plain)
+    if type(plain) ~= "string" or plain == "" then return end
+    local LS, LD = NitCodec()
+    if not LS then return end
+    local serialized = LS:Serialize(plain)
+    if type(serialized) ~= "string" then return end
+    local compressed = LD:CompressDeflate(serialized, { level = 9 })
+    if type(compressed) ~= "string" then return end
+    local encoded = LD:EncodeForWoWAddonChannel(compressed)
+    if type(encoded) ~= "string" or encoded == "" or #encoded > 255 then return end
+    return encoded
+end
+
+local function NitWire(plain)
+    local encoded = NitEncode(plain)
+    if not encoded then return end
+    local lead = encoded:byte(1)
+    if lead >= 1 and lead <= 9 then
+        if #encoded >= 255 then return end
+        return "\004" .. encoded
+    end
+    return encoded
+end
+
+local function NitDecode(payload)
+    if type(payload) ~= "string" or payload == "" then return end
+    local lead = payload:byte(1)
+    if lead == 4 then
+        payload = payload:sub(2)
+        if payload == "" then return end
+    elseif lead == 1 or lead == 2 or lead == 3 then
         return
     end
+    local LS, LD = NitCodec()
+    if not LS then return end
+    local decoded = LD:DecodeForWoWAddonChannel(payload)
+    if type(decoded) ~= "string" then return end
+    local compressed = LD:DecompressDeflate(decoded)
+    if type(compressed) ~= "string" then return end
+    local ok, value = LS:Deserialize(compressed)
+    if not ok or type(value) ~= "string" then return end
+    return value
+end
+
+-- The first two words are the command and the version. The instance keeps its spaces.
+local function NitFields(text)
+    if type(text) ~= "string" then return end
+    local cmd, version, rest = text:match("^(%S+)%s+(%S+)%s*(.*)$")
+    if not cmd then return end
+    if rest == "" then rest = nil end
+    return cmd, version, rest
+end
+
+local function NitVersionOk(version)
+    local n = tonumber(version)
+    return n ~= nil and n >= 1
+end
+
+-- The name Nova prints: the sender, without a realm glued on the end.
+local function NitWho(sender)
+    if type(sender) ~= "string" or sender == "" then return end
+    local name = sender:match("^([^%-]+)")
+    if not name or name == "" then return end
+    return name
+end
+
+-- A realm that is not ours is ignored. A roster match who is not the leader is
+-- ignored. A name that matches no unit is still taken: Forever's addon sender is
+-- often a full name no unit API returns, and Nova only sends this as the leader.
+local function NitSenderOk(sender, realm, normalized, roster)
+    if type(sender) ~= "string" or sender == "" then return false end
+    local _, theirs = sender:match("^([^%-]+)%-(.+)$")
+    if theirs and theirs ~= realm and theirs ~= normalized then return false end
+    if type(roster) ~= "table" then return true end
+    local who = NitWho(sender)
+    local saw, leads = false, false
+    for name, leader in pairs(roster) do
+        if name == sender or name == who then
+            saw = true
+            if leader then leads = true end
+        end
+    end
+    if saw then return leads end
+    return true
+end
+
+-- The instance to forget, and a line to print when Nova sent no chat line.
+local function NitIncoming(text, sender, realm, normalized, roster)
+    local cmd, version, instance = NitFields(text)
+    if not NIT_RESET[cmd] or not NitVersionOk(version) then return end
+    if not NitSenderOk(sender, realm, normalized, roster) then return end
+    if type(instance) ~= "string" or instance == "" then return end
+    local line
+    if cmd ~= "instanceReset" then
+        line = instance .. " has been reset by the group leader (" .. (NitWho(sender) or sender) .. ")."
+    end
+    return instance, line
+end
+
+-- kind is "success", "inside", "zoning" or "offline". chatOk is whether the group
+-- line can go out. A failed chat send of a real reset uses instanceResetNoMsg, so
+-- Nova still prints it. Zoning and offline are the chat line only.
+local function NitOutbound(kind, instance, systemText, chatOk)
+    if type(instance) ~= "string" or instance == "" then return end
+    local body
+    if kind == "inside" then
+        body = instance .. " " .. NIT_STILL_INSIDE
+    elseif kind == "success" or kind == "zoning" or kind == "offline" then
+        body = systemText
+    else
+        return
+    end
+    if type(body) ~= "string" or body == "" then return end
+    local chat = chatOk and ("[NIT] " .. body) or nil
+    if kind ~= "success" and kind ~= "inside" then return chat end
+    local cmd = chat and "instanceReset" or "instanceResetNoMsg"
+    return chat, cmd .. " " .. NIT_VERSION .. " " .. instance
+end
+
+-- Drops every live copy stored under this instance name. The hour list is left as
+-- it is: a reset does not give an entry back.
+local function ClearNamedCopy(lives, name)
+    if type(lives) ~= "table" or type(name) ~= "string" or name == "" then return false end
+    local cleared = false
+    for key, stored in pairs(lives) do
+        if stored == name then
+            lives[key] = nil
+            cleared = true
+        end
+    end
+    return cleared
+end
+-- end Nova reset wire format
+
+local function ForgetCopy(name)
     local store = RawStore()
     if not store then return end
     local mine = CharLives(store, false)
     if not mine then return end
-    if resetName then
-        for key, stored in pairs(mine) do
-            if stored == resetName then mine[key] = nil end
-        end
+    if name then
+        ClearNamedCopy(mine, name)
     else
         for key in pairs(mine) do mine[key] = nil end
     end
+end
+
+local function ResetPattern(global)
+    if type(global) ~= "string" or not global:find("%s", 1, true) then return end
+    local pattern = global:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+    return "^" .. pattern:gsub("%%%%s", "(.+)") .. "$"
+end
+
+local resetPatterns
+local function ClassifyReset(text)
+    if type(text) ~= "string" or Secret(text) then return end
+    if not resetPatterns then
+        resetPatterns = {
+            zoning = ResetPattern(INSTANCE_RESET_FAILED_ZONING),
+            offline = ResetPattern(INSTANCE_RESET_FAILED_OFFLINE),
+            inside = ResetPattern(INSTANCE_RESET_FAILED),
+            success = ResetPattern(INSTANCE_RESET_SUCCESS),
+        }
+    end
+    local order = { "zoning", "offline", "inside", "success" }
+    for i = 1, #order do
+        local kind = order[i]
+        local pattern = resetPatterns[kind]
+        if pattern then
+            local name = text:match(pattern)
+            if name then return kind, name end
+        elseif kind == "success" and type(INSTANCE_RESET_SUCCESS) == "string"
+            and text == INSTANCE_RESET_SUCCESS then
+            return "success"
+        end
+    end
+end
+
+-- Raid, else the instance group, else the party. Alone, nothing is sent. A raid is
+-- included here even when the leave summary is not sent to raid chat.
+local function ResetChannel()
+    if IsInRaid then
+        local raid = IsInRaid()
+        if not Secret(raid) and raid then return "RAID" end
+    end
+    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup then
+        local instance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
+        if not Secret(instance) and instance then return "INSTANCE_CHAT" end
+    end
+    if IsInGroup then
+        local group = IsInGroup()
+        if not Secret(group) and group then return "PARTY" end
+    end
+end
+
+local function WeAreLeader()
+    if not UnitIsGroupLeader then return false end
+    local leader = UnitIsGroupLeader("player")
+    if Secret(leader) or not leader then return false end
+    return true
+end
+
+local function ChatWent(ok, result)
+    if not ok then return false end
+    if result == nil or result == true then return true end
+    local success = Enum and Enum.SendChatMessageResult and Enum.SendChatMessageResult.Success
+    return result == success
+end
+
+local function AddonWent(ok, result)
+    if not ok then return false end
+    if result == nil or result == true then return true end
+    local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
+    return result == success
+end
+
+local function SendResetChat(text, channel)
+    if type(text) ~= "string" or #text > CHAT_LIMIT or #text == 0 then return false end
+    return ChatWent(pcall(C_ChatInfo.SendChatMessage, text, channel))
+end
+
+local function SendResetAddon(plain, channel)
+    local encoded = NitWire(plain)
+    if not encoded then return false end
+    return AddonWent(pcall(C_ChatInfo.SendAddonMessage, NIT_PREFIX, encoded, channel))
+end
+
+local function AnnounceReset(kind, name, text)
+    if not WeAreLeader() then return end
+    local channel = ResetChannel()
+    if not channel then return end
+    local locked = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
+    if Secret(locked) then locked = true end
+    local chat, plain = NitOutbound(kind, name or "", text, not locked)
+    if chat and not SendResetChat(chat, channel) then
+        plain = select(2, NitOutbound(kind, name or "", text, false))
+    end
+    if plain then SendResetAddon(plain, channel) end
+end
+
+local function OnResetMessage(text)
+    local kind, name = ClassifyReset(text)
+    if not kind then return end
+    if kind == "success" or kind == "inside" then ForgetCopy(name) end
+    AnnounceReset(kind, name, text)
+end
+
+local function OurRealm()
+    local realm = GetRealmName()
+    if Secret(realm) or type(realm) ~= "string" then realm = "" end
+    local normalized = (GetNormalizedRealmName and GetNormalizedRealmName()) or realm
+    if Secret(normalized) or type(normalized) ~= "string" then normalized = realm end
+    return realm, normalized
+end
+
+local function IsOwnSender(sender)
+    if type(sender) ~= "string" or sender == "" then return true end
+    local full, first = FullName(), FirstName()
+    local realm, normalized = OurRealm()
+    if sender == full or sender == first then return true end
+    if full ~= "" and (sender == full .. "-" .. realm or sender == full .. "-" .. normalized) then
+        return true
+    end
+    if first ~= "" and (sender == first .. "-" .. realm or sender == first .. "-" .. normalized) then
+        return true
+    end
+    return false
+end
+
+-- Names that match a group unit, and whether that unit leads. No match is absent,
+-- which the incoming check treats as still worth taking.
+local function LeaderRoster()
+    local roster = {}
+    if not IsInGroup then return roster end
+    local grouped = IsInGroup()
+    if Secret(grouped) or not grouped then return roster end
+    local raid = false
+    if IsInRaid then
+        local inRaid = IsInRaid()
+        if not Secret(inRaid) and inRaid then raid = true end
+    end
+    local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
+    if Secret(count) or type(count) ~= "number" then return roster end
+    local prefix = raid and "raid" or "party"
+    local function note(unit)
+        local leader = UnitIsGroupLeader and UnitIsGroupLeader(unit)
+        if Secret(leader) then leader = false end
+        leader = leader and true or false
+        local name = MemberName(unit)
+        if name then roster[name] = leader end
+        local full = UnitFullName(unit)
+        if not Secret(full) and type(full) == "string" and full ~= "" then roster[full] = leader end
+    end
+    note("player")
+    for i = 1, count do
+        local unit = prefix .. i
+        local mine = UnitIsUnit(unit, "player")
+        if Secret(mine) or not mine then note(unit) end
+    end
+    return roster
+end
+
+local function OnNovaReset(prefix, payload, channel, sender)
+    if Secret(prefix) or prefix ~= NIT_PREFIX then return end
+    if Secret(payload) or Secret(channel) or Secret(sender) then return end
+    if not NIT_CHANNELS[channel] or IsOwnSender(sender) then return end
+    local text = NitDecode(payload)
+    if not text then return end
+    local realm, normalized = OurRealm()
+    local instance, line = NitIncoming(text, sender, realm, normalized, LeaderRoster())
+    if not instance then return end
+    ForgetCopy(instance)
+    if line then ns.Print(line) end
 end
 
 local function TakeSameCopy(name, mapID, difficulty)
@@ -1577,6 +1889,8 @@ events:SetScript("OnEvent", function(_, event, ...)
         end
     elseif event == "CHAT_MSG_SYSTEM" then
         OnResetMessage(...)
+    elseif event == "CHAT_MSG_ADDON" then
+        OnNovaReset(...)
     elseif event == "CHAT_MSG_MONEY" then
         AddLoot(...)
     elseif event == "CHAT_MSG_COMBAT_FACTION_CHANGE" then
@@ -1616,6 +1930,10 @@ local function Apply()
     events:RegisterEvent("UPDATE_INSTANCE_INFO")
     events:RegisterEvent("PLAYER_LOGOUT")
     events:RegisterEvent("CHAT_MSG_SYSTEM")
+    events:RegisterEvent("CHAT_MSG_ADDON")
+    if C_ChatInfo.RegisterAddonMessagePrefix then
+        C_ChatInfo.RegisterAddonMessagePrefix(NIT_PREFIX)
+    end
     events:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
     events:RegisterEvent("PLAYER_XP_UPDATE")
     events:RegisterEvent("PLAYER_LEVEL_UP")
