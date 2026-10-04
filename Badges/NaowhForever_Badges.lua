@@ -2,7 +2,7 @@
 --  NaowhForever_Badges.lua -- supporter badges: the Naowh Forever N next to the name of
 --  Naowh, a Developer, a Moderator or a Legendary Patron in chat, a card when you hover it,
 --  a plate over their player tooltip, and a banner when one joins your group. Each part has its
---  own setting in QoL > Interface: badges, card and tooltip start on so everyone sees them,
+--  own setting in QoL > Character: badges, card and tooltip start on so everyone sees them,
 --  the banner starts off (Naowh's call). /nf badges preview puts one on your own name
 --  (staff only).
 -------------------------------------------------------------------------------
@@ -337,6 +337,15 @@ local function HidePlate()
     if plate then plate:Hide() end
 end
 
+-- Watched from the plate, not by hooking GameTooltip's scripts: OnTooltipCleared runs in the
+-- middle of the game's own tooltip building, and with our hook on it the game's unit colouring
+-- was reported failing on secret values as tainted by Naowh Forever.
+local function PlateUpdate()
+    local data = GameTooltip:IsShown() and GameTooltip:GetPrimaryTooltipData()
+    local guid = data and data.guid
+    if not guid or Secret(guid) or guid ~= plate.guid then plate:Hide() end
+end
+
 local function FitTitle()
     local title = plate.title
     title:SetText(plate.full)
@@ -356,12 +365,12 @@ local function BuildPlate()
     plate.title:SetJustifyH("LEFT")
     plate.title:SetWordWrap(false)
     plate:SetScript("OnSizeChanged", FitTitle)
-    GameTooltip:HookScript("OnHide", HidePlate)
-    GameTooltip:HookScript("OnTooltipCleared", HidePlate)
+    plate:SetScript("OnUpdate", PlateUpdate)
 end
 
-local function ShowPlate(tooltip, entry, tier)
+local function ShowPlate(tooltip, guid, entry, tier)
     if not plate then BuildPlate() end
+    plate.guid = guid
     Paint(plate, tier)
     local c = tier.color
     local title = TitleOf(entry, tier)
@@ -379,9 +388,12 @@ local function AddTooltipLine(tooltip, data)
     if not S.Get("badgeTooltip") then return end
     local entry = EntryOf(data and data.guid)
     local tier = TierOf(entry)
-    if not tier then return end
+    if not tier then
+        if tooltip == GameTooltip then HidePlate() end
+        return
+    end
     if tooltip == GameTooltip then
-        ShowPlate(tooltip, entry, tier)
+        ShowPlate(tooltip, data.guid, entry, tier)
     else
         tooltip:AddLine(tier.tooltipLine)
     end
@@ -827,3 +839,37 @@ ns._BadgesTest = { DecorateName = DecorateName, ListBadges = listBadges, OnLinkE
     BuildRoster = BuildRoster, BadgeCode = BadgeCode,
     Card = function() return card end, Toast = function() return toast end,
     QueueSize = function() return queueTail - queueHead + 1 end, GroupEvents = groupEvents }
+
+local Settings = ns.Shared and ns.Shared.Settings
+if not Settings then return end
+
+local BADGE_KEYS = { "badgeChat", "badgeCard", "badgeTooltip", "badgeBanner", "badgeBannerSkipGuild" }
+
+local function BadgesSummary(store)
+    local on = 0
+    for i = 1, #BADGE_KEYS do
+        if store.Get(BADGE_KEYS[i]) then on = on + 1 end
+    end
+    return ("%d of %d on"):format(on, #BADGE_KEYS)
+end
+
+Settings.Page("QoL/Character", S):Card({
+    id = "supporterBadges", name = "Supporter Badges", order = 40,
+    help = "Shows who Naowh, the developers, the moderators and our Legendary patrons are: a badge "
+        .. "by their name in chat, a line on their tooltip and, if you want it, a banner when one "
+        .. "of them joins your group.",
+    summary = BadgesSummary,
+    rows = {
+        { key = "badgeChat", label = "Chat Badges", toggle = true,
+          help = "The Naowh Forever N next to the name of Naowh, the developers, the moderators and "
+              .. "our Legendary patrons in chat." },
+        { key = "badgeCard", label = "Hover Card", toggle = true, needs = "badgeChat",
+          help = "Hover a badged name in chat to see their card." },
+        { key = "badgeTooltip", label = "Tooltip Line", toggle = true,
+          help = "A line in their colour on their player tooltip." },
+        { key = "badgeBanner", label = "Group Banner", toggle = true,
+          help = "A banner and a sound when one of them joins your group." },
+        { key = "badgeBannerSkipGuild", label = "No Banner For Guild Members", toggle = true,
+          needs = "badgeBanner", help = "Skips the banner when they're in your guild." },
+    },
+})

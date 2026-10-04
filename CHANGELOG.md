@@ -7,15 +7,143 @@
   and how many new instances this character has entered this hour, toward a cap of 10.
   A reset is not typed in party or raid chat until Chat on Reset is on, and that line is
   left out when Nova Instance Tracker is loaded.
+- Settings: click the dot beside a setting you changed to put it back to its default; hover it to
+  see what the default is.
+- Aim Trainer (QoL > Travel, on by default): a shooting game for flight paths. Click the other
+  faction's races as they pop up, in Hexakill (six targets at once, the default), Gridshot (three)
+  or Reflex (one at a time, shrinking away), for a score, accuracy, combo and reaction time, with
+  your best kept for every character. A miss costs 50, so spam-clicking doesn't pay. Every round
+  is 30 seconds with the same targets for everyone, so scores compare fairly on its Leaderboard:
+  once you have a best and with Share My Scores on, your bests are swapped with the players you
+  group with and your guild's, and the results card shows your rank. Open it with /nfaim or the
+  Flight Timer's Games button, or pick it under Flight Games to open by itself when a flight
+  starts; it closes when you land or enter combat. Move it in Unlock Mode.
+- Flight Games (QoL > Travel, under the Flight Timer): one choice of what opens by itself when a
+  flight starts, Nothing, the Quiz or the Aim Trainer (the default).
+- Scrap Marker (QoL > Loot & Items, off by default): Alt-click an item in your bags, the game's
+  or EllesmereUI's, to mark it as scrap, and again to unmark it. Marks count on every character,
+  or on this one only (New Marks), and the next vendor sells your scrap, even items the game
+  doesn't count as junk. At the Vendor can instead ask first, on a panel beside the vendor, or do
+  nothing. Scrap shows an icon on its bag slot and a line on its tooltip. Your BiS and gear sets
+  are protected, and quest items, keys and items with no sell price can't be marked.
+  - Rules, each off by default, count gear your class can't wear and old grey and white gear as
+    scrap too; the X on a rule's item keeps it.
+  - The Scrap List (Open Scrap List on its settings page, or /nf scrap): every scrap item with
+    what you carry and what it sells for, a search, an X to unmark, Account or Character on each
+    mark, drop an item on it to mark it, Clear All, and Export and Import to share a list.
+  - Bag Space puts your scrap first and shows the slots it will free, like +3.
+- Training Planner: a waypoint to your nearest class trainer, from Waypoint to nearest trainer at
+  the top of the planner, the Waypoint button on the level-up toast, or /nf trainer. With TomTom
+  loaded, it uses TomTom's arrow.
+
+### Changed
+- QoL has a Character tab: Character Panel, Slot Marks and Naowh Score moved there from the BiS
+  List's settings, and Supporter Badges from Interface. The BiS List's page keeps what is about
+  your BiS.
+- The Naowh Character Panel and Bag Marks are now on by default. With EllesmereUI's character
+  panel in use, you're asked once at login which one you want.
+- Loot Feed: Spacing goes down to -1, now the default, so neighbouring lines share one border
+  instead of two. Its coins line up on every line, and it is the first card on QoL > Loot &
+  Items. Edit it right in its preview: drag its right edge for width and a line's bottom for
+  height, the wheel for text size (Shift: spacing, Ctrl: lines), click a line's value or bag
+  count to show or hide it, and right-click a line for what it shows.
+- QoL's Leveling & Travel tab is two again: XP (XP Bar, XP per Hour, Group XP) and Travel
+  (Flight Timer, Flight Games, Quiz, Aim Trainer).
+- Quiz: Quiz While Flying is gone, replaced by Flight Games, where the Aim Trainer now opens on
+  flights by default. If you had turned it off, Flight Games is set to Nothing; the Quiz keeps
+  its campfire toggle.
+- XP Bar: click a text on the preview, or an empty spot around the bar, to pick what it shows,
+  as before the settings rebuild. The eleven text dropdowns under it are gone; search still
+  finds each spot and opens the card.
+- Flight Timer: a new look. A card with where you left and where you land, the time left in
+  blue, and a slim track you ride along on your faction's flight mount, with each stop marked on
+  it (filled once passed) and the next stop and its time under it. Land Early is now a Land
+  button beside Games.
+- Character Panel: the grey Legendary badge for players without a badge is now off by default;
+  turn on Legendary Badge Preview (QoL > Character) to see it. Your own badge still shows.
+
+### Fixed
+- Instance Tracker: releasing after a wipe no longer tells the group you left. The visit
+  stays open through the corpse run, and it ends when you resurrect outside, or when you
+  come back and leave for real.
+- Naowh Score: no more Lua error after seeing more than 300 players, like in a busy city.
+- Hovering items and players no longer fills BugSack with "secret value" errors on Forever: the
+  upgrade line and bag arrows wait while the game keeps your stats hidden, Naowh Score copes with
+  a player it can no longer read, and the supporter plate and ID lines stop hooking the game's
+  tooltip, which was reported breaking its own player-name colours.
+- Naowh's Forge: no more Lua error when a macro line is just a "/" with no command yet.
+- Character panel: while the game keeps your stats hidden (combat, encounters), your spec's stats
+  still show where the game allows it (primary stats, armor, healing, each school's spell damage,
+  crit, dodge, block), a dash for the rest, instead of a Lua error.
+- Stat Weights: upgrade lines and bag arrows keep working while your stats are hidden, worked out
+  against your stats from just before, until your gear or level changes.
+- Loot Feed: looting coins again while the Coins line is still up adds to it instead of throwing
+  a Lua error, and the loot after that line fades shows up again.
+- Auto-Fill Delete Confirmation: Yes can be clicked again once DELETE is filled in for you;
+  it stayed greyed out on Forever.
+- Settings: a module's window opened from /nf (Open Dungeon Journal, or the small window button
+  beside a module) brings /nf back when you close it the first time too, not only from the
+  second time on.
+
+## 0.5.19-beta
+
+### Added
 - Naowh's Forge (/nfmacros, the Macros page, or its minimap and top bar button): a window for
   your macros. My Macros lists your account and character macros and your pack's; the editor
-  shows how many of the game's 255 bytes a macro uses, numbers its lines, marks the ones that
+  colours a macro as you type it, in a code font (JetBrains Mono), shows how many of the
+  game's 255 bytes it uses, numbers its lines, marks the ones that
   will not work with what was meant (/castsequnce: did you mean /castsequence?), and beside it
   Explain says what each line does in plain words. Build conditions with Conditions, insert
   commands from Commands, pick an icon (star your favourites), Shorten a macro, and drag its
   icon to a bar. Smart Macros shows the macros the module keeps up to date with what each will
   use right now; the Library holds Naowh's macros once you import them. Export and Import share
   macros as a string.
+- /nf settings, rebuilt on the Dungeon Journal's look. Every feature is a card with its
+  switch and a line saying how it is set; open, its settings sit in groups, two to a line. A
+  setting that is off says what it needs, a dot marks what you changed, and each card can reset
+  itself. Search finds a setting by its name and opens its card.
+- Every module has one Settings page, with a card on top saying where you stand. What is not a
+  setting moved to the module's own window: Discovery's books (/nfdiscovery), Macros
+  (/nfmacros), Action Bars (/nfbars), AuraBuffs' consumables and debuff sounds (/nfbuffs), Smart
+  Reminders' presets and boss pages (/nfreminders), Gear Sets, Stat Weights, and the Dungeon
+  Journal's recent kills and loot (the skull on its title bar). Opening a window from /nf closes
+  /nf, and Back to Settings in its title brings you back.
+- Live previews on the settings cards of everything you see on screen: the Top Bar, Crosshair,
+  Mouse Ring, Focus Cast Bar, Loot Feed, XP Bar, XP per Hour, Group XP, Flight Timer, the BiS
+  drop alert, the threat meter, swing timer bars, buff and camp reminders, low health, the
+  gear and trinket bars, the craft timer, tracking and food bars, and Smart Reminders' displays,
+  each in the moments you see it, following every setting as you change it. A moment that only
+  exists with a setting on (faded, in combat, idle...) only has its tab while that is on.
+- Top Bar: arrange its buttons right in the preview: drag to move, x to remove, + to add.
+- Blessings: edit the bar right in its preview: right-click a class for its blessing, click the
+  aura for yours, x hides the aura or Righteous Fury button and + brings it back, the wheel
+  sizes the buttons (Shift: spacing) and the gap after the aura drags wider or narrower.
+- Threat Meter: edit it right in its preview: drag the corner to resize, click the name or the
+  status line to change them, the wheel sets row height (Shift: spacing, Ctrl: text size) and
+  right-click a row for what it shows.
+- Naowh Forever in the game menu (Esc), by the other addons' buttons. Game Menu Button on the
+  Settings page turns it off.
+- Profile strings now carry every module's settings and Unlock Mode positions, not only Smart
+  Reminders'.
+- The sidebar dims the modules you have off and lists them last in their group; a module with a
+  window of its own opens it from the icon on its row.
+- Discovery: a waypoint also opens the world map on it (Open the Map), a waypoint to your
+  librarian, and new settings: tracker scale, map pin size and hand-in pin, and the nearby
+  alert's ping and chat line each on their own.
+- Auto Combat Logging: log raids and dungeons each Ask Once, Always or Never, keep logging when
+  you leave, a chat line when it starts or stops, and the Advanced Logging prompt as a choice.
+- Blessings: one Settings page with a live preview of the bar, in a group and out of range. The
+  assignments grid, Auto-Assign and the preset moved to Blessings' own window: /nfbless, Open
+  Blessings on its settings page, or Assignments on a class button's right-click menu.
+- Quality of Life in 7 tabs instead of 13: Interface, Cursor, Combat, Questing & Group, Loot &
+  Items, Leveling & Travel and System. Mouse Ring is one card, the two copy shortcuts are one,
+  the auction price line sits with Auction Prices, Trainer moved to Training Planner and Naowh
+  Score to BiS List.
+- Credits page with the team, the people we thank, and the data and libraries Naowh Forever is
+  built on; Discord, Website and GitHub links in the sidebar.
+- Patch Notes as cards, the newest open, each change with where it lives.
+- A smaller search box by Unlock Mode, the Dungeon Journal's boxed tabs, and no more
+  UNTESTED / READY tags or "Preview build" notes. Minimap Icons moved to Settings.
 - QoL > Interface, Town Map Pins: Mailboxes, every mailbox on the world map, in towns and out in
   the world, even with Town Pins Only in Capitals on (off until you turn it on). Positions come
   from Wowhead's WoW Forever database.
@@ -416,9 +544,11 @@
   tooltips. What you wear is marked in green.
 
 ### Fixed
-- Instance Tracker: releasing after a wipe no longer tells the group you left. The visit
-  stays open through the corpse run, and it ends when you resurrect outside, or when you
-  come back and leave for real.
+- Unlock Mode: Exit Config shows again (it was under the Level-Up Toast), Smart Reminders'
+  samples move by dragging the whole display like everything else, and Bag Space's plate covers
+  its whole row.
+- Character panel: your Naowh Score no longer stays out beside the panel when you fold the stats
+  side away.
 - Blessings: the options window opens again while the bar shows your blessing buffs. Opening
   it, or changing the UI scale, raised a Lua error and left the window broken.
 - Borders and divider lines no longer lose a side at some UI scales (the trainer popup's X

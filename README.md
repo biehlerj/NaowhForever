@@ -66,6 +66,7 @@ character or share them with a friend.
 | `/nfbless` | Blessings |
 | `/nfthreat` | Threat Meter |
 | `/nf quiz` | A WoW quiz for flights and campfires |
+| `/nf scrap` | Your Scrap List (Scrap Marker, QoL > Loot & Items) |
 | `/copy` | The text under your mouse, ready to copy (turn on Global Copy in QoL > Tools) |
 | `/nf badges id` | Your badge code, for all your characters (see [Supporter badges](#supporter-badges)) |
 
@@ -138,7 +139,9 @@ writes it. Staff can check a badge with
 
 Bug fixes and ideas are welcome. Read the [contributing guide](.github/CONTRIBUTING.md)
 before you start: it has the rules every change is reviewed against, how to set up the
-checks, and how commits and pull requests are named. For anything bigger than a fix,
+checks, and how commits and pull requests are named. All UI is built from the shared
+components in [`Shared/`](Shared/README.md): use them, extend them, or add a new one there,
+never a copy inside a module. For anything bigger than a fix,
 message Glyalith on [Discord](https://discord.gg/naowh) first.
 
 ## Releasing a new version

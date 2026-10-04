@@ -52,12 +52,13 @@ end
 -------------------------------------------------------------------------------
 --  What is kept
 -------------------------------------------------------------------------------
--- The oldest kept score goes when there are too many.
+-- The oldest kept score goes to make room when the list is full.
 local function Prune()
-    if keptCount <= MAX_KEPT then return end
+    if keptCount < MAX_KEPT then return end
     local oldestGUID, oldestAt
     for guid, entry in pairs(kept) do
-        if not oldestAt or entry.at < oldestAt then oldestGUID, oldestAt = guid, entry.at end
+        local at = entry.at or 0
+        if not oldestAt or at < oldestAt then oldestGUID, oldestAt = guid, at end
     end
     kept[oldestGUID] = nil
     keptCount = keptCount - 1
@@ -66,17 +67,20 @@ end
 local function Entry(guid)
     local entry = kept[guid]
     if not entry then
-        entry = {}
+        Prune()
+        entry = { at = GetTime() }
         kept[guid] = entry
         keptCount = keptCount + 1
-        Prune()
     end
     return entry
 end
 
--- The tooltip's line, filled in now that the score is known.
+-- The tooltip's line, filled in now that the score is known, while the tooltip still shows them.
 local function Refresh(guid, entry)
     if guid ~= shownGUID or not shownLine or not GameTooltip:IsShown() then return end
+    local data = GameTooltip:GetPrimaryTooltipData()
+    local showing = data and data.guid
+    if not Readable(showing) or showing ~= guid then return end
     local right = _G["GameTooltipTextRight" .. shownLine]
     if right then
         right:SetText(Score.Tooltip(entry.score, entry.level))
@@ -128,7 +132,8 @@ local function Ready(guid)
     if not (pending and pending.guid == guid) then return false end
     local unit = pending.unit
     pending = nil
-    if not UnitExists(unit) or UnitGUID(unit) ~= guid then return true end
+    local now = UnitExists(unit) and UnitGUID(unit)
+    if not Readable(now) or now ~= guid then return true end
     wipe(links)
     for slot in pairs(Score.SLOTS) do links[slot] = GetInventoryItemLink(unit, slot) end
     local entry = Entry(guid)
@@ -297,7 +302,6 @@ local hooked = false
 -- comes first, and the score under it, as one Naowh block.
 local function Hook()
     TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnUnit)
-    GameTooltip:HookScript("OnTooltipCleared", function() shownGUID, shownLine = nil, nil end)
 end
 local SCAN_EVENTS = { "GROUP_ROSTER_UPDATE", "PLAYER_REGEN_ENABLED", "UNIT_INVENTORY_CHANGED" }
 local NEARBY_EVENTS = { "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_TARGET_CHANGED",

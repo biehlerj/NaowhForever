@@ -1196,6 +1196,7 @@ local function GroupsDiffer(saved, current, inGroup)
     if hereN == 0 and inGroup then return false end
     return true
 end
+-- end copy memory
 
 -- countIt is false for a login or reload: that copy already existed. An existing
 -- stamp stays put on that path, so a resume does not push the hour forward.

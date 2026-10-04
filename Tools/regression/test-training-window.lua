@@ -16,7 +16,10 @@ local frames = {}
 local METHODS = {
     SetScript = function(f, script, fn) f.scripts[script] = fn end,
     GetScript = function(f, script) return f.scripts[script] end,
-    HookScript = function(f, script, fn) f.scripts[script] = fn end,
+    HookScript = function(f, script, fn)
+        local old = f.scripts[script]
+        f.scripts[script] = old and function(...) old(...); fn(...) end or fn
+    end,
     GetParent = function(f) return rawget(f, "parent") end,
     SetWidth = function(f, w) f.w = w end,
     SetHeight = function(f, h) f.h = h end,
@@ -35,7 +38,11 @@ local METHODS = {
         f.shown = true
         if was == false and f.scripts.OnShow then f.scripts.OnShow(f) end
     end,
-    Hide = function(f) f.shown = false end,
+    Hide = function(f)
+        local was = rawget(f, "shown") ~= false
+        f.shown = false
+        if was and f.scripts.OnHide then f.scripts.OnHide(f) end
+    end,
     SetShown = function(f, shown) f.shown = shown and true or false end,
     IsShown = function(f) return rawget(f, "shown") ~= false end,
     IsVisible = function(f) return rawget(f, "shown") ~= false end,
@@ -58,7 +65,7 @@ local function Click(f, button)
 end
 
 local WHITE = { r = 1, g = 1, b = 1 }
-local account, printed = {}, {}
+local account, printed, waypoint = {}, {}, nil
 local settings = {}
 local listeners = {}
 local UI = {
@@ -128,6 +135,9 @@ local ns = {
     UIScale = function() return 1 end,
     AccountSettings = function() return account end,
     Print = function(m) printed[#printed + 1] = m end,
+    TownNPCs = { [1453] = { { 38.4, 79.4, "class", "Elsharin", "Mage Trainer", "MAGE", "A" } } },
+    TownCapitals = { [1453] = true },
+    PlaceWaypoint = function(title, map, x, y, note) waypoint = { title, map, x, y, note } end,
     Confirm = function(_, yes) yes() end,
     PromptText = function(_, _, _, accept) accept("Mine") end,
     ShowCopyBox = NOTHING,
@@ -151,6 +161,9 @@ local env = setmetatable({
     UnitClass = function() return "Mage", "MAGE", 8 end,
     UnitRace = function() return "Human", "Human", 1 end,
     UnitLevel = function() return 20 end,
+    UnitFactionGroup = function() return "Alliance" end,
+    CreateVector2D = function() end,
+    C_Map = { GetBestMapForUnit = function() end, GetWorldPosFromMapPos = function() end },
     UnitName = function() return "Me" end,
     GetRealmName = function() return "Realm" end,
     GetMoney = function() return 12345 end,
@@ -185,6 +198,7 @@ env._G = env
 Load({
     "Shared/Shared.lua", "Shared/Data/Forever.lua", "Shared/Style.lua", "Shared/Items.lua", "Shared/Places.lua",
     "Shared/Parts.lua", "Shared/Window.lua", "Shared/View.lua", "Shared/Kinds.lua",
+    "Shared/Settings/Settings.lua",
     "Training/NaowhForever_TrainingData.lua", "Training/NaowhForever_TrainingBuilds.lua",
     "Training/NaowhForever_Training.lua", "Training/NaowhForever_TrainingWindow.lua",
 }, env)
@@ -202,6 +216,9 @@ check("it shows", window:IsShown())
 check("its subtitle says who you are", window.subtitle:GetText() == "Mage, level 20")
 check("the Spells tab shows the next visit and the road", window.hero:IsShown() and window.road:IsShown())
 check("and its own controls", window.search:IsShown() and not window.import:IsShown())
+Click(window.hero.trainer)
+check("its trainer link puts a waypoint on your class's trainer", waypoint and waypoint[1] == "Elsharin"
+    and waypoint[2] == 1453 and waypoint[5] == " (Mage Trainer)")
 
 ns.OpenTrainingWindow(20)
 check("a level opens on Spells with All Levels", window.back:IsShown())
@@ -252,9 +269,20 @@ check("back on Spells", window.hero:IsShown())
 settings.enabled = true
 settings.miniShown = true
 for _, fn in ipairs(listeners) do fn("miniShown") end
-local page = Frame()
-local y = ns.BuildTrainingSettingsPage(page, 0)
-check("the settings page builds", type(y) == "number" and y < 0)
-check("with the module card", rawget(page, "trainingCard") ~= nil)
+local declared = ns.Shared.Settings.pages["Training Planner/Settings"]
+local windowCard, trainer = declared and declared.items[1], declared and declared.cards.trainer
+check("the settings page is declared, the planner's window card first", windowCard and windowCard.window
+    and windowCard.text == "Open Training Planner")
+check("with the trainer popup's card, switched by its own setting", trainer and trainer.switch == "trainerPopup")
+
+local backed = 0
+window:Hide()
+ns.Shared.Parts.OpenWithBack(function() ns.OpenTrainingWindow() end, Frame(), function() backed = backed + 1 end,
+    "Back to Settings")
+check("opened from /nf, its title links back", window.backLink and window.backLink:IsShown()
+    and window.backLink.text:GetText() == "Back to Settings")
+check("and All Levels stays its own button", window.back ~= window.backLink)
+window:Hide()
+check("closing it goes back to /nf, once", backed == 1 and not window.backLink:IsShown())
 
 print(("test-training-window: %d checks passed"):format(checks))
