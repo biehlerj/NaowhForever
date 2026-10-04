@@ -31,9 +31,10 @@ local S = UI.ModuleSettings("qol", {
     coTankDebuffDuration = true, coTankDebuffDurationSize = 10,
     coTankDebuffStacks = true, coTankDebuffStackSize = 10, coTankDebuffTooltips = false,
 
-    deleteConfirm = false, lootConfirm = false,
+    deleteConfirm = false, lootConfirm = false, enchantReplace = false,
     questAccept = false, questTurnIn = false, questGossip = false, questRewardPicks = true,
     questSkipModifier = "ALT",
+    groupButtons = false, groupButtonsLayout = "stacked",
     questShare = false,
     combatTimer = false, combatTimerInstanceOnly = false, combatTimerChat = true,
     combatTimerSticky = false, combatTimerHidePrefix = false, combatTimerBackground = false,
@@ -47,7 +48,7 @@ local S = UI.ModuleSettings("qol", {
     badgeBanner = false, badgeBannerSkipGuild = true,
     tooltipDisplay = true, tooltipSpellID = true, tooltipNPCID = true, tooltipItemID = true,
     tooltipRestricted = "hide", tooltipCopy = true, tooltipModifier = "CTRL-SHIFT", tooltipKey = "C",
-    tooltipCopyFormat = "url", tooltipWowhead = "classic",
+    tooltipCopyFormat = "url", tooltipCopyHint = false,
     slashCommands = false,
     lootFeed = true, lootFeedMoney = true, lootFeedXP = false, lootFeedQuality = 1,
     lootFeedQuest = true, lootFeedRep = false,
@@ -62,6 +63,13 @@ local S = UI.ModuleSettings("qol", {
     xpTickerHideResting = false, xpTickerFont = "", xpTickerFontSize = 24,
     xpTickerSplits = true, xpTickerSplitCount = 4, xpTickerCompare = true, xpTickerHistoryCount = 10,
     groupXP = false, groupXPShowSelf = true, groupXPWidth = 260,
+    naowhScore = true, naowhScoreTooltip = true, naowhScoreScan = true, naowhScoreNearby = true,
+    naowhScoreCompare = "max",
+    characterPanel = false,
+    -- On by default, an exception to off by default: marks on the game's own panel, no restyle.
+    characterPanelSlotMarks = true, characterPanelLevels = true, characterPanelMarks = true,
+    characterPanelEnchants = true, characterPanelScore = true, characterPanelBadge = true, characterPanelStats = "spec",
+    characterPanelTookOver = false,
     xpBar = false, xpBarLeftText = "level", xpBarCenterText = "xp", xpBarRightText = "percent",
     xpBarTopLeft = "played", xpBarTopRight = "none", xpBarBottomLeft = "leveling",
     xpBarBottom = "none", xpBarBottomRight = "xphour", xpBarTop = "none", xpBarLeft = "none",
@@ -79,9 +87,15 @@ local S = UI.ModuleSettings("qol", {
     townCapitalsOnly = true, townSpiritHealers = true, townZoneLinks = true,
     townMap = true, townClass = true, townProfession = true, townFlight = true, townInn = true,
     townBank = true, townStable = false, townRepair = true, townSupplies = true,
-    townVendors = false, townPinSize = 16,
+    townVendors = false, townMail = false, townPinSize = 16,
     gearSets = true, gearBarVisible = true, trinketBar = false, trinketSize = 36, trinketSpacing = 4, gearBarSize = 32, gearMounted = "", gearResting = "",
-    bis = true, bisTooltip = true, bisLootAlert = true,
+    bis = true, bisTooltip = true, bisBagMarks = false, bisLootAlert = true, bisWindowAlpha = 1,
+    -- Drop Alert: which picks, what it does, and its on-screen alert (BiS/View/Toast.lua).
+    bisAlertFor = "all", bisAlertChat = true, bisAlertBadge = true, bisToast = true,
+    bisDropSound = "game:raidwarning", bisYoursSound = "game:epicloot",
+    bisToastScale = 1, bisToastTime = 6, bisToastAlpha = 0.95, bisToastGlow = true, bisToastStar = "icon",
+    bisToastBorder = "rank", bisToastEvent = true, bisToastRank = true, bisToastSlot = true,
+    bisToastSource = false, bisToastGain = true,
     blessings = true, blessSpacing = 6, blessGroupSpacing = 6, blessTimerSize = 14, blessShowLabels = true, blessBarSize = 30, blessTimers = true, blessShowAura = true,
     blessShowFury = false,
 
@@ -285,7 +299,7 @@ local function TextControl(label, title, key)
     end }
 end
 
-local function DisbandGroup()
+function ns.DisbandGroup()
     if not IsInGroup() then ns.Print("You are not in a group."); return end
     if not UnitIsGroupLeader("player") then ns.Print("Only the group leader can disband the group."); return end
     ns.Confirm("Remove everyone from your group?", function()
@@ -331,12 +345,20 @@ function ns.BuildQoLQuestingPage(parent, y)
     _, h = W:SectionHeader(parent, "GROUP TOOLS", y); y = y - h
     _, h = W:DualRow(parent, y,
         { type = "button", text = "Disband Group", buttonText = "Disband",
-          tooltip = "Removes everyone from your group. Group leader only.", onClick = DisbandGroup },
+          tooltip = "Removes everyone from your group. Group leader only.", onClick = ns.DisbandGroup },
         { type = "button", text = "Invite Player", buttonText = "Invite",
           tooltip = "Type a name and invite them. Handy when you play with the same people.",
           onClick = function()
               ns.PromptText("Invite which player?", "", 0, function(name) C_PartyInfo.InviteUnit(name) end)
           end }
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("groupButtons", "On-Screen Buttons",
+            "Invite and Disband as buttons on your screen, to click without opening /nf. Invite "
+            .. "invites your target and works in combat; Disband works out of combat. Move them "
+            .. "in Unlock Mode."),
+        S.Dropdown("groupButtonsLayout", "Button Layout", { stacked = "Stacked", row = "Side by Side" },
+            { "stacked", "row" }, "Invite over Disband, or side by side.", "groupButtons")
     ); y = y - h
 
     return y
@@ -581,6 +603,11 @@ function ns.BuildQoLLootPage(parent, y)
             "Types DELETE into the confirmation box for you, and names the item in the dialog as a "
             .. "link you can hover for its tooltip."),
         S.Toggle("fastLoot", "Faster Auto Loot", "Loots automatically without hiding the loot window. Hold Shift to loot manually.")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("enchantReplace", "Auto-Replace Enchants",
+            "Says yes when an enchant would replace the one already on the item, instead of asking. "
+            .. "Hold Shift while applying it to be asked.")
     ); y = y - h
 
     _, h = W:SectionHeader(parent, "VENDORS", y); y = y - h
@@ -1324,7 +1351,7 @@ function ns.BuildQoLInterfacePage(parent, y)
     ); y = y - h
     _, h = W:DualRow(parent, y,
         S.Toggle("townVendors", "Other Vendors", "Trade goods and every other merchant.", "townMap"),
-        { type = "label", text = "" }
+        S.Toggle("townMail", "Mailboxes", "Every mailbox, in towns and out in the world.", "townMap")
     ); y = y - h
 
     return y
@@ -1513,7 +1540,9 @@ function ns.BuildQoLTooltipPage(parent, y)
     ); y = y - h
     _, h = W:DualRow(parent, y,
         S.Toggle("tooltipCopy", "Mouseover Copy Shortcut", nil, "tooltipDisplay"),
-        { type = "label", text = "" }
+        S.Toggle("tooltipCopyHint", "Show Shortcut Hint",
+            "A line under the ID saying which keys copy it (Ctrl-Shift-C: copy ID or Wowhead link). "
+            .. "Off, the shortcut still works; the line is just not shown.", { "tooltipDisplay", "tooltipCopy" })
     ); y = y - h
     _, h = W:Feature(parent, y, { type = "label", text = "Copy Card" }); y = y - h
     _, h = W:DualRow(parent, y,
@@ -1523,7 +1552,7 @@ function ns.BuildQoLTooltipPage(parent, y)
     ); y = y - h
     _, h = W:DualRow(parent, y,
         S.Dropdown("tooltipCopyFormat", "Initially Select", { id = "ID", url = "Wowhead Link" }, { "id", "url" }, nil, "tooltipCopy"),
-        S.Dropdown("tooltipWowhead", "Wowhead Database", { classic = "Classic", retail = "Retail" }, { "classic", "retail" }, "Forever-specific entries may not have a matching Wowhead page.", "tooltipCopy")
+        { type = "label", text = "" }
     ); y = y - h
     _, h = W:DualRow(parent, y,
         { type = "button", text = "Preview Copy Card", buttonText = "Preview", onClick = function() ns.PreviewTooltipCopyCard() end },
