@@ -59,6 +59,14 @@ Case("the three reset commands clear only that instance", function()
         assert(lives["33:"] == "Shadowfang Keep", cmd .. " leaves a different instance")
         assert(#hour == 2 and hour[1].name == "Ragefire Chasm", "the hour list is not shortened")
     end
+    local stamped = {
+        ["36:"] = { name = "Ragefire Chasm", at = 1 },
+        ["36:Heroic"] = { name = "Ragefire Chasm", at = 1 },
+        ["33:"] = "Shadowfang Keep",
+    }
+    assert(Nit.Clear(stamped, "Ragefire Chasm"))
+    assert(stamped["36:"] == nil and stamped["36:Heroic"] == nil, "a stamp clears by name")
+    assert(stamped["33:"] == "Shadowfang Keep", "a string row is left")
 end)
 
 Case("only a reset without the chat line is printed", function()

@@ -1,9 +1,10 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_InstanceTracker.lua -- saved lockouts for each character on this
 --  account, a record of each dungeon or raid visit, and how many new instances this
---  character has entered in the last hour. Coming back to a copy this character has
---  not reset continues that visit, and the time outside is not counted. Who else was
---  in the group is kept on that visit. With Track Alts on, every character you log
+--  character has entered in the last hour. Coming back to the same group in a copy
+--  this character has not reset continues that visit, and the time outside is not
+--  counted. A different group starts a new visit. Who else was in the group is kept
+--  on that visit. With Track Alts on, every character you log
 --  into keeps that hour, its saved instances, and a snapshot of rest and durability.
 --
 --  Off until the module is enabled. The display frame is built the first time the run
@@ -956,10 +957,13 @@ end
 
 -------------------------------------------------------------------------------
 --  Hourly instance entries. A new dungeon or raid instance counts. Walking back into
---  one this character has not reset does not. The client's own reset line clears that
---  memory, and so does a reset a Nova Instance Tracker group leader announces. The cap
---  is 10 new instances in a rolling hour, for this character. Another character on the
---  account has their own 10.
+--  one this character has not reset does not, for the hour after that entry. A later
+--  zone-in counts again. A name saved before those stamps does not hold the count.
+--  The client's own reset line clears that memory, and so does a reset a Nova
+--  Instance Tracker group leader announces. The same group continues the visit. A
+--  different group is a new one, so the earlier loot and group stay on that record.
+--  The cap is 10 new instances in a rolling hour, for this character. Another
+--  character on the account has their own 10.
 -------------------------------------------------------------------------------
 local expiryGen = 0
 
@@ -1128,18 +1132,67 @@ local function ScheduleExpiry()
     end)
 end
 
--- countIt is false for a login or reload: that copy already existed.
+-- A stamp inside the hour is still this copy. An older stamp, or a name saved
+-- before stamps existed, is not. A login does not count. The block through
+-- GroupsDiffer is loaded by the regression.
+local function CopyFresh(stored, now, hour)
+    if type(stored) ~= "table" or type(stored.at) ~= "number" then return false end
+    if type(now) ~= "number" or type(hour) ~= "number" then return false end
+    local age = now - stored.at
+    return age >= 0 and age < hour
+end
+
+-- True when this zone-in adds an hourly entry. A login or reload does not.
+local function CountsEntry(stored, now, hour, countIt)
+    if not countIt then return false end
+    return not CopyFresh(stored, now, hour)
+end
+
+-- True when the people zoning in are not the visit's group. One shared name keeps
+-- the visit. Two empty groups are the same solo copy. An empty roster while still
+-- grouped has not loaded, so it does not split the visit.
+local function GroupsDiffer(saved, current, inGroup)
+    local function names(group)
+        local set, n = {}, 0
+        if type(group) ~= "table" then return set, 0 end
+        for i = 1, #group do
+            local row = group[i]
+            local who = type(row) == "table" and row.name or nil
+            if type(who) == "string" and who ~= "" and not set[who] then
+                set[who] = true
+                n = n + 1
+            end
+        end
+        return set, n
+    end
+    local savedSet, savedN = names(saved)
+    local hereSet, hereN = names(current)
+    for who in pairs(savedSet) do
+        if hereSet[who] then return false end
+    end
+    if savedN == 0 and hereN == 0 then return false end
+    if hereN == 0 and inGroup then return false end
+    return true
+end
+
+-- countIt is false for a login or reload: that copy already existed. An existing
+-- stamp stays put on that path, so a resume does not push the hour forward.
 local function NoteInstanceEntry(name, mapID, difficulty, countIt)
     local store = EnsureStore()
     local lives = CharLives(store, true)
     if not lives then return end
     local key = CopyKey(mapID, difficulty, name)
-    if lives[key] then return end
-    lives[key] = name or ""
-    if not countIt then return end
+    local now = time()
+    if not CountsEntry(lives[key], now, HOUR, countIt) then
+        if lives[key] == nil then
+            lives[key] = { name = name or "", at = now }
+        end
+        return
+    end
+    lives[key] = { name = name or "", at = now }
     if type(store.hour) ~= "table" then store.hour = {} end
     store.hour[#store.hour + 1] = {
-        at = time(), name = name or "", map = mapID, who = CharName(), realm = RealmKey(),
+        at = now, name = name or "", map = mapID, who = CharName(), realm = RealmKey(),
     }
     PruneHour(store)
     WarnHour()
@@ -1303,7 +1356,9 @@ local function ClearNamedCopy(lives, name)
     if type(lives) ~= "table" or type(name) ~= "string" or name == "" then return false end
     local cleared = false
     for key, stored in pairs(lives) do
-        if stored == name then
+        local storedName = stored
+        if type(stored) == "table" then storedName = stored.name end
+        if storedName == name then
             lives[key] = nil
             cleared = true
         end
@@ -1498,11 +1553,19 @@ local function TakeSameCopy(name, mapID, difficulty)
     local mine = CharLives(store, false)
     if not mine or not mine[CopyKey(mapID, difficulty, name)] then return end
     local now = time()
+    local grouped = false
+    if IsInGroup then
+        local inGroup = IsInGroup()
+        if not Secret(inGroup) and inGroup then grouped = true end
+    end
+    local current = CurrentGroup()
     for i = 1, #store.runs do
         local run = store.runs[i]
         if type(run) == "table" and SamePlace(run, name, mapID, difficulty) then
             local away = now - (tonumber(run.left) or 0)
             if away < 0 or away >= AWAY_CAP then return end
+            -- A different group is a new copy. The old visit stays in the history.
+            if GroupsDiffer(run.group, current, grouped) then return end
             table.remove(store.runs, i)
             return run
         end
