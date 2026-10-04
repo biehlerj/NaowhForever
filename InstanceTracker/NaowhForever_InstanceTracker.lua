@@ -1696,7 +1696,8 @@ local function Build()
     frame.hour:SetPoint("RIGHT", frame, "RIGHT", -PAD_X, 0)
     frame.hour:SetJustifyH("LEFT")
     frame.hour:SetWordWrap(false)
-    frame.mover = UI.AttachMover(frame, "Instance Tracker", function(pos) S.Set("pos", pos) end)
+    frame.mover = UI.AttachMover(frame, "Instance Tracker", function(pos) S.Set("pos", pos) end,
+        "Instance Tracker/Display")
     frame:Hide()
 end
 
