@@ -444,7 +444,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
     _, h = W:SectionHeader(parent, "ON SCREEN" .. UI.STATUS.untested, y); y = y - h
     _, h = W:DualRow(parent, y,
         S.Toggle("showFrame", "Show Run Timer",
-            "Time, coins looted, experience, experience per hour, overall experience, "
+            "Time, coins looted, experience, experience per hour, "
             .. "and instances entered this hour, while you are inside. Move it in Unlock Mode.",
             "enabled"),
         S.Toggle("enterChat", "Chat on Enter",

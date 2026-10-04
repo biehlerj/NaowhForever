@@ -1610,24 +1610,6 @@ local function Place()
     end
 end
 
-local function OverallXP(open)
-    local realm, name = RealmKey(), CharName()
-    local total = 0
-    local store = RawStore()
-    if store and type(store.runs) == "table" then
-        for i = 1, #store.runs do
-            local run = store.runs[i]
-            if run.realm == realm and run.char == name then
-                total = total + (run.xp or 0)
-            end
-        end
-    end
-    if open and open.realm == realm and open.char == name then
-        total = total + (open.xp or 0)
-    end
-    return total
-end
-
 local function XPPerHour(open)
     return (open.xp or 0) / (math.max(Elapsed(open), 60) / 3600)
 end
@@ -1635,7 +1617,6 @@ end
 local function XPLine(open)
     local rate = open and math.floor(XPPerHour(open) + 0.5) or 0
     return "XP/hr " .. BreakUpLargeNumbers(rate)
-        .. "    Overall " .. BreakUpLargeNumbers(OverallXP(open))
 end
 
 local function HourLine()
