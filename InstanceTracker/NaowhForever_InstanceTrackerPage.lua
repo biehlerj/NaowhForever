@@ -281,7 +281,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
         .. "on this character count toward a 10-per-hour cap. Another character has their own 10. "
         .. "Walking back into one you have not reset does not count. The chat warning is set "
         .. "on the Display tab.", y); y = y - h
-    _, h = W:SectionHeader(parent, "THIS HOUR" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "THIS HOUR", y); y = y - h
 
     local count, cap, frees = IT.Hour()
     local summary = string.format("Instances this hour: %d of %d", count, cap)
@@ -336,7 +336,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
         y = y - GROUP_GAP
     end
 
-    _, h = W:SectionHeader(parent, "CHARACTERS" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "CHARACTERS", y); y = y - h
     _, h = W:Note(parent, "A character shows up here after you log into it with Instance Tracker on. "
         .. "Track Alts keeps the others: rested experience, durability and saved "
         .. "instances, from the last time that character was logged in. "
@@ -380,7 +380,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
             UI:RefreshPage(true)
         end)
     end); y = y - h
-    _, h = W:SectionHeader(parent, "VISITS" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "VISITS", y); y = y - h
 
     local open = IT.Open()
     if open and open.instance then
@@ -420,7 +420,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
         .. "Chat on Reset is under When You Reset, and it starts off. "
         .. "Move the timer in Unlock Mode; it shows only inside a dungeon or raid.",
         y); y = y - h
-    _, h = W:SectionHeader(parent, "THIS HOUR" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "THIS HOUR", y); y = y - h
     _, h = W:DualRow(parent, y,
         S.Slider("hourlyWarn", "Warn when this many are left", 1, 5, 1,
             "Prints in your chat when this many new instances are left before this character's "
@@ -428,7 +428,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
             "enabled"),
         { type = "label", text = "The cap is 10 for this character" }
     ); y = y - h
-    _, h = W:SectionHeader(parent, "ON SCREEN" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "ON SCREEN", y); y = y - h
     _, h = W:DualRow(parent, y,
         S.Toggle("showFrame", "Show Run Timer",
             "Time, coins looted, experience, experience per hour, "
@@ -439,7 +439,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
             .. "Coming back to one you have not reset says you resumed it. This is never sent to the group.",
             "enabled")
     ); y = y - h
-    _, h = W:SectionHeader(parent, "ALTS" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "ALTS", y); y = y - h
     _, h = W:DualRow(parent, y,
         S.Toggle("trackAlts", "Track Alts",
             "Keep every character you log into on this account: saved instances, visits, "
@@ -449,7 +449,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
             "enabled"),
         { type = "label", text = "Off drops other characters" }
     ); y = y - h
-    _, h = W:SectionHeader(parent, "WHEN YOU LEAVE" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "WHEN YOU LEAVE", y); y = y - h
     _, h = W:Note(parent, "Choose what to say when you leave a dungeon. Nothing is sent until Chat on Leave "
         .. "is on, and each detail stays off until you check it. Your Chat prints it only for you. "
         .. "Group sends it to party chat, and to raid chat only when Send to Raid Chat is on. "
@@ -524,7 +524,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
         raidChat
     ); y = y - h
 
-    _, h = W:SectionHeader(parent, "WHEN YOU RESET" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:SectionHeader(parent, "WHEN YOU RESET", y); y = y - h
     _, h = W:Note(parent, "As group leader, a reset can be announced in party, raid, or instance chat. "
         .. "Nothing is typed there until Chat on Reset is on. "
         .. "Nova Instance Tracker users in the group still hear about the reset. "
