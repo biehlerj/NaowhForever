@@ -5,6 +5,8 @@
 ### Added
 - Instance Tracker (off by default, /nfinstance): saved lockouts, each dungeon or raid visit,
   and how many new instances this character has entered this hour, toward a cap of 10.
+  A reset is not typed in party or raid chat until Chat on Reset is on, and that line is
+  left out when Nova Instance Tracker is loaded.
 - Naowh's Forge (/nfmacros, the Macros page, or its minimap and top bar button): a window for
   your macros. My Macros lists your account and character macros and your pack's; the editor
   shows how many of the game's 255 bytes a macro uses, numbers its lines, marks the ones that
@@ -414,6 +416,9 @@
   tooltips. What you wear is marked in green.
 
 ### Fixed
+- Instance Tracker: releasing after a wipe no longer tells the group you left. The visit
+  stays open through the corpse run, and it ends when you resurrect outside, or when you
+  come back and leave for real.
 - Blessings: the options window opens again while the bar shows your blessing buffs. Opening
   it, or changing the UI scale, raised a Lua error and left the window broken.
 - Borders and divider lines no longer lose a side at some UI scales (the trainer popup's X

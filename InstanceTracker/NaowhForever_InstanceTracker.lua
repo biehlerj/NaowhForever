@@ -22,6 +22,9 @@ local S = UI.ModuleSettings("instanceTracker", {
     enabled = false,
     showFrame = false,
     enterChat = false,
+    -- Party, raid, or instance chat when this character leads a reset. Off still
+    -- tells Nova Instance Tracker users in the group, and sends no chat line.
+    resetChat = false,
     leaveChat = false,
     leaveWhere = "self",
     leaveTime = false,
@@ -374,10 +377,14 @@ local function FormatDuration(seconds)
 end
 
 -- Time inside the visit. skipped is the gap while logged out, reloading, or outside
--- this copy, so a resumed visit does not count the time spent away.
+-- this copy, so a resumed visit does not count the time spent away. seen is that
+-- gap while it is still open, so the timer stays put at a graveyard.
 local function Elapsed(open, now)
     now = now or time()
-    local elapsed = now - (tonumber(open.entered) or now) - (tonumber(open.skipped) or 0)
+    local skipped = tonumber(open.skipped) or 0
+    local seen = tonumber(open.seen)
+    if seen and seen < now then skipped = skipped + (now - seen) end
+    local elapsed = now - (tonumber(open.entered) or now) - skipped
     if elapsed < 0 then return 0 end
     return elapsed
 end
@@ -441,6 +448,15 @@ local function CurrentInstance()
     if type(difficultyName) ~= "string" then difficultyName = "" end
     if type(mapID) ~= "number" then mapID = 0 end
     return name, "in", kind, difficultyName, mapID
+end
+
+-- Dead or a ghost. nil when that read is secret, so the visit stays open
+-- rather than being announced as a leave.
+local function PlayerGhost()
+    if not UnitIsDeadOrGhost then return false end
+    local dead = UnitIsDeadOrGhost("player")
+    if Secret(dead) then return nil end
+    return dead and true or false
 end
 
 local function SamePlace(open, name, mapID, difficulty)
@@ -572,7 +588,7 @@ end
 -- keeps up outside a dungeon. These only matter during a visit.
 local RUN_EVENTS = {
     "CHAT_MSG_MONEY", "CHAT_MSG_COMBAT_FACTION_CHANGE", "PLAYER_DEAD",
-    "GROUP_ROSTER_UPDATE",
+    "PLAYER_ALIVE", "PLAYER_UNGHOST", "GROUP_ROSTER_UPDATE",
 }
 
 local function SetRunEvents(active)
@@ -1356,6 +1372,15 @@ local function NitOutbound(kind, instance, systemText, chatOk)
     return chat, cmd .. " " .. NIT_VERSION .. " " .. instance
 end
 
+-- "chat" is the group line plus instanceReset. "addon" is instanceResetNoMsg and no
+-- line, so Nova still prints the reset. nil sends nothing: Nova Instance Tracker is
+-- loaded and posts the same line itself.
+local function NitAnnounce(settingOn, nitLoaded, locked)
+    if nitLoaded then return end
+    if settingOn and not locked then return "chat" end
+    return "addon"
+end
+
 -- Drops every live copy stored under this instance name. The hour list is left as
 -- it is: a reset does not give an entry back.
 local function ClearNamedCopy(lives, name)
@@ -1465,13 +1490,24 @@ local function SendResetAddon(plain, channel)
     return AddonWent(pcall(C_ChatInfo.SendAddonMessage, NIT_PREFIX, encoded, channel))
 end
 
+-- Nova posts the same reset line. A secret answer is treated as loaded, so this
+-- addon does not add a second one.
+local function NitLoaded()
+    if not C_AddOns or not C_AddOns.IsAddOnLoaded then return false end
+    local loaded = C_AddOns.IsAddOnLoaded("NovaInstanceTracker")
+    if Secret(loaded) then return true end
+    return loaded and true or false
+end
+
 local function AnnounceReset(kind, name, text)
     if not WeAreLeader() then return end
     local channel = ResetChannel()
     if not channel then return end
     local locked = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
     if Secret(locked) then locked = true end
-    local chat, plain = NitOutbound(kind, name or "", text, not locked)
+    local how = NitAnnounce(S.Get("resetChat"), NitLoaded(), locked)
+    if not how then return end
+    local chat, plain = NitOutbound(kind, name or "", text, how == "chat")
     if chat and not SendResetChat(chat, channel) then
         plain = select(2, NitOutbound(kind, name or "", text, false))
     end
@@ -1648,6 +1684,13 @@ local function SyncZone(announce)
     if state == "secret" then return end
     if state ~= "in" then
         local open = OpenRun()
+        -- Releasing spirit lands at the graveyard. That is still this visit.
+        if open and PlayerGhost() ~= false then
+            if not open.seen then open.seen = time() end
+            SetRunEvents(true)
+            UpdateFrame()
+            return
+        end
         if open then CloseRun(announce, (not announce) and open.seen or nil)
         else UpdateFrame() end
         return
@@ -1937,7 +1980,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         local open = OpenRun()
         if open then
             NoteGroup(open)
-            open.seen = time()
+            if not open.seen then open.seen = time() end
         end
     elseif event == "CHAT_MSG_SYSTEM" then
         OnResetMessage(...)
@@ -1950,6 +1993,12 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "PLAYER_DEAD" then
         local open = OpenRun()
         if open then open.deaths = (open.deaths or 0) + 1 end
+    elseif event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
+        local open = OpenRun()
+        if open and PlayerGhost() == false then
+            local _, zoneState = CurrentInstance()
+            if zoneState == "out" then CloseRun(true) end
+        end
     elseif event == "GROUP_ROSTER_UPDATE" then
         local open = OpenRun()
         if open and NoteGroup(open) then UI:RefreshPage(true) end
