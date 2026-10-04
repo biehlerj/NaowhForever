@@ -19,7 +19,8 @@ assert(loadfile("Libs/LibDeflate/LibDeflate.lua"))()
 local tracker = Read("InstanceTracker/NaowhForever_InstanceTracker.lua")
 local code = Slice(tracker, "local NIT_PREFIX = ", "\n-- end Nova reset wire format")
     .. "\nreturn { Encode = NitEncode, Wire = NitWire, Decode = NitDecode,"
-    .. " Incoming = NitIncoming, Outbound = NitOutbound, Clear = ClearNamedCopy }\n"
+    .. " Incoming = NitIncoming, Outbound = NitOutbound, Announce = NitAnnounce,"
+    .. " Clear = ClearNamedCopy }\n"
 local env = { LibStub = LibStub }
 setmetatable(env, { __index = _G })
 local chunk = assert(loadstring(code))
@@ -96,6 +97,14 @@ Case("a successful reset sends the chat line and instanceReset", function()
     chat, plain = Nit.Outbound("inside", "Deadmines", "Cannot reset Deadmines.", true)
     assert(chat == "[NIT] Deadmines " .. STILL, chat)
     assert(plain == "instanceReset 1 Deadmines", plain)
+end)
+
+Case("reset chat follows the setting, Nova, and a lock", function()
+    assert(Nit.Announce(false, false, false) == "addon", "setting off sends no chat line")
+    assert(Nit.Announce(true, true, false) == nil, "Nova loaded sends nothing")
+    assert(Nit.Announce(false, true, false) == nil, "Nova loaded still sends nothing")
+    assert(Nit.Announce(true, false, true) == "addon", "chat locked sends no chat line")
+    assert(Nit.Announce(true, false, false) == "chat", "setting on sends the chat line")
 end)
 
 Case("a failed chat send uses instanceResetNoMsg and no chat line", function()
