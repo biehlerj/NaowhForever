@@ -276,9 +276,9 @@ local function DurabilityPct()
     return math.floor(current / full * 100 + 0.5)
 end
 
--- Rest and durability from this login. A failed read leaves the previous number in
--- place, so a secret combat value does not wipe the sheet. Gold stays with Mail & Alts.
-local function SnapshotChar(row)
+-- Experience, level and rest. Durability is a separate scan: it only changes on
+-- UPDATE_INVENTORY_DURABILITY, so a kill does not walk every equipped slot.
+local function SnapshotXP(row)
     local level = WholeNumber(UnitLevel("player"))
     if level then row.level = level end
     local _, class = UnitClass("player")
@@ -293,9 +293,15 @@ local function SnapshotChar(row)
             row.rested = type(rested) == "number" and rested or 0
         end
     end
+    row.seen = time()
+end
+
+-- Rest and durability from this login. A failed read leaves the previous number in
+-- place, so a secret combat value does not wipe the sheet. Gold stays with Mail & Alts.
+local function SnapshotChar(row)
+    SnapshotXP(row)
     local durability = DurabilityPct()
     if durability ~= nil then row.durability = durability end
-    row.seen = time()
 end
 
 -- The character row lockouts and the sheet hang off.
@@ -313,6 +319,22 @@ local function TouchChar()
     SnapshotChar(row)
     PruneAlts()
     return row, realm, name
+end
+
+-- Experience and level-up. A row that does not exist yet still gets the full sheet,
+-- durability included, so the first write is complete.
+local function TouchXP()
+    local name = CharName()
+    if name == "" then return end
+    local store = RawStore()
+    local realm = RealmKey()
+    local group = store and store.chars and store.chars[realm]
+    local row = type(group) == "table" and group[name] or nil
+    if type(row) ~= "table" then
+        TouchChar()
+        return
+    end
+    SnapshotXP(row)
 end
 
 -- Off keeps the character you are playing. The hourly list is left alone: each
@@ -389,15 +411,13 @@ local function Elapsed(open, now)
     return elapsed
 end
 
-local function FormatRemaining(resetAt)
-    local seconds = math.floor((tonumber(resetAt) or 0) - time())
-    if seconds <= 0 then return "expired" end
-    local days = math.floor(seconds / 86400)
-    local hours = math.floor(seconds % 86400 / 3600)
-    local minutes = math.floor(seconds % 3600 / 60)
-    if days > 0 then return string.format("%dd %dh", days, hours) end
-    if hours > 0 then return string.format("%dh %dm", hours, minutes) end
-    return string.format("%dm", math.max(1, minutes))
+-- Experience per hour. A visit shorter than a minute is treated as one minute, so the
+-- first seconds do not print an enormous rate. The leave line passes the visit span;
+-- the run frame passes Elapsed.
+local function XPPerHour(xp, elapsed)
+    elapsed = tonumber(elapsed) or 0
+    if elapsed < 0 then elapsed = 0 end
+    return (xp or 0) / (math.max(elapsed, 60) / 3600)
 end
 
 -- Plain coins for a line sent to the group. Textures from the coin API are for this client.
@@ -491,69 +511,8 @@ local function MatchingLockout(instance)
     end
 end
 
--- The client's reset is a countdown from the last UPDATE_INSTANCE_INFO, not from now.
--- Only that event stamps the clock. The tooltip and this module both read the list here.
-local savedReadAt, savedRaw
-
-function ns.RefreshSavedInstances()
-    savedRaw = {}
-    if not GetNumSavedInstances or not GetSavedInstanceInfo then return end
-    local count = GetNumSavedInstances()
-    if Secret(count) or type(count) ~= "number" or count < 1 then return end
-    for i = 1, count do
-        local name, id, reset, _, locked, extended, _, isRaid, maxPlayers,
-            difficultyName, encounters, progress = GetSavedInstanceInfo(i)
-        if not Secret(name) and not Secret(reset) and not Secret(locked) and not Secret(extended)
-            and type(name) == "string" and type(reset) == "number" and reset > 0
-            and (locked or extended) then
-            local lock = {
-                name = name,
-                reset = reset,
-                locked = locked and true or false,
-                extended = extended and true or false,
-                isRaid = (not Secret(isRaid)) and isRaid and true or false,
-                difficulty = (not Secret(difficultyName) and type(difficultyName) == "string")
-                    and difficultyName or "",
-            }
-            if not Secret(id) and type(id) == "number" and id > 0 then lock.id = id end
-            if not Secret(maxPlayers) and type(maxPlayers) == "number" then
-                lock.maxPlayers = maxPlayers
-            end
-            if not Secret(encounters) and type(encounters) == "number" then
-                lock.encounters = encounters
-            end
-            if not Secret(progress) and type(progress) == "number" then
-                lock.progress = progress
-            end
-            savedRaw[#savedRaw + 1] = lock
-        end
-    end
-end
-
--- Stamp the countdown only when the client has just refreshed instance info.
-function ns.NoteInstanceInfo()
-    savedReadAt = GetTime()
-    ns.RefreshSavedInstances()
-end
-
-function ns.SavedInstances()
-    if savedReadAt == nil or savedRaw == nil then return {} end
-    local elapsed = GetTime() - savedReadAt
-    local now, list = time(), {}
-    for i = 1, #savedRaw do
-        local src = savedRaw[i]
-        local left = src.reset - elapsed
-        if left > 0 then
-            local lock = {}
-            for key, value in pairs(src) do lock[key] = value end
-            lock.left = left
-            lock.resetAt = now + left
-            list[#list + 1] = lock
-        end
-    end
-    return list
-end
-
+-- Core stamps the countdown on UPDATE_INSTANCE_INFO and is the only walk of
+-- GetSavedInstanceInfo. This stores the locked rows on the character.
 local function ReadLockouts()
     local list = {}
     for _, lock in ipairs(ns.SavedInstances()) do
@@ -568,7 +527,7 @@ end
 local function SaveLockouts()
     -- Nothing to store until UPDATE_INSTANCE_INFO. A login or profile switch before
     -- that must not replace the saved countdown with an empty list.
-    if not On() or savedReadAt == nil then return end
+    if not On() or not ns.SavedInstancesReady() then return end
     local row = TouchChar()
     if not row then return end
     row.lockouts = ReadLockouts()
@@ -578,7 +537,7 @@ local function SaveLockouts()
         local lock = MatchingLockout(open.instance)
         if lock then
             open.toldSave = true
-            ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, FormatRemaining(lock.resetAt)))
+            ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, ns.FormatRemaining(lock.resetAt)))
         end
     end
     UI:RefreshPage(true)
@@ -645,12 +604,16 @@ local function NoteRep(text)
     open.rep[faction] = (open.rep[faction] or 0) + amount
 end
 
-local function Where(open)
-    local name = open.instance or ""
-    if open.difficulty and open.difficulty ~= "" then
-        return name .. " (" .. open.difficulty .. ")"
+-- "Deadmines" or "Deadmines (Heroic)". The history page uses the same line.
+local function PlaceName(name, difficulty)
+    if type(difficulty) == "string" and difficulty ~= "" then
+        return (name or "") .. " (" .. difficulty .. ")"
     end
-    return name
+    return name or ""
+end
+
+local function Where(open)
+    return PlaceName(open.instance, open.difficulty)
 end
 
 local function AnnounceResume(open)
@@ -669,7 +632,7 @@ local function AnnounceEnter(open)
     local lock = MatchingLockout(open.instance)
     if lock then
         open.toldSave = true
-        ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, FormatRemaining(lock.resetAt)))
+        ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, ns.FormatRemaining(lock.resetAt)))
     end
 end
 
@@ -684,10 +647,12 @@ local function VisitActive(open)
     return false
 end
 
-local function RepText(open)
-    if type(open.rep) ~= "table" then return end
+-- Faction, then the amount, factions in order. Nil when none was gained. The history
+-- page prints the same words.
+local function Reputation(rep)
+    if type(rep) ~= "table" then return end
     local parts = {}
-    for faction, amount in pairs(open.rep) do
+    for faction, amount in pairs(rep) do
         if type(faction) == "string" and (amount or 0) > 0 then
             parts[#parts + 1] = faction .. " +" .. BreakUpLargeNumbers(amount)
         end
@@ -712,13 +677,20 @@ local function RunsFor(open, instanceOnly)
     return list
 end
 
-local function GroupChannel()
+-- Raid when raidChat is set, else nothing while in a raid, so a leave summary stays
+-- out of raid chat unless that option is on. Then the instance group, then the party.
+-- Alone, nothing is sent.
+local function GroupChannel(raidChat)
     if IsInRaid then
         local raid = IsInRaid()
         if not Secret(raid) and raid then
-            if S.Get("leavePrintRaid") then return "RAID" end
+            if raidChat then return "RAID" end
             return nil
         end
+    end
+    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup then
+        local instance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
+        if not Secret(instance) and instance then return "INSTANCE_CHAT" end
     end
     if IsInGroup then
         local group = IsInGroup()
@@ -738,10 +710,7 @@ local function LeaveFacts(open, span, plain)
         add(ns.L("%s XP", BreakUpLargeNumbers(open.xp or 0)))
     end
     if S.Get("leaveXPHour") then
-        local elapsed = span or 0
-        if elapsed < 0 then elapsed = 0 end
-        local rate = (open.xp or 0) / (math.max(elapsed, 60) / 3600)
-        add(ns.L("%s XP/hr", BreakUpLargeNumbers(math.floor(rate + 0.5))))
+        add(ns.L("%s XP/hr", BreakUpLargeNumbers(math.floor(XPPerHour(open.xp, span) + 0.5))))
     end
     if S.Get("leaveGold") then
         add(plain and PlainCoins(open.loot) or Coins(open.loot))
@@ -751,7 +720,7 @@ local function LeaveFacts(open, span, plain)
         add(n == 1 and ns.L("1 death") or ns.L("%d deaths", n))
     end
     if S.Get("leaveRep") then
-        local rep = RepText(open)
+        local rep = Reputation(open.rep)
         if rep then add(ns.L("%s reputation", rep)) end
     end
     if S.Get("leaveAverage") then
@@ -788,8 +757,24 @@ local function Sentence(place, facts)
     return place .. " " .. table.concat(facts, ", ") .. "."
 end
 
+local function ChatWent(ok, result)
+    if not ok then return false end
+    if result == nil or result == true then return true end
+    local success = Enum and Enum.SendChatMessageResult and Enum.SendChatMessageResult.Success
+    return result == success
+end
+
+-- A secret answer is treated as locked, so a leave summary is printed here instead of
+-- erroring after the visit has already been closed.
+local function ChatLocked()
+    local locked = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
+    if Secret(locked) or locked then return true end
+    return false
+end
+
 local function SendLine(text, channel)
-    return pcall(C_ChatInfo.SendChatMessage, text, channel)
+    if type(text) ~= "string" or text == "" or #text > CHAT_LIMIT then return false end
+    return ChatWent(pcall(C_ChatInfo.SendChatMessage, text, channel))
 end
 
 -- Complete facts, joined by commas, with a period on each message.
@@ -819,9 +804,8 @@ local function Deliver(shown, place, facts)
         ns.Print(shown)
         return
     end
-    local channel = GroupChannel()
-    local locked = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
-    if not channel or locked then
+    local channel = GroupChannel(S.Get("leavePrintRaid"))
+    if not channel or ChatLocked() then
         ns.Print(shown)
         return
     end
@@ -863,20 +847,27 @@ local function MemberName(unit)
     return name
 end
 
--- Everyone else currently in the group. The visit already names this character.
-local function CurrentGroup()
-    local list = {}
-    if not IsInGroup then return list end
+-- Unit prefix and how many, or nothing when the group is secret or we are alone.
+-- count can be 0. Callers decide whether that is an empty roster.
+local function GroupShape()
+    if not IsInGroup then return end
     local grouped = IsInGroup()
-    if Secret(grouped) or not grouped then return list end
+    if Secret(grouped) or not grouped then return end
     local raid = false
     if IsInRaid then
         local inRaid = IsInRaid()
         if not Secret(inRaid) and inRaid then raid = true end
     end
     local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
-    if Secret(count) or type(count) ~= "number" or count < 1 then return list end
-    local prefix = raid and "raid" or "party"
+    if Secret(count) or type(count) ~= "number" then return end
+    return (raid and "raid" or "party"), count
+end
+
+-- Everyone else currently in the group. The visit already names this character.
+local function CurrentGroup()
+    local list = {}
+    local prefix, count = GroupShape()
+    if not prefix or count < 1 then return list end
     for i = 1, count do
         local unit = prefix .. i
         local mine = UnitIsUnit(unit, "player")
@@ -988,6 +979,7 @@ end
 --  character on the account has their own 10.
 -------------------------------------------------------------------------------
 local expiryGen = 0
+local hourSnap
 
 local function CopyKey(mapID, difficulty, name)
     if type(mapID) ~= "number" or mapID == 0 then
@@ -1028,10 +1020,11 @@ local function PruneHour(store)
     if type(list) ~= "table" then
         list = {}
         store.hour = list
+        hourSnap = nil
         return list
     end
     local now = time()
-    local n, w, ordered, prev = #list, 1, true, nil
+    local n, w, ordered, prev, removed = #list, 1, true, nil, false
     for i = 1, n do
         local row = list[i]
         if type(row) == "table" and type(row.at) == "number" and now - row.at < HOUR then
@@ -1039,9 +1032,12 @@ local function PruneHour(store)
             prev = row
             if w ~= i then list[w] = row end
             w = w + 1
+        else
+            removed = true
         end
     end
     for i = n, w, -1 do list[i] = nil end
+    if removed then hourSnap = nil end
     if not ordered then table.sort(list, ByAt) end
     return list
 end
@@ -1073,7 +1069,7 @@ local function HourFor(list, realm, name)
         frees = oldest + HOUR - time()
         if frees < 0 then frees = 0 end
     end
-    return count, frees
+    return count, frees, oldest
 end
 
 -- Oldest first, this character only. PruneHour has already ordered the full list.
@@ -1091,7 +1087,18 @@ end
 
 local function HourSnapshot(store)
     if not store then return 0, HOURLY_CAP, 0 end
-    local count, frees = HourFor(PruneHour(store), RealmKey(), CharName())
+    local now = time()
+    if hourSnap and hourSnap.store == store
+        and (not hourSnap.oldest or now < hourSnap.oldest + HOUR) then
+        local frees = 0
+        if hourSnap.oldest then
+            frees = hourSnap.oldest + HOUR - now
+            if frees < 0 then frees = 0 end
+        end
+        return hourSnap.count, HOURLY_CAP, frees
+    end
+    local count, frees, oldest = HourFor(PruneHour(store), RealmKey(), CharName())
+    hourSnap = { store = store, count = count, oldest = oldest }
     return count, HOURLY_CAP, frees
 end
 
@@ -1217,6 +1224,7 @@ local function NoteInstanceEntry(name, mapID, difficulty, countIt)
     store.hour[#store.hour + 1] = {
         at = now, name = name or "", map = mapID, who = CharName(), realm = RealmKey(),
     }
+    hourSnap = nil
     PruneHour(store)
     WarnHour()
     ScheduleExpiry()
@@ -1442,23 +1450,6 @@ local function ClassifyReset(text)
     end
 end
 
--- Raid, else the instance group, else the party. Alone, nothing is sent. A raid is
--- included here even when the leave summary is not sent to raid chat.
-local function ResetChannel()
-    if IsInRaid then
-        local raid = IsInRaid()
-        if not Secret(raid) and raid then return "RAID" end
-    end
-    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup then
-        local instance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
-        if not Secret(instance) and instance then return "INSTANCE_CHAT" end
-    end
-    if IsInGroup then
-        local group = IsInGroup()
-        if not Secret(group) and group then return "PARTY" end
-    end
-end
-
 local function WeAreLeader()
     if not UnitIsGroupLeader then return false end
     local leader = UnitIsGroupLeader("player")
@@ -1466,23 +1457,11 @@ local function WeAreLeader()
     return true
 end
 
-local function ChatWent(ok, result)
-    if not ok then return false end
-    if result == nil or result == true then return true end
-    local success = Enum and Enum.SendChatMessageResult and Enum.SendChatMessageResult.Success
-    return result == success
-end
-
 local function AddonWent(ok, result)
     if not ok then return false end
     if result == nil or result == true then return true end
     local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
     return result == success
-end
-
-local function SendResetChat(text, channel)
-    if type(text) ~= "string" or #text > CHAT_LIMIT or #text == 0 then return false end
-    return ChatWent(pcall(C_ChatInfo.SendChatMessage, text, channel))
 end
 
 local function SendResetAddon(plain, channel)
@@ -1502,14 +1481,13 @@ end
 
 local function AnnounceReset(kind, name, text)
     if not WeAreLeader() then return end
-    local channel = ResetChannel()
+    local channel = GroupChannel(true)
     if not channel then return end
-    local locked = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
-    if Secret(locked) then locked = true end
+    local locked = ChatLocked()
     local how = NitAnnounce(S.Get("resetChat"), NitLoaded(), locked)
     if not how then return end
     local chat, plain = NitOutbound(kind, name or "", text, how == "chat")
-    if chat and not SendResetChat(chat, channel) then
+    if chat and not SendLine(chat, channel) then
         plain = select(2, NitOutbound(kind, name or "", text, false))
     end
     if plain then SendResetAddon(plain, channel) end
@@ -1548,17 +1526,8 @@ end
 -- which the incoming check treats as still worth taking.
 local function LeaderRoster()
     local roster = {}
-    if not IsInGroup then return roster end
-    local grouped = IsInGroup()
-    if Secret(grouped) or not grouped then return roster end
-    local raid = false
-    if IsInRaid then
-        local inRaid = IsInRaid()
-        if not Secret(inRaid) and inRaid then raid = true end
-    end
-    local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
-    if Secret(count) or type(count) ~= "number" then return roster end
-    local prefix = raid and "raid" or "party"
+    local prefix, count = GroupShape()
+    if not prefix then return roster end
     local function note(unit)
         local leader = UnitIsGroupLeader and UnitIsGroupLeader(unit)
         if Secret(leader) then leader = false end
@@ -1723,12 +1692,8 @@ local function Place()
     end
 end
 
-local function XPPerHour(open)
-    return (open.xp or 0) / (math.max(Elapsed(open), 60) / 3600)
-end
-
 local function XPLine(open)
-    local rate = open and math.floor(XPPerHour(open) + 0.5) or 0
+    local rate = open and math.floor(XPPerHour(open.xp, Elapsed(open)) + 0.5) or 0
     return "XP/hr " .. BreakUpLargeNumbers(rate)
 end
 
@@ -1837,7 +1802,9 @@ ns.InstanceTracker = {
     Open = OpenRun,
     Duration = FormatDuration,
     Elapsed = Elapsed,
-    Remaining = FormatRemaining,
+    Remaining = ns.FormatRemaining,
+    PlaceName = PlaceName,
+    Reputation = Reputation,
     Coins = Coins,
     WarnDistance = WarnDistance,
     CapRGB = CAP_RGB,
@@ -1957,8 +1924,8 @@ end
 -- The sheet is written immediately. The open page follows a moment later, so a bag
 -- update does not rebuild it on every slot.
 local sheetQueued
-local function QueueSheet()
-    TouchChar()
+local function QueueSheet(xpOnly)
+    if xpOnly then TouchXP() else TouchChar() end
     if sheetQueued then return end
     sheetQueued = true
     C_Timer.After(1, function()
@@ -1974,7 +1941,6 @@ events:SetScript("OnEvent", function(_, event, ...)
         SyncZone(not login and not reload)
         QueueSheet()
     elseif event == "UPDATE_INSTANCE_INFO" then
-        ns.NoteInstanceInfo()
         SaveLockouts()
     elseif event == "PLAYER_LOGOUT" then
         TouchChar()
@@ -2014,7 +1980,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             end
         end
         NoteXP(false)
-        QueueSheet()
+        QueueSheet(true)
         UpdateFrame()
     end
 end)
@@ -2039,8 +2005,7 @@ local function Apply()
     events:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
     events:RegisterEvent("PLAYER_XP_UPDATE")
     events:RegisterEvent("PLAYER_LEVEL_UP")
-    -- The Top Bar asks the server for saved instances on each zone. Read whatever
-    -- the client already has, so enabling the tracker does not request them again.
+    -- Core already stamped the countdown. Store it, without asking the server again.
     SaveLockouts()
     PruneAlts()
     TouchChar()

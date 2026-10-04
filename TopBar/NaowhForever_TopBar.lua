@@ -179,13 +179,12 @@ local function FmtCD(sec)
     return ("%d:%02d"):format(sec / 60, sec % 60)
 end
 
--- Saved instances, soonest reset first. The countdown is ns.SavedInstances, shared with
--- Instance Tracker and stamped on UPDATE_INSTANCE_INFO.
+-- Saved instances, soonest reset first. The countdown is ns.SavedInstances, stamped once
+-- on UPDATE_INSTANCE_INFO in Core.
 local function Lockouts()
     local out = {}
     local list = ns.SavedInstances()
     local fraction = ns.Shared.Parts.Fraction
-    local remaining = ns.InstanceTracker.Remaining
     for i = 1, #list do
         local lock = list[i]
         local name = lock.name or ""
@@ -195,7 +194,7 @@ local function Lockouts()
         out[#out + 1] = {
             left = lock.left,
             name = name,
-            reset = remaining(lock.resetAt),
+            reset = ns.FormatRemaining(lock.resetAt),
         }
     end
     table.sort(out, function(a, b) return a.left < b.left end)
@@ -1426,12 +1425,9 @@ events:RegisterEvent("PLAYER_UPDATE_RESTING")
 events:RegisterEvent("FRIENDLIST_UPDATE")
 events:RegisterEvent("BN_FRIEND_INFO_CHANGED")
 events:RegisterEvent("GUILD_ROSTER_UPDATE")
-events:RegisterEvent("UPDATE_INSTANCE_INFO")
 events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_UPDATE_RESTING" then
         UpdateResting()
-    elseif event == "UPDATE_INSTANCE_INFO" then
-        ns.NoteInstanceInfo()
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         if event == "PLAYER_ENTERING_WORLD" then RequestRaidInfo() end
         -- PLAYER_ENTERING_WORLD comes after every addon's login, so late brokers exist by then.

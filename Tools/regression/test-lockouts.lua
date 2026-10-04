@@ -8,15 +8,13 @@ local function Slice(source, a, b)
     return source:sub(first, assert(source:find(b, first + #a, true), b) - 1)
 end
 
-local tracker = Read(arg[1] or "InstanceTracker/NaowhForever_InstanceTracker.lua")
+local core = Read(arg[1] or "Core/NaowhForever_SavedInstances.lua")
 local top = Read(arg[2] or "TopBar/NaowhForever_TopBar.lua")
 
--- The countdown lives in the tracker. The clock only names and sorts what that read returns.
+-- The countdown lives in Core. The clock only names and sorts what that read returns.
 local preamble = "local function Secret(v)\n    return issecretvalue and issecretvalue(v)\nend\n"
 local code = preamble
-    .. Slice(tracker, "local function FormatRemaining(resetAt)", "\nlocal function PlainCoins(")
-    .. "\nns.InstanceTracker = { Remaining = FormatRemaining }\n"
-    .. Slice(tracker, "local savedReadAt, savedRaw", "\nlocal function ReadLockouts")
+    .. Slice(core, "function ns.FormatRemaining(resetAt)", "\nlocal watch")
     .. "\n" .. Slice(top, "local function Lockouts()", "\nfunction ns.LockoutsCommand")
     .. "\nreturn Lockouts\n"
 

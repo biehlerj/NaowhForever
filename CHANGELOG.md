@@ -37,6 +37,8 @@
   loaded, it uses TomTom's arrow.
 
 ### Changed
+- Instance Tracker: a leave summary in a looking-for-group party goes to instance chat. A group
+  message the game refuses is printed to you instead.
 - QoL has a Character tab: Character Panel, Slot Marks and Naowh Score moved there from the BiS
   List's settings, and Supporter Badges from Interface. The BiS List's page keeps what is about
   your BiS.

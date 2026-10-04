@@ -20,6 +20,10 @@ Locales\ruRU.lua [AllowLoadTextLocale ruRU]
 # hang off.
 Core\NaowhForever_Core.lua
 
+# Saved instances, stamped once on UPDATE_INSTANCE_INFO. The Top Bar and Instance Tracker
+# both read this list. Needs the Core.
+Core\NaowhForever_SavedInstances.lua
+
 # ns.PlaceWaypoint: a waypoint (or TomTom's) for any module. Needs the Core.
 Core\NaowhForever_Waypoint.lua
 

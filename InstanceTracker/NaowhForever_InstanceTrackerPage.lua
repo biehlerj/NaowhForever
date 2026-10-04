@@ -81,13 +81,6 @@ local function OffText()
     return "Instance Tracker is off, so nothing new is recorded. "
 end
 
-local function PlaceName(name, difficulty)
-    if type(difficulty) == "string" and difficulty ~= "" then
-        return name .. " (" .. difficulty .. ")"
-    end
-    return name or ""
-end
-
 local function LockLine(lock)
     local parts = { lock.name or "" }
     if type(lock.difficulty) == "string" and lock.difficulty ~= "" then
@@ -165,7 +158,7 @@ local function RunLine(run)
     local when = date("%m/%d %H:%M", run.entered or time())
     local who = ns.ClassColoredName(run.char or "?", run.class)
     local text = string.format("%s   %s   %s   %s   %s   %s XP", when, who,
-        PlaceName(run.instance, run.difficulty), span, IT.Coins(run.loot),
+        IT.PlaceName(run.instance, run.difficulty), span, IT.Coins(run.loot),
         BreakUpLargeNumbers(run.xp or 0))
     if (run.deaths or 0) > 0 then
         local word = run.deaths == 1 and "death" or "deaths"
@@ -174,19 +167,12 @@ local function RunLine(run)
     return text
 end
 
--- Reputation gained during the visit. Same shape as the leave summary: faction, then
--- the amount, factions in order. Left out when none was gained.
+-- Reputation gained during the visit. The words come from the tracker; this only
+-- indents them as a second line. Left out when none was gained.
 local function RepText(rep)
-    if type(rep) ~= "table" then return end
-    local parts = {}
-    for faction, amount in pairs(rep) do
-        if type(faction) == "string" and (amount or 0) > 0 then
-            parts[#parts + 1] = faction .. " +" .. BreakUpLargeNumbers(amount)
-        end
-    end
-    if #parts == 0 then return end
-    table.sort(parts)
-    return "    " .. ns.Color("muted", table.concat(parts, ", "))
+    local text = ns.InstanceTracker.Reputation(rep)
+    if not text then return end
+    return "    " .. ns.Color("muted", text)
 end
 
 local function RepLine(parent, y, rep)
@@ -400,7 +386,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
     if open and open.instance then
         local elapsed = IT.Duration(IT.Elapsed(open))
         y = VisitLine(parent, y, "In progress   " .. ns.ClassColoredName(open.char or "?", open.class)
-            .. "   " .. PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
+            .. "   " .. IT.PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
             .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP",
             open.group)
         y = RepLine(parent, y, open.rep)
@@ -431,6 +417,7 @@ function ns.BuildInstanceTrackerPage(parent, y)
         .. "are recorded, and each new dungeon or raid instance on this character counts toward 10 per hour. "
         .. "Show Run Timer and Chat on Enter stay off until you turn them on. "
         .. "Chat on Leave is under When You Leave, and each of its lines starts off. "
+        .. "Chat on Reset is under When You Reset, and it starts off. "
         .. "Move the timer in Unlock Mode; it shows only inside a dungeon or raid.",
         y); y = y - h
     _, h = W:SectionHeader(parent, "THIS HOUR" .. UI.STATUS.untested, y); y = y - h
@@ -535,6 +522,22 @@ function ns.BuildInstanceTrackerPage(parent, y)
         Leave("leaveRaids", "Include Raids",
             "Also print the summary when you leave a raid. Off means dungeons only."),
         raidChat
+    ); y = y - h
+
+    _, h = W:SectionHeader(parent, "WHEN YOU RESET" .. UI.STATUS.untested, y); y = y - h
+    _, h = W:Note(parent, "As group leader, a reset can be announced in party, raid, or instance chat. "
+        .. "Nothing is typed there until Chat on Reset is on. "
+        .. "Nova Instance Tracker users in the group still hear about the reset. "
+        .. "If you also have Nova Instance Tracker loaded, it announces, and this line is left out "
+        .. "so the group does not see it twice.",
+        y); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("resetChat", "Chat on Reset",
+            "As group leader, post the reset in party, raid, or instance chat. "
+            .. "Off still tells Nova Instance Tracker users in the group. "
+            .. "Left out when Nova Instance Tracker is loaded, so the line is not posted twice.",
+            "enabled"),
+        { type = "label", text = "Off until you turn it on" }
     ); y = y - h
     return y
 end
