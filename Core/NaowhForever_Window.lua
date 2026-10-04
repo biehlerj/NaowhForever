@@ -74,6 +74,14 @@ local MODULES = {
       tabs = {
           { name = "Settings", build = "BuildTrainingSettingsPage", reuse = true },
       } },
+    { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
+      command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
+      subtitle = "Saved lockouts, visits, and how many new instances this character has entered this hour.",
+      tabs = {
+          { name = "Lockouts", build = "BuildInstanceLockoutsPage", reuse = true },
+          { name = "History", build = "BuildInstanceHistoryPage", reuse = true },
+          { name = "Display", build = "BuildInstanceTrackerPage", reuse = true },
+      } },
     { name = "Gear & Trinkets", group = "COMBAT", navIcon = "shield", settings = "QoLSettings", enabledKey = "gearSets",
       command = "gear", short = "Gear", icon = "Interface\\Icons\\INV_Chest_Plate04",
       subtitle = "Swap equipment sets from a bar, or on their own while you ride or rest.",

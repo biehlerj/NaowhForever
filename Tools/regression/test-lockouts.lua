@@ -1,14 +1,34 @@
-local f = assert(io.open(arg[1] or "TopBar/NaowhForever_TopBar.lua", "rb"))
-local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
-local function Slice(a, b)
-    local first = assert(source:find(a, 1, true))
-    return source:sub(first, assert(source:find(b, first + #a, true)) - 1)
+local function Read(path)
+    local f = assert(io.open(path, "rb"))
+    local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
+    return source
 end
+local function Slice(source, a, b)
+    local first = assert(source:find(a, 1, true), a)
+    return source:sub(first, assert(source:find(b, first + #a, true), b) - 1)
+end
+
+local tracker = Read(arg[1] or "InstanceTracker/NaowhForever_InstanceTracker.lua")
+local top = Read(arg[2] or "TopBar/NaowhForever_TopBar.lua")
+
+-- The countdown lives in the tracker. The clock only names and sorts what that read returns.
+local preamble = "local function Secret(v)\n    return issecretvalue and issecretvalue(v)\nend\n"
+local code = preamble
+    .. Slice(tracker, "local function FormatRemaining(resetAt)", "\nlocal function PlainCoins(")
+    .. "\nns.InstanceTracker = { Remaining = FormatRemaining }\n"
+    .. Slice(tracker, "local savedReadAt, savedRaw", "\nlocal function ReadLockouts")
+    .. "\n" .. Slice(top, "local function Lockouts()", "\nfunction ns.LockoutsCommand")
+    .. "\nreturn Lockouts\n"
 
 -- Saved instances as GetSavedInstanceInfo returns them: name, reset, locked, extended, total, done.
 local function Fixture(saved, now, updatedAt)
+    local clock = updatedAt
     local env = {
-        GetTime = function() return now end,
+        ns = { Shared = { Parts = { Fraction = function(part, whole)
+            return part .. "/" .. whole
+        end } } },
+        GetTime = function() return clock end,
+        time = function() return 0 end,
         GetNumSavedInstances = function() return #saved end,
         GetSavedInstanceInfo = function(i)
             local s = saved[i]
@@ -16,10 +36,11 @@ local function Fixture(saved, now, updatedAt)
         end,
     }
     setmetatable(env, { __index = _G })
-    local code = Slice("local lockoutsAt = 0", "\nfunction ns.LockoutsCommand")
-        .. "\nlockoutsAt = " .. updatedAt .. "\nreturn Lockouts"
     local chunk = assert(loadstring(code)); setfenv(chunk, env)
-    return chunk()()
+    local Lockouts = chunk()
+    env.ns.RefreshSavedInstances()
+    clock = now
+    return Lockouts()
 end
 local function Lines(list)
     local out = {}

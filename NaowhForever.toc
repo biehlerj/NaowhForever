@@ -147,6 +147,8 @@ Professions\NaowhForever_CraftTimer.lua
 Professions\NaowhForever_FavoriteRecipes.lua
 Professions\NaowhForever_ShoppingList.lua
 ThreatMeter\NaowhForever_ThreatMeter.lua
+InstanceTracker\NaowhForever_InstanceTracker.lua
+InstanceTracker\NaowhForever_InstanceTrackerPage.lua
 SwingTimer\NaowhForever_SwingTimer.lua
 TopBar\NaowhForever_TopBar.lua
 QoL\NaowhForever_FlightData.lua

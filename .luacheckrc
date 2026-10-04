@@ -82,7 +82,7 @@ read_globals = {
     "GetTrainerServiceSkillReq", "GetUnitName", "GetXPExhaustion", "GetZoneText", "GOLD_AMOUNT",
     "HandleModifiedItemClick", "hash_EmoteTokenList", "HideUIPanel", "hooksecurefunc", "IconDataProviderExtraType",
     "IconDataProviderMixin",
-    "InCinematic", "InCombatLockdown", "InviteUnit", "INVSLOT_FIRST_EQUIPPED", "INVSLOT_LAST_EQUIPPED",
+    "InCinematic", "InCombatLockdown", "INSTANCE_RESET_SUCCESS", "InviteUnit", "INVSLOT_FIRST_EQUIPPED", "INVSLOT_LAST_EQUIPPED",
     "INVSLOT_TRINKET1", "INVSLOT_TRINKET2", "IsAltKeyDown", "IsControlKeyDown", "IsInGroup",
     "IsInGuild", "IsInInstance", "IsInRaid", "IsModifiedClick", "IsMounted",
     "IsMouseButtonDown", "IsPlayerMoving", "IsPlayerSpell", "IsQuestCompletable", "IsResting",

@@ -104,23 +104,24 @@ local function FmtCD(sec)
     return ("%d:%02d"):format(sec / 60, sec % 60)
 end
 
--- GetSavedInstanceInfo's reset counts down from the last UPDATE_INSTANCE_INFO, not from now.
-local lockoutsAt = 0
-
--- Saved instances, soonest reset first, each with its line for a tooltip or chat.
+-- Saved instances, soonest reset first. The countdown is ns.SavedInstances, shared with
+-- Instance Tracker and stamped when the client refreshes the list.
 local function Lockouts()
-    local out, elapsed = {}, GetTime() - lockoutsAt
-    for i = 1, GetNumSavedInstances() do
-        local name, _, reset, _, locked, extended, _, _, _, _, total, done = GetSavedInstanceInfo(i)
-        local left = (reset or 0) - elapsed
-        if (locked or extended) and left > 0 then
-            local d, h, m = math.floor(left / 86400), math.floor(left / 3600) % 24, math.floor(left / 60) % 60
-            out[#out + 1] = {
-                left = left,
-                name = (total and total > 0) and ("%s %d/%d"):format(name, done or 0, total) or name,
-                reset = d > 0 and ("%dd %dh"):format(d, h) or h > 0 and ("%dh %dm"):format(h, m) or ("%dm"):format(m),
-            }
+    local out = {}
+    local list = ns.SavedInstances()
+    local fraction = ns.Shared.Parts.Fraction
+    local remaining = ns.InstanceTracker.Remaining
+    for i = 1, #list do
+        local lock = list[i]
+        local name = lock.name or ""
+        if (lock.encounters or 0) > 0 then
+            name = name .. " " .. fraction(lock.progress or 0, lock.encounters)
         end
+        out[#out + 1] = {
+            left = lock.left,
+            name = name,
+            reset = remaining(lock.resetAt),
+        }
     end
     table.sort(out, function(a, b) return a.left < b.left end)
     return out
@@ -933,7 +934,7 @@ events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_UPDATE_RESTING" then
         UpdateResting()
     elseif event == "UPDATE_INSTANCE_INFO" then
-        lockoutsAt = GetTime()
+        ns.RefreshSavedInstances()
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         if event == "PLAYER_ENTERING_WORLD" then RequestRaidInfo() end
         -- PLAYER_ENTERING_WORLD comes after every addon's login, so late brokers exist by then.
