@@ -10,6 +10,7 @@ local SIDEBAR_W, CONTENT_W, WINDOW_W, WINDOW_H = 240, 1000, 1440, 790
 local TOP_H, PAGE_HEADER_H = 64, 128
 local HEADER_H, TAB_H, FOOTER_H, NAV_H = 76, 32, 46, 32
 local SEARCH_W, SEARCH_H = 240, 26
+local SCROLL_BAR_GAP = 12 -- the page scrollbar sits this far right of the page, in its margin
 local LINK_ICONS = "Interface\\AddOns\\NaowhForever\\Media\\Links\\"
 local LINKS = {
     { "Discord", "discord", function() return ns.NAOWH_DISCORD or "https://discord.com/invite/naowh" end },
@@ -23,8 +24,9 @@ local MEDIA = "Interface\\AddOns\\NaowhForever\\Media\\"
 local FOOTER_H_SIDEBAR = 28
 local LOGO = "Interface\\AddOns\\NaowhForever\\Media\\LogoAddon.tga"
 local BRAND_LOGO = "Interface\\AddOns\\NaowhForever\\Media\\BrandLogo.tga"
--- The art sits high and to the left in its 512x256 canvas, so the texture is moved to centre it.
-local BRAND = { width = 186.8, height = 93.4, x = 11.5, y = -15.1 }
+-- The art fills the top left 448x139 of its 512x256 canvas (the size mipmaps need) and is drawn
+-- cropped to it, 56 tall, 8 in from the panel's top left.
+local BRAND = { artW = 448, artH = 139, texW = 512, texH = 256, height = 56, inset = 8 }
 
 -- System pages sit below the module navigation. `build` names the ns builder (resolved at
 -- open time); `arg` is passed after the starting y.
@@ -35,6 +37,8 @@ local BRAND = { width = 186.8, height = 93.4, x = 11.5, y = -15.1 }
 --             with `open`, ns[open] toggles the module's own window instead
 --   noscan    left out of the search scan: its builder makes frames, writes the profile or
 --             reads the Encounter Journal, so it is found by name only
+--   addon     module shipped as its own addon, left out of the window while it is not loaded
+--   needs     module addons it cannot work without; turning one off turns this one off too
 local SYSTEM_PAGES = {
     { name = "Settings", build = "BuildSettingsPage", reuse = true,
       subtitle = "Options for the whole addon, saved for this computer." },
@@ -63,6 +67,7 @@ local MODULES = {
       } },
     -- The journal itself is a window of its own (open); only its settings live here.
     { name = "Dungeon Journal", group = "ADVENTURE", navIcon = "map", settings = "JournalSettings",
+      addon = "NaowhForever_DungeonJournal", needs = { "NaowhForever_BiS" },
       open = "ToggleJournalWindow",
       command = "journal", alias = "dj", short = "Journal", icon = "Interface\\Icons\\INV_Misc_Book_09",
       subtitle = "Every dungeon and raid: what drops, your quests, and more.",
@@ -81,6 +86,7 @@ local MODULES = {
       } },
     -- The list itself is a window of its own (open); only its settings live here.
     { name = "BiS List", group = "ADVENTURE", navIcon = "trophy", settings = "QoLSettings", enabledKey = "bis",
+      addon = "NaowhForever_BiS", needs = { "NaowhForever_DungeonJournal" },
       open = "ToggleBisWindow",
       command = "bis", short = "BiS", icon = "Interface\\Icons\\INV_Sword_39",
       subtitle = "Your best-in-slot list, marked on tooltips and called out when it drops.",
@@ -89,6 +95,7 @@ local MODULES = {
       } },
     -- The planner itself is a window of its own (open); only its settings live here.
     { name = "Training Planner", group = "ADVENTURE", navIcon = "notes", settings = "TrainingSettings",
+      addon = "NaowhForever_Training", needs = { "NaowhForever_Professions" },
       open = "ToggleTrainingWindow",
       command = "training", short = "Training", icon = "Interface\\Icons\\INV_Misc_Book_11",
       subtitle = "What you can train now, what each level brings and what it costs.",
@@ -97,14 +104,17 @@ local MODULES = {
       } },
     -- The books are a window of their own (open); only their settings live here.
     { name = "Discovery", group = "ADVENTURE", navIcon = "compass", settings = "DiscoverySettings",
+      addon = "NaowhForever_Discovery",
       open = "ToggleDiscoveryWindow",
       command = "discovery", short = "Discovery", icon = "Interface\\Icons\\INV_Misc_Book_07",
       subtitle = "Library books to find around Azeroth, and who to hand them to.",
       tabs = {
-          { name = "Settings", reuse = true },
+          { name = "Library Books", reuse = true },
+          { name = "Sleeping Bag", reuse = true },
       } },
     -- The sets are a window of their own (open); only their settings live here.
     { name = "Gear & Trinkets", group = "COMBAT", navIcon = "shield", settings = "QoLSettings", enabledKey = "gearSets",
+      addon = "NaowhForever_GearSets",
       open = "ToggleGearSetsWindow",
       command = "gear", short = "Gear", icon = "Interface\\Icons\\INV_Chest_Plate04",
       subtitle = "Swap equipment sets from a bar, or on their own while you ride or rest.",
@@ -112,6 +122,7 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Blessings", group = "COMBAT", navIcon = "spark", settings = "QoLSettings", enabledKey = "blessings",
+      addon = "NaowhForever_Blessings",
       open = "ToggleBlessingsWindow",
       command = "bless", short = "Bless", icon = "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings",
       subtitle = "Paladin blessings by class and player, shared with the group's paladins.",
@@ -119,11 +130,13 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Professions", group = "ADVENTURE", navIcon = "hammer", settings = "ProfessionSettings",
+      addon = "NaowhForever_Professions",
       subtitle = "Recipes, reagents and crafting in one window, with the recipes you have not learned yet.",
       tabs = {
           { name = "Settings", reuse = true },
       } },
     { name = "Macros", group = "UTILITIES", navIcon = "pen", settings = "MacroSettings",
+      addon = "NaowhForever_Macros",
       open = "ToggleMacroWindow",
       command = "macros", short = "Macros", icon = "Interface\\Icons\\INV_Misc_Note_01",
       subtitle = "Naowh's Forge: your macros, checked and explained, and macros kept current for you.",
@@ -131,6 +144,7 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Action Bars", group = "UTILITIES", navIcon = "grid", settings = "ActionBarSettings",
+      addon = "NaowhForever_ActionBars",
       open = "ToggleActionBarsWindow",
       command = "bars", short = "Bars", icon = "Interface\\Icons\\INV_Misc_Gear_01",
       subtitle = "Your action bars saved by name and put back whenever you want them.",
@@ -138,6 +152,7 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "AuraBuffs", group = "COMBAT", navIcon = "aura", settings = "AuraBuffSettings",
+      addon = "NaowhForever_AuraBuffs",
       open = "ToggleAuraBuffsWindow",
       command = "buffs", short = "Buffs", icon = "Interface\\Icons\\Spell_Holy_WordFortitude",
       subtitle = "Buff, consumable and campfire reminders, low health and debuff sounds.",
@@ -145,12 +160,14 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Threat Meter", group = "COMBAT", navIcon = "bars", settings = "ThreatMeterSettings",
+      addon = "NaowhForever_ThreatMeter",
       command = "threat", short = "Threat", icon = "Interface\\Icons\\Ability_Warrior_Sunder",
       subtitle = "Threat on your target for the whole group, and a warning before you pull.",
       tabs = {
           { name = "Settings", reuse = true },
       } },
     { name = "Swing Timer", group = "COMBAT", navIcon = "infinity", settings = "SwingTimerSettings",
+      addon = "NaowhForever_SwingTimer",
       subtitle = "Your swings from the game's own swing timer, with marks for timing around them.",
       tabs = {
           { name = "Settings", reuse = true },
@@ -230,14 +247,83 @@ local function BuildPageInto(page, parent)
     return fn(parent, -6, page.arg)
 end
 
+local function DisplayName(mod)
+    return ns.L(mod.name == "QoL" and "Quality of Life" or mod.name)
+end
+
+local function Loaded(mod)
+    return not mod.addon or C_AddOns.IsAddOnLoaded(mod.addon)
+end
+
+local function Has(list, value)
+    for _, v in ipairs(list or {}) do
+        if v == value then return true end
+    end
+    return false
+end
+
+-- The module addons that switch along with mod: turning it off takes every module that
+-- needs it, turning it on brings every module it needs.
+local function Linked(mod, on)
+    local mods, seen = { mod }, { [mod.addon] = true }
+    local i = 1
+    while mods[i] do
+        local cur = mods[i]
+        for _, other in ipairs(MODULES) do
+            if other.addon and not seen[other.addon]
+                and (on and Has(cur.needs, other.addon) or not on and Has(other.needs, cur.addon)) then
+                seen[other.addon] = true
+                mods[#mods + 1] = other
+            end
+        end
+        i = i + 1
+    end
+    return mods
+end
+
+local function NameList(mods)
+    local names = {}
+    for i, m in ipairs(mods) do names[i] = DisplayName(m) end
+    if #names == 1 then return names[1] end
+    return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
+end
+
+-- Enables or disables a module addon, with the ones linked to it, for every character. The
+-- game applies it at the next reload, so the reload prompt follows.
+local function SwitchModuleAddon(mod, on)
+    local mods = Linked(mod, on)
+    local verb = on and "enable" or "disable"
+    local text = ("%s %s?"):format(on and "Enable" or "Disable", DisplayName(mod))
+    if #mods > 1 then
+        local others = { unpack(mods, 2) }
+        text = text .. (on and " It needs %s, so %s will be %sd." or " %s needs it, so %s will be %sd.")
+            :format(NameList(others), #mods == 2 and "both" or "all of them", verb)
+    end
+    local yes = (on and "Enable" or "Disable") .. (#mods == 2 and " Both" or #mods > 2 and " All" or "")
+    ns.Confirm(text, function()
+        for _, m in ipairs(mods) do
+            if on then C_AddOns.EnableAddOn(m.addon) else C_AddOns.DisableAddOn(m.addon) end
+        end
+        UI:RefreshPage(true)
+        ns.ConfirmReload(("%s will be %sd when you reload. Reload now?"):format(NameList(mods), verb))
+    end, function() UI:RefreshPage(true) end, yes, "Cancel")
+end
+
 -- A module's on/off switch. Smart Reminders keeps its own master switch; the newer modules
--- store `enabled` (or their `enabledKey`) in their settings table.
+-- store `enabled` (or their `enabledKey`) in their settings table. Switching off a module
+-- shipped as its own addon disables the addon, so it is gone after a reload; until then it
+-- reads as off, and switching it back on cancels that.
 local function ModuleOn(mod)
+    if mod.addon and C_AddOns.GetAddOnEnableState(mod.addon) == 0 then return false end
     if mod.settings then return ns[mod.settings].Get(mod.enabledKey or "enabled") end
     return ns.DB().enabled == true
 end
 
 local function SetModuleOn(mod, on)
+    if mod.addon and not on then return SwitchModuleAddon(mod, false) end
+    if mod.addon then
+        for _, m in ipairs(Linked(mod, true)) do C_AddOns.EnableAddOn(m.addon) end
+    end
     if mod.settings then ns[mod.settings].Set(mod.enabledKey or "enabled", on) else ns.SetEnabled(on) end
     UI:RefreshPage(true)
 end
@@ -256,11 +342,7 @@ local function PaintTabs(bar, shown)
     end
 end
 
-local function DisplayName(mod)
-    return ns.L(mod.name == "QoL" and "Quality of Life" or mod.name)
-end
-
-local NAV_ROW, NAV_OFF_ALPHA = 31, 0.45
+local NAV_ROW, NAV_OFF_ALPHA = 32, 0.45
 
 -- Within each group the modules that are on come first, then the ones you have off.
 local function LayoutNav()
@@ -364,6 +446,8 @@ local function ShowWrapper(pageWrappers, child, key)
 end
 
 local function ShowPage(key)
+    -- A link to a module that is switched off lands where it can be turned back on.
+    if PAGES[key].module and not Loaded(PAGES[key].module) then key = "Settings" end
     currentPage = key
     if PAGES[key].module then lastPages[PAGES[key].module.name] = key end
     LayoutContent()
@@ -378,7 +462,7 @@ function UI.SearchPages()
     for _, page in ipairs(SYSTEM_PAGES) do pages[#pages + 1] = page end
     for _, mod in ipairs(MODULES) do
         for _, tab in ipairs(mod.tabs) do
-            if not tab.soon then pages[#pages + 1] = tab end
+            if not tab.soon and Loaded(mod) then pages[#pages + 1] = tab end
         end
     end
     return pages
@@ -556,9 +640,9 @@ local function MinimapButtonOn(mod)
     return account.microMenu and account.microMenu.buttons[mod.name] == true
 end
 
--- Set by any change in the COLORS section, and only cleared by a reload, which is when the
--- colors apply.
+-- Set by any change in COLORS or RESTEDXP; only a reload clears it.
 local colorsPending = false
+local rxpPending = false
 
 function ns.BuildMinimapIcons(parent, y)
     local W = UI.Widgets
@@ -586,7 +670,7 @@ function ns.BuildMinimapIcons(parent, y)
     ); y = y - h
     local rows = {}
     for _, mod in ipairs(MODULES) do
-        if mod.command then
+        if mod.command and Loaded(mod) then
             rows[#rows + 1] = { type = "toggle", text = mod.name,
                 tooltip = ("A minimap button that opens %s on its own. /nf%s does the same, "
                     .. "and the Top Bar can carry it too. Saved for this computer.")
@@ -611,6 +695,32 @@ end
 function ns.BuildSettingsPage(parent, y)
     local W = UI.Widgets
     local _, h
+
+    -- Every module shipped as its own addon, switched on or off for the next reload. A module
+    -- that is off is only here, so this is where it comes back.
+    _, h = W:SectionHeader(parent, "MODULES", y); y = y - h
+    local rows = {}
+    for _, mod in ipairs(MODULES) do
+        if mod.addon then
+            local tip = mod.subtitle
+            if mod.needs then
+                local needs = {}
+                for i, addon in ipairs(mod.needs) do
+                    for _, other in ipairs(MODULES) do
+                        if other.addon == addon then needs[i] = other end
+                    end
+                end
+                tip = tip .. "|n|nSwitches with " .. NameList(needs) .. "."
+            end
+            rows[#rows + 1] = { type = "toggle", text = mod.name,
+                tooltip = tip,
+                getValue = function() return C_AddOns.GetAddOnEnableState(mod.addon) > 0 end,
+                setValue = function(v) SwitchModuleAddon(mod, v) end }
+        end
+    end
+    for i = 1, #rows, 2 do
+        _, h = W:DualRow(parent, y, rows[i], rows[i + 1] or { type = "label", text = "" }); y = y - h
+    end
 
     y = ns.BuildMinimapIcons(parent, y)
 
@@ -742,6 +852,89 @@ function ns.BuildSettingsPage(parent, y)
     if colorsPending then
         _, h = W:Note(parent, "Reload UI to apply your color changes.", y); y = y - h
     end
+
+    -- Only with RestedXP Guides installed.
+    if ns.RXPThemesAvailable and ns.RXPThemesAvailable() then
+        _, h = W:SectionHeader(parent, "RESTEDXP", y); y = y - h
+        -- RestedXP reads these as it starts, so each one asks for a reload.
+        local function Switch(text, tooltip, get, set)
+            return { type = "toggle", text = text, tooltip = tooltip,
+                getValue = get,
+                setValue = function(v)
+                    set(v)
+                    rxpPending = true
+                    UI:RefreshPage(true)
+                end }
+        end
+        local themesSwitch = Switch("Add Themes to RestedXP", "Adds the Naowh themes to RestedXP's theme list.",
+            ns.RXPThemesEnabled, ns.SetRXPThemes)
+        local themeChoice = { type = "label", text = "" }
+        if ns.RXPThemesEnabled() then
+            local choices, choiceOrder = ns.RXPThemeChoices()
+            themeChoice = ns.RXPThemesReady() and { type = "dropdown", text = "RestedXP Theme", values = choices,
+                order = choiceOrder, tooltip = "The theme RestedXP uses: its own, or one of the Naowh themes.",
+                getValue = ns.RXPThemeChoice,
+                setValue = function(v)
+                    if ns.SetRXPThemeChoice(v) == "reload" then
+                        rxpPending = true
+                        UI:RefreshPage(true)
+                    end
+                end } or { type = "label", text = "Reload UI to pick a theme." }
+        end
+        _, h = W:DualRow(parent, y, themesSwitch, themeChoice); y = y - h
+        if ns.RXPThemesEnabled() then
+            local image = ns.RXPArrowStyle() == "image"
+            _, h = W:DualRow(parent, y,
+                { type = "dropdown", text = "RestedXP Arrow",
+                  values = { layer = "Colored layer", image = "Naowh arrow", off = "RestedXP's own" },
+                  order = { "layer", "image", "off" },
+                  tooltip = "How RestedXP's waypoint arrow is drawn with a Naowh theme.",
+                  getValue = ns.RXPArrowStyle,
+                  setValue = function(v)
+                      ns.SetRXPArrowStyle(v)
+                      UI:RefreshPage(true)
+                  end },
+                image and { type = "dropdown", text = "Naowh Arrow Shape",
+                  values = { kite = "Kite", wide = "Wide kite" },
+                  order = { "kite", "wide" },
+                  tooltip = "The shape of Naowh's arrow.",
+                  getValue = ns.RXPArrowShape,
+                  setValue = function(v) ns.SetRXPArrowShape(v) end } or { type = "label", text = "" }
+            ); y = y - h
+            if image then
+                local sizeMin, sizeMax, sizeStep = ns.RXPArrowSizeRange()
+                _, h = W:DualRow(parent, y,
+                    { type = "toggle", text = "Naowh Arrow Glow",
+                      tooltip = "A soft glow around Naowh's arrow.",
+                      getValue = ns.RXPArrowGlow,
+                      setValue = function(v) ns.SetRXPArrowGlow(v) end },
+                    { type = "slider", text = "Naowh Arrow Size", min = sizeMin, max = sizeMax, step = sizeStep,
+                      tooltip = "How big Naowh's arrow is.",
+                      getValue = ns.RXPArrowSize,
+                      setValue = function(v) ns.SetRXPArrowSize(v) end }
+                ); y = y - h
+            end
+            local gapMin, gapMax = ns.RXPArrowGapRange()
+            _, h = W:DualRow(parent, y,
+                { type = "toggle", text = "Show Arrow Text",
+                  tooltip = "The step and distance text under RestedXP's waypoint arrow.",
+                  getValue = ns.RXPArrowTextEnabled,
+                  setValue = function(v) ns.SetRXPArrowText(v) end },
+                image and { type = "slider", text = "Naowh Arrow Text Gap", min = gapMin, max = gapMax, step = 1,
+                  tooltip = "The space between Naowh's arrow and the text under it.",
+                  getValue = ns.RXPArrowGap,
+                  setValue = function(v) ns.SetRXPArrowGap(v) end } or { type = "label", text = "" }
+            ); y = y - h
+            _, h = W:DualRow(parent, y,
+                Switch("Use Addon Font", "RestedXP's text uses your Addon Font.", ns.RXPFontEnabled, ns.SetRXPFont),
+                Switch("Use Theme Text Color", "RestedXP's text uses the theme's Text color.",
+                    ns.RXPTextColorEnabled, ns.SetRXPTextColor)
+            ); y = y - h
+        end
+        if rxpPending then
+            _, h = W:Note(parent, "Reload UI to apply your RestedXP changes.", y); y = y - h
+        end
+    end
     _, h = W:ReloadButton(parent, y); y = y - h
 
     return y
@@ -756,6 +949,7 @@ local function DragRegion(frame, target)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function() target:StartMoving() end)
     frame:SetScript("OnDragStop", function() target:StopMovingOrSizing() end)
+    ns.AllowOffscreen(target)
 end
 
 -- A grip in the bottom-right corner, with the size kept per window in the account store.
@@ -857,11 +1051,7 @@ local function NavigationScroll(parent, top, bottom, width)
     bar:Hide()
     scroll:SetScript("OnScrollRangeChanged", UpdateRange)
     scroll:SetScript("OnShow", UpdateRange)
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(self, delta)
-        self:SetVerticalScroll(math.max(0, math.min(self:GetVerticalScrollRange(),
-            self:GetVerticalScroll() - delta * NAV_H)))
-    end)
+    UI.SmoothWheel(scroll, NAV_H)
     scroll:SetScript("OnSizeChanged", function(self)
         self:UpdateScrollChildRect()
         UpdateRange()
@@ -981,8 +1171,9 @@ local function CreateWindow()
     brandEdge:SetPoint("TOPRIGHT"); brandEdge:SetPoint("BOTTOMRIGHT"); ns.Hairline(brandEdge, "v")
     local logo = brand:CreateTexture(nil, "ARTWORK")
     logo:SetTexture(BRAND_LOGO, nil, nil, "TRILINEAR")
-    logo:SetSize(BRAND.width, BRAND.height)
-    logo:SetPoint("CENTER", brand, "CENTER", BRAND.x, BRAND.y)
+    logo:SetTexCoord(0, BRAND.artW / BRAND.texW, 0, BRAND.artH / BRAND.texH)
+    logo:SetSize(BRAND.height * BRAND.artW / BRAND.artH, BRAND.height)
+    logo:SetPoint("TOPLEFT", brand, "TOPLEFT", BRAND.inset, -BRAND.inset)
     -- The logo's panel sits a level above the border's frame, its fill over the window's top
     -- left edges; the border goes over it.
     border._frame:SetFrameLevel(brand:GetFrameLevel() + 1)
@@ -1002,12 +1193,13 @@ local function CreateWindow()
     local edge = ns.Solid(sidebar, "ARTWORK", T.line, 1)
     edge:SetPoint("TOPRIGHT"); edge:SetPoint("BOTTOMRIGHT"); ns.Hairline(edge, "v")
     local nav = NavigationScroll(sidebar, 16, FOOTER_H_SIDEBAR + 6 + NAV_STEP * #SYSTEM_NAV, SIDEBAR_W)
-    -- Modules list in MODULES order under their group; one with only unfinished tabs is left out.
+    -- Modules list in MODULES order under their group; one with only unfinished tabs, or whose
+    -- addon is switched off, is left out.
     local groups, grouped = {}, {}
     for _, mod in ipairs(MODULES) do
         local ready = false
         for _, tab in ipairs(mod.tabs) do ready = ready or not tab.soon end
-        if ready then
+        if ready and Loaded(mod) then
             local group = mod.group or ""
             if not grouped[group] then
                 grouped[group] = {}
@@ -1027,8 +1219,7 @@ local function CreateWindow()
         for _, mod in ipairs(grouped[group]) do
             local btn = NavigationButton(nav, DisplayName(mod), ny,
                 function() ShowPage(lastPages[mod.name] or mod.tabs[1].key) end, mod.navIcon)
-            -- One pixel under the 30-tall row, so every module still fits the 790-high window
-            -- (test-navigation.lua) after Instance Tracker joined the list.
+            -- Spaced to fit every module in the default 790-high window (test-navigation.lua).
             btn:SetHeight(30)
             NavExtras(btn, mod)
             navButtons[mod.name] = btn
@@ -1098,16 +1289,7 @@ local function CreateWindow()
     ns.AccentBorder(ns.ReloadButton(contentFooter, "Reload UI", 120, 30)):SetPoint("LEFT", 26, 0)
     ns.AccentBorder(ns.Button(contentFooter, "Close", 120, 30, function() window:Hide() end))
         :SetPoint("RIGHT", -30, 0)
-    scrollFrame = CreateFrame("ScrollFrame", nil, window, "UIPanelScrollFrameTemplate")
-    local bar = scrollFrame.ScrollBar
-    if bar then
-        bar:SetWidth(8)
-        bar.ThumbTexture:SetTexture("Interface\\Buttons\\WHITE8x8")
-        bar.ThumbTexture:SetVertexColor(T.muted.r, T.muted.g, T.muted.b, 0.7)
-        bar.ThumbTexture:SetSize(6, 40)
-        bar.ScrollUpButton:SetAlpha(0); bar.ScrollUpButton:EnableMouse(false)
-        bar.ScrollDownButton:SetAlpha(0); bar.ScrollDownButton:EnableMouse(false)
-    end
+    scrollFrame = UI.SlimScroll(window, nil, SCROLL_BAR_GAP)
     scrollChild = CreateFrame("Frame", nil, scrollFrame)
     scrollChild:SetSize(WINDOW_W - SIDEBAR_W - 36, 1)
     scrollFrame:SetScrollChild(scrollChild)
@@ -1234,7 +1416,7 @@ local function CreateModuleWindow(mod)
     line:SetPoint("TOPRIGHT", win, "TOPRIGHT", 0, -offset)
     ns.Hairline(line, "h")
 
-    win.scrollFrame = CreateFrame("ScrollFrame", nil, win, "UIPanelScrollFrameTemplate")
+    win.scrollFrame = UI.SlimScroll(win, nil, SCROLL_BAR_GAP)
     win.scrollFrame:SetPoint("TOPLEFT", win, "TOPLEFT", 10, -(offset + 5))
     win.scrollFrame:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -30, 22)
     win.scrollChild = CreateFrame("Frame", nil, win.scrollFrame)
@@ -1272,6 +1454,9 @@ end
 
 -- A module's own window: the one it names in `open`, else its tabs on their own.
 local function OpenModule(mod)
+    if not Loaded(mod) then
+        return ns.Print(("%s is switched off. Turn it on under Settings > Modules."):format(DisplayName(mod)))
+    end
     if mod.open and ns[mod.open] then ns[mod.open]() else ToggleModuleWindow(mod) end
 end
 
@@ -1279,6 +1464,22 @@ end
 function _G.NaowhForever_OnCompartmentClick()
     ns.ToggleOptionsWindow()
 end
+
+-- Key Bindings > AddOns (Bindings.xml), named here so the list reads the same whichever modules
+-- are on. A module's key calls a function its addon defines over the stub below when it loads.
+BINDING_HEADER_NAOWHFOREVER = "Naowh Forever"
+BINDING_NAME_NAOWHFOREVER_JOURNAL = "Open Dungeon Journal"
+BINDING_NAME_NAOWHFOREVER_BOSSLOOT = "Boss Loot at Cursor"
+BINDING_NAME_NAOWHFOREVER_BIS = "Open BiS List"
+_G["BINDING_NAME_CLICK NaowhForeverBlessNext:LeftButton"] = "Next Blessing"
+_G["BINDING_NAME_CLICK NaowhForeverBlessNextGreater:LeftButton"] = "Next Greater Blessing"
+
+local function SwitchedOff(name)
+    return function() ns.Print(("%s is switched off. Turn it on under Settings > Modules."):format(name)) end
+end
+NaowhForever_ToggleJournal = SwitchedOff("Dungeon Journal")
+NaowhForever_BossLoot = SwitchedOff("Dungeon Journal")
+NaowhForever_ToggleBis = SwitchedOff("BiS List")
 
 SLASH_NAOWHFOREVER1 = "/smartreminders"
 SLASH_NAOWHFOREVER2 = "/naowh"
@@ -1308,12 +1509,16 @@ SlashCmdList["NAOWHFOREVER"] = function(msg)
         ns.RecipeFinderDebug()
     elseif cmd == "townaudit" and ns.TownAudit then
         ns.TownAudit()
+    elseif cmd == "itemprobe" and ns.JournalItemProbe then
+        ns.JournalItemProbe()
     elseif (cmd == "mappins" or cmd == "mapcheck") and ns.DungeonMapCommand then
         ns.DungeonMapCommand(cmd)
     elseif cmd == "badges" and ns.BadgesCommand then
         ns.BadgesCommand(arg)
     elseif cmd == "scrap" and ns.ToggleScrapList then
         ns.ToggleScrapList()
+    elseif cmd == "welcome" and ns.ShowWelcome then
+        ns.ShowWelcome()
     else
         ns.ToggleOptionsWindow()
     end
@@ -1345,6 +1550,7 @@ local function TipLine(tooltip, text)
 end
 launcherEvents:SetScript("OnEvent", function(self)
     self:UnregisterEvent("PLAYER_LOGIN")
+    ns.SaveModuleDefaults()
     local account = ns.AccountSettings()
     if type(account.minimap) ~= "table" then
         account.minimap = { minimapPos = 220 }
@@ -1366,7 +1572,7 @@ launcherEvents:SetScript("OnEvent", function(self)
     -- Minimap Buttons switch is on.
     account.moduleButtons = account.moduleButtons or {}
     for _, mod in ipairs(MODULES) do
-        if mod.command then
+        if mod.command and Loaded(mod) then
             local db = account.moduleButtons[mod.name] or { minimapPos = 220 }
             account.moduleButtons[mod.name] = db
             db.hide = not MinimapButtonOn(mod)

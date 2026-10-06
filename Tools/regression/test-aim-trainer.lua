@@ -127,6 +127,7 @@ local function fixture(opts)
     function ns.Hairline(t) return t end
     function ns.Solid(parent) return parent:CreateTexture() end
     function ns.Border() end
+    function ns.AllowOffscreen() end
     function ns.Button(parent, _, w, h, onClick)
         local b = frame("Button", nil, parent)
         b:SetSize(w, h)
@@ -502,14 +503,16 @@ do
     check("off: a flight offer opens nothing", not p.shown)
 end
 
--- Unlock Mode shows it with its mover, and locking again hides only what it opened.
+-- Not in Unlock Mode (Robin, 2026-10-05: it took a lot of room): the window drags itself.
 do
     local s = fixture({ faction = "Alliance", settings = { aimTrainer = true } })
     s.ns.ShowRaidReminderAnchorConfig()
     local p = s.panel()
-    check("Unlock Mode shows it", p and p.shown)
+    check("Unlock Mode does not open it", not (p and p.shown))
     s.ns.HideRaidReminderAnchorConfig()
-    check("locking hides it again", not p.shown)
+    s.ns.AimOffer("flight")
+    p = s.panel()
+    check("it drags by itself", p and p.scripts.OnDragStart ~= nil and p.scripts.OnDragStop ~= nil)
 end
 
 -- The card's Play Now and its summary.

@@ -4,8 +4,10 @@
 -- edge, item level, Forever's mark and your BiS's star, and no upgrade arrow; your score and your
 -- spec's stats (their yardstick, worth bars, row height and hover cards); Slot Marks alone puts
 -- the marks on the game's own panel as it looks; it stands down while
--- EllesmereUI styles the panel; off again, the game's art comes back; and neither a slot's update
--- nor a repaint of the stats makes garbage.
+-- EllesmereUI styles the panel; your supporter badge shows only when you have one, never a grey
+-- one or a pitch; off again, the game's art comes back; and neither a slot's update
+-- nor a repaint of the stats makes garbage. All with ns.FEATURE_BADGES at 1; at 0, a team
+-- badge shows on its setting's default and the Supporter Badge row is gone from the card.
 local Load = dofile("Tools/regression/load_files.lua")
 local TocFiles = dofile("Tools/regression/toc_files.lua")
 local Measure = dofile("Tools/regression/measure.lua")
@@ -110,6 +112,7 @@ for _, text in ipairs({ title, levelText }) do
     text.SetFont = function(self, path, size) self.size = size; self.object = nil end
 end
 
+local QOL_DEFAULTS = { characterPanelBadge = true }
 local S = {
     Get = function(key) return state.values[key] end,
     Set = function(key, value)
@@ -117,12 +120,13 @@ local S = {
         for _, fn in ipairs(state.listeners) do fn(key, value) end
     end,
     OnChange = function(fn) state.listeners[#state.listeners + 1] = fn end,
+    Default = function(key) return QOL_DEFAULTS[key] end,
 }
 -- The QoL defaults this module adds, and the QoL switch on.
 -- Slot Marks is on by default; off here, to start from nothing (its own checks turn it on).
 state.values = { enabled = true, characterPanel = false, characterPanelSlotMarks = false, characterPanelLevels = true,
     characterPanelMarks = true, characterPanelEnchants = true, characterPanelScore = true,
-    characterPanelBadge = true, characterPanelBadgeAsk = false, characterPanelStats = "spec" }
+    characterPanelBadge = true, characterPanelStats = "spec" }
 
 -- Your list: the head's BiS is 101 (you wear it), the chest's 202 (you wear 200 there).
 local LIST = { slots = { [1] = 101, [5] = 202 }, extra = {} }
@@ -149,6 +153,7 @@ local ns = {
     QoLSettings = S,
     Apply = NOTHING,
     IsBisItem = function(id) return RANK[id] end,
+    FEATURE_BADGES = 1,
     BADGE_TIERS = {
         legendary = { title = "Legendary Patron", about = "Supports Naowh.", large = "legendaryArt",
             chat = "legendaryChat", markup = "|TlegendaryChat:0|t",
@@ -165,7 +170,7 @@ local ns = {
     StatWeights = {
         OnChange = NOTHING,
         STATS = { { "agi", "Agility" }, { "str", "Strength" }, { "hit", "Hit %" }, { "int", "Intellect" },
-            { "sta", "Stamina" }, { "armor", "Armor" } },
+            { "sta", "Stamina" }, { "armor", "Armor" }, { "shit", "Spell Hit %" } },
         ActiveSpec = function() return "assassination-rogue" end,
         Spec = function(key) return key == "assassination-rogue" and ASSASSINATION or nil end,
         For = function() return WEIGHTS end,
@@ -262,6 +267,8 @@ local env = setmetatable({
         return tostring(math.floor(type(n) == "table" and n.value or n))
     end },
     GetHitModifier = function() return 3 end,
+    GetSpellHitModifier = function() return 2 end,
+    CR_HIT_SPELL = 8,
     CR_HIT_MELEE = 6,
     -- What a spec weighing many stats reads (its totals' own numbers do not matter here).
     UnitAttackPower = function() return 100, 0, 0 end,
@@ -282,8 +289,8 @@ env._G = env
 env.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 
 local files = TocFiles("^Shared/.*%.lua$")
-for _, path in ipairs(TocFiles("^CharacterPanel/.*%.lua$")) do files[#files + 1] = path end
-check("the TOC loads the module's files", files[#files] == "CharacterPanel/SettingsPage.lua")
+for _, path in ipairs(TocFiles("^NaowhForever_BiS/CharacterPanel/.*%.lua$")) do files[#files + 1] = path end
+check("the TOC loads the module's files", files[#files] == "NaowhForever_BiS/CharacterPanel/SettingsPage.lua")
 Load(files, env)
 local CP = ns.CharacterPanel
 ns.Shared.ForeverNew.items[101] = true   -- the head's item is new in Forever
@@ -320,6 +327,22 @@ check("painted with your score, in its grade's colour, as the panel opens", badg
 check("only the score: its bar's legend the best it is graded against", badge.best.text == "Best 58.8"
     and badge.rest.shown ~= false)
 
+-- Grade Against Both (the default): your level's goal as a gold tick on the bar, with no label
+-- (the tooltip names it), while it is short of the best in the game; with Best in the Game, no tick.
+do
+    local Score = ns.NaowhScore
+    local best = Score.Best
+    Score.Best = function(level) return level and 24.4 or 58.8 end
+    S.Set("naowhScoreCompare", "both")
+    check("Both: your level's goal ticked on the bar", badge.goal.shown == true
+        and badge.goal.points.CENTER == badge.bar)
+    check("no label for it, only the best's", badge.goalLabel == nil and badge.best.text == "Best 58.8")
+    S.Set("naowhScoreCompare", "max")
+    check("Best in the Game: no goal on the bar", badge.goal.shown == false)
+    Score.Best = best
+    S.Set("naowhScoreCompare", nil)
+end
+
 -- Ours: the frame the module made on the game's button.
 local function Ours(button) return button.children and button.children[1] end
 local Update = hooks.PaperDollItemSlotButton_Update
@@ -351,56 +374,54 @@ S.Set("characterPanelEnchants", true)
 S.Set("characterPanelScore", false)
 check("Naowh Score off: no score in the corner", badge.shown == false)
 
--- Your supporter badge, in the left pane's top corner.
+-- Your supporter badge, in the left pane's top corner: only ever a badge of your own. A player
+-- without one sees nothing there, and nothing asks them for one.
 state.badgeTiers = ns.BADGE_TIERS
-check("no badge, Legendary Badge Preview off (the default): nothing in the corner", CP.supportBadge == nil)
-S.Set("characterPanelBadgeAsk", true)
+local opened = 0
+ns.MakeModal = function() opened = opened + 1; return Frame(), Frame() end
+S.Set("characterPanelBadge", true)
+check("no badge: nothing in the corner, nothing made", CP.supportBadge == nil)
+state.badges = { ["Player-1-ME"] = { tier = "developer", title = "Lead Developer" } }
+S.Set("characterPanelBadge", true)
 local support = CP.supportBadge
 check("your supporter badge in the left pane's corner", support and support.parent == character.LeftPaneHost
     and support.shown ~= false)
 support.scripts.OnShow(support)
-check("none yet: the Legendary Patron's in grey, with what it takes", support.emblem.desaturated == true
-    and support.emblem.alpha < 1 and support.title.text == "Legendary Badge"
-    and support.line.text == "Learn more" and support.glow.shown == false and support.has == false)
-state.badges = { ["Player-1-ME"] = { tier = "developer", title = "Lead Developer" } }
-support.scripts.OnShow(support)
-check("yours: in its colour, with its glow and your own title", support.emblem.desaturated == false
-    and support.emblem.alpha == 1 and support.title.text == "Lead Developer" and support.glow.shown == true
-    and support.has == true)
-local opened = 0
-ns.MakeModal = function() opened = opened + 1; return Frame(), Frame() end
--- The card's own parts, as the options' widgets make them.
-local cardText = {}   -- the card's texts by their key, to read back
-local cardParts = {}  -- its kept frames by their key
-ns.UI = { Keep = function(parent, key, make) local f = make(parent); cardParts[key] = f; return f end,
-    KeepFont = function(parent, key) local f = Frame(parent); cardText[key] = f; return f end,
-    KeepButton = function(parent) return Frame(parent) end }
-support.scripts.OnClick(support)
-check("your own badge's click opens no card", opened == 0)
-state.badges = nil
-support.scripts.OnShow(support)
-support.scripts.OnClick(support)
-check("the grey one's click opens what it gives you and how to get it", opened == 1)
-check("it says what the badge is, and shows Dieman in warrior colour wearing it in chat",
-    cardText.head.text == "The Legendary Badge" and cardText.perk1 ~= nil
-    and cardText.sample.text == "|cffc79c6eDieman|r |TlegendaryChat:0:0:0:1|t: Ready for Deadmines?")
-local shownCard
-ns.ShowBadgeCard = function(tier, name) shownCard = tier .. " " .. name end
-ns.HideBadgeCard = function() shownCard = nil end
-cardParts.sampleBox.scripts.OnEnter(cardParts.sampleBox)
-check("hovering the sample shows the badge's own card, as on a badged name in chat",
-    shownCard == "legendary Dieman")
+check("yours: in its colour, with your own title", support.title.text == "Lead Developer"
+    and support.line.text == "Naowh Forever Team" and support.emblem.desaturated ~= true)
+check("a click on it opens nothing", support.scripts.OnClick == nil and opened == 0)
 S.Set("characterPanelBadge", false)
 check("Supporter Badge off: no badge", support.shown == false)
 S.Set("characterPanelBadge", true)
-S.Set("characterPanelBadgeAsk", false)
-check("Legendary Badge Preview off: no grey badge", support.shown == false)
-state.badges = { ["Player-1-ME"] = "developer" }
-character.LeftPaneHost.hooks.OnShow(character.LeftPaneHost)
-check("a badge of your own shows with the preview off, looked at again as the panel opens", support.shown == true)
+check("and back on", support.shown == true)
+ns.FEATURE_BADGES = 0
+S.Set("characterPanelBadge", false)
+check("flag 0: a team badge stays on its default, whatever was saved", support.shown == true)
+support.scripts.OnShow(support)
+check("flag 0: still the team's title and line", support.title.text == "Lead Developer"
+    and support.line.text == "Naowh Forever Team")
+ns.FEATURE_BADGES = 1
+S.Set("characterPanelBadge", true)
 state.badges = nil
 character.LeftPaneHost.hooks.OnShow(character.LeftPaneHost)
-check("and goes once you have none", support.shown == false)
+check("once you have none, it goes as the panel opens", support.shown == false)
+support.scripts.OnShow(support)
+check("and a repaint without a badge hides it, never a grey one", support.shown == false and opened == 0)
+state.badges = { ["Player-1-ME"] = "developer" }
+character.LeftPaneHost.hooks.OnShow(character.LeftPaneHost)
+check("a badge of your own shows again, looked at as the panel opens", support.shown == true)
+state.badges = nil
+character.LeftPaneHost.hooks.OnShow(character.LeftPaneHost)
+
+-- No preview setting, grey badge or pitch is left in the panel's files.
+for _, path in ipairs({ "NaowhForever_BiS/CharacterPanel/Badge.lua", "NaowhForever_BiS/CharacterPanel/SettingsPage.lua", "QoL/NaowhForever_QoL.lua" }) do
+    local f = assert(io.open(path, "rb"))
+    local source = f:read("*a")
+    f:close()
+    for _, word in ipairs({ "characterPanelBadgeAsk", "Badge Preview", "Learn more", "MakeModal", "Patreon" }) do
+        check(path .. " has no " .. word, not source:find(word, 1, true))
+    end
+end
 
 -- The stats: your spec's first (the default), the game's list under it; the switch at the
 -- pane's bottom.
@@ -480,6 +501,11 @@ end
 statsList.hooks.OnShow(statsList)
 check("many stats: every row fits above the switch", rows[14].shown ~= false and rows[15].shown == false
     and 14 * rows[1].h <= 300 - 52)
+-- A caster: its spell hit, the game's spell hit (rating and talents) as its total.
+ns.StatWeights.For = function() return { spell = 1, int = 0.3, shit = 14, sta = 0.05, armor = 0.005 } end
+statsList.hooks.OnShow(statsList)
+check("a caster's spell hit, its own total, after its power", rows[3].name.text == "Spell Hit %"
+    and rows[3].total.text == "2.0%")
 ns.StatWeights.For = For
 statsList.hooks.OnShow(statsList)
 statsList.shown = false
@@ -571,5 +597,48 @@ env.EllesmereUIDB, env.EllesmereUI = nil, nil
 S.Set("characterPanel", true)
 S.Set("characterPanel", false)
 check("without EllesmereUI: nothing to swap, no reload asked", state.reloads == 2)
+
+-------------------------------------------------------------------------------
+--  ns.FEATURE_BADGES = 0: the badge file builds and hooks nothing, and the panel's card has
+--  no Supporter Badge row (and no gap for it), with the flag on it is the first row.
+-------------------------------------------------------------------------------
+local function PanelCard(flag)
+    local cards, listeners, hooked = {}, 0, 0
+    local store = {
+        Get = function(key) return key == "characterPanelBadge" or key == "characterPanelScore" end,
+        Default = function() return true end,
+        OnChange = function() listeners = listeners + 1 end,
+    }
+    local flagNs = {
+        FEATURE_BADGES = flag, THEME = ns.THEME, QoLSettings = store,
+        CharacterPanel = { EllesmereSheet = function() return false end },
+        Shared = { Settings = { Page = function()
+            return { Card = function(_, def) cards[def.id] = def end }
+        end } },
+    }
+    local flagEnv = setmetatable({ _G = { NaowhForever = flagNs },
+        hooksecurefunc = function() hooked = hooked + 1 end }, { __index = _G })
+    local paths = {}
+    for _, path in ipairs(files) do
+        if path:find("CharacterPanel/Badge.lua", 1, true) or path:find("CharacterPanel/SettingsPage.lua", 1, true) then
+            paths[#paths + 1] = path
+        end
+    end
+    Load(paths, flagEnv)
+    return cards.characterPanel, flagNs.CharacterPanel, listeners, hooked, store
+end
+
+local offCard, offCP, offListeners, offHooked, offStore = PanelCard(0)
+check("flag 0: the team's badge still listens and hooks", offHooked == 1 and offListeners == 1
+    and offCP.supportBadge == nil)
+check("flag 0: the BiS link keeps its place", offCP.BADGE_MID == CP.BADGE_MID)
+check("flag 0: no badge row at all, the Naowh Score row first", #offCard.rows == 1
+    and offCard.rows[1].key == "characterPanelScore")
+check("flag 0: the summary leaves the badge out", offCard.summary(offStore) == "With your Naowh Score")
+local onCard, _, onListeners, onHooked, onStore = PanelCard(1)
+check("flag 1: the badge listens and hooks as before", onListeners == 1 and onHooked == 1)
+check("flag 1: the Supporter Badge row first, then Naowh Score", #onCard.rows == 2
+    and onCard.rows[1].label == "Supporter Badge" and onCard.rows[2].key == "characterPanelScore")
+check("flag 1: the summary names the badge", onCard.summary(onStore) == "With your badge and Naowh Score")
 
 print(("test-character-panel: %d checks passed"):format(checks))

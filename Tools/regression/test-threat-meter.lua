@@ -48,6 +48,7 @@ local function fixture(settings, withSettings)
         Apply=function() end, ShowRaidReminderAnchorConfig=function() end, HideRaidReminderAnchorConfig=function() end,
         Font=function() return frame('FontString') end,
         Border=function(_,color) local b=frame('Border'); b.edge=color; return b end,
+        AllowOffscreen=function() end,
         Solid=function(_,_,color,alpha) local t=frame('Texture'); t.solid={color=color,alpha=alpha}; return t end,
         ThemeTint=function(_,literal) return literal end, Tooltip=function() end,
         Button=function(parent,text,w,h,fn) local b=frame('Button',nil,parent); b.label=frame('FontString'); b.label:SetText(text); b.scripts.OnClick=fn; return b end,
@@ -97,7 +98,7 @@ local function fixture(settings, withSettings)
             Page=function() return {Window=function() end,Card=function(_,c) s.cards[c.id]=c end} end}}
     end
     setmetatable(env,{__index=_G})
-    local chunk=assert(loadfile('ThreatMeter/NaowhForever_ThreatMeter.lua'));setfenv(chunk,env);chunk()
+    local chunk=assert(loadfile('NaowhForever_ThreatMeter/NaowhForever_ThreatMeter.lua'));setfenv(chunk,env);chunk()
     s.ns=ns
     function s.fire(event,unit)
         local all={};for i,f in ipairs(s.frames) do all[i]=f end

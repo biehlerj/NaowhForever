@@ -1,6 +1,8 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_Core.lua -- theme, chrome primitives, DB and profile plumbing.
 --  Standalone addon: no EllesmereUI dependency.
+--  ns.FEATURE_BADGES: 0 hides supporter badges, badge settings and support mentions until they
+--  launch; the team's badges still show, on their defaults.
 -------------------------------------------------------------------------------
 local ADDON_NAME = ...
 
@@ -23,7 +25,9 @@ end
 -- Bumped by hand on every code change sent to a tester and printed beside the TOC version,
 -- which only moves on release. A report naming a stamp the reporter was not sent comes from
 -- a client that was not reloaded after the files changed.
-ns.CODE_BUILD = "0.5.19-beta"
+ns.CODE_BUILD = "0.5.22-beta"
+
+ns.FEATURE_BADGES = 0
 
 -- Naowh's own scheme: dark grey with his blue (#0091ed) as the single accent.
 ns.THEME = {
@@ -42,7 +46,7 @@ ns.THEME = {
 -- and muted and accent at 3:1 against its own bg and panel (Tools/regression checks it).
 ns.THEME_EDITABLE = { "bg", "panel", "line", "fg", "muted", "accent" }
 ns.THEME_PRESET_ORDER = { "midnight", "slate", "obsidian", "aubergine", "forest", "crimson", "rosenoir",
-    "cottoncandy" }
+    "cottoncandy", "classic" }
 ns.THEME_PRESETS = {
     midnight = { name = "Midnight",
         bg     = { r = 0x0b / 255, g = 0x10 / 255, b = 0x20 / 255 },
@@ -100,6 +104,13 @@ ns.THEME_PRESETS = {
         fg     = { r = 0xf8 / 255, g = 0xf2 / 255, b = 0xff / 255 },
         muted  = { r = 0xbb / 255, g = 0xb2 / 255, b = 0xdc / 255 },
         accent = { r = 0xf7 / 255, g = 0x8f / 255, b = 0xc8 / 255 } },
+    classic = { name = "Classic",
+        bg     = { r = 0x15 / 255, g = 0x10 / 255, b = 0x0b / 255 },
+        panel  = { r = 0x22 / 255, g = 0x1a / 255, b = 0x12 / 255 },
+        line   = { r = 0x4d / 255, g = 0x3c / 255, b = 0x26 / 255 },
+        fg     = { r = 0xf4 / 255, g = 0xe8 / 255, b = 0xcc / 255 },
+        muted  = { r = 0xa8 / 255, g = 0x9a / 255, b = 0x7c / 255 },
+        accent = { r = 0xd6 / 255, g = 0x8e / 255, b = 0x35 / 255 } },
 }
 
 -- A |cffRRGGBB escape from a THEME key (or an {r,g,b} table). With text it wraps it and
@@ -385,10 +396,14 @@ function ns.FontInset(size)
     return size * STEM_INSET
 end
 
+--- The Addon Font as a file path, looked up each time; UIFontPath keeps its first answer.
+---@return string
+function ns.AddonFontPath()
+    return FontPath(ns.AccountSettings().uiFont or "Naowh") or STANDARD_TEXT_FONT
+end
+
 function ns.UIFontPath()
-    if not uiFontPath then
-        uiFontPath = FontPath(ns.AccountSettings().uiFont or "Naowh") or STANDARD_TEXT_FONT
-    end
+    if not uiFontPath then uiFontPath = ns.AddonFontPath() end
     return uiFontPath
 end
 
@@ -536,6 +551,19 @@ function ns.Solid(parent, layer, color, alpha)
     local t = parent:CreateTexture(nil, layer or "BACKGROUND")
     t:SetColorTexture(c.r, c.g, c.b, alpha or 1)
     return t
+end
+
+-- For a clamped frame the player drags: up to 90% of it can go off the sides and bottom,
+-- but the top edge stays on screen so its title bar can always be grabbed again.
+local OFFSCREEN = 0.9
+
+local function ClampOffscreen(frame, w, h)
+    frame:SetClampRectInsets(w * OFFSCREEN, -w * OFFSCREEN, 0, h * OFFSCREEN)
+end
+
+function ns.AllowOffscreen(frame)
+    ClampOffscreen(frame, frame:GetWidth(), frame:GetHeight())
+    frame:HookScript("OnSizeChanged", ClampOffscreen)
 end
 
 -- NaowhUI's 1px black border on buttons and input boxes, lit blue on hover.
@@ -870,12 +898,15 @@ function ns.Confirm(text, onYes, onNo, yesText, noText)
     head:SetWidth(310)
     head:SetText(text)
     local w = (yesText or noText) and CONFIRM_WIDE or CONFIRM_W
-    UI.KeepButton(panel, "yes", yesText or "Yes", w, 26, function() dimmer:Hide(); onYes() end)
-        :SetPoint("BOTTOM", panel, "BOTTOM", -(w / 2 + 4), 14)
-    UI.KeepButton(panel, "no", noText or "No", w, 26, function()
+    UI.KeepButton(panel, "yes", yesText or "Yes", w, 26, function()
+        dimmer.onClose = nil
         dimmer:Hide()
-        if onNo then onNo() end
-    end):SetPoint("BOTTOM", panel, "BOTTOM", w / 2 + 4, 14)
+        onYes()
+    end):SetPoint("BOTTOM", panel, "BOTTOM", -(w / 2 + 4), 14)
+    UI.KeepButton(panel, "no", noText or "No", w, 26, function() dimmer:Hide() end)
+        :SetPoint("BOTTOM", panel, "BOTTOM", w / 2 + 4, 14)
+    -- No, Escape and a newer confirm taking this one's place all count as no.
+    dimmer.onClose = onNo
     dimmer:Show()
 end
 
