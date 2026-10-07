@@ -8,8 +8,8 @@
 --  visits, and the rest and durability sheet stay saved, and show only when
 --  Track Alts is on. Each character keeps their own hour.
 --
---  Off until the module is enabled. The display frame is built the first time the run
---  timer is allowed on screen. Coin amounts come from loot messages (the client's own
+--  Off until the module is enabled. The run timer is a shared tracker panel, built the
+--  first time it is allowed on screen. Coin amounts come from loot messages (the client's own
 --  GOLD_AMOUNT phrases), not from a combat log, which Forever does not give to addons.
 --  Lockouts and visits are account data, so a profile switch does not wipe them.
 --  A character is stored under its UnitGUID (Shared.CharacterData). Names are not
@@ -46,6 +46,8 @@ local S = UI.ModuleSettings("instanceTracker", {
     trackAlts = false,
     -- How many entries short of this character's 10-per-hour cap to warn. 1 warns at 9 of 10.
     hourlyWarn = 1,
+    -- The module window, 0 to 1. The slider shows it as a percent.
+    windowAlpha = 1,
 })
 ns.InstanceTrackerSettings = S
 
@@ -55,17 +57,17 @@ local HOUR = 3600
 local HOURLY_CAP = 10
 
 -- Run timer. Sizes are pixels at the addon's UI scale.
-local FRAME_W, FRAME_H = 280, 100
-local PAD_X = 10             -- text from the left and right edges
-local TITLE_TOP = 8          -- title below the frame's top
-local TIME_GAP = 2           -- between the title and the clock
-local LINE_GAP = 1           -- between the clock, loot, xp and hour lines
-local TITLE_SIZE = 13
+local TIME_GAP = 2           -- between the clock and the lines under it
+local LINE_GAP = 1           -- between the loot, xp and hour lines
 local TIME_SIZE = 16
 local BODY_SIZE = 12         -- the loot, xp and hour lines
-local DEFAULT_Y = -180       -- where the frame first sits, under the top of the screen
+local TIME_LINE = 20         -- the clock's line, taller than its font
+local BODY_LINE = 16         -- a stat line
+local DEFAULT_Y = -180       -- where the timer first sits, under the top of the screen
 local COIN_ICON = 12         -- the coin textures beside a loot amount
-local FRAME_ALPHA = 0.9
+local BODY_H = TIME_LINE + TIME_GAP + (BODY_LINE + LINE_GAP) * 2 + BODY_LINE
+local SETTINGS_PAGE = "Instance Tracker/Settings"
+local TIMER_CARD = "timer"
 
 -- At the hourly cap the line is red; inside the warn distance it is amber.
 -- Not theme tokens (same hues as LIMITED and NOT POSSIBLE YET). The lockouts page
@@ -74,6 +76,7 @@ local CAP_RGB = { r = 1, g = 0x60 / 255, b = 0x60 / 255 }
 local WARN_RGB = { r = 1, g = 0xa3 / 255, b = 0 }
 
 local frame, clock, unlocked
+local dismissedAt             -- the visit whose X hid the timer, until the next one
 local goldPattern, silverPattern, copperPattern, repPattern
 local events
 
@@ -1484,27 +1487,70 @@ local function SyncZone(announce)
 end
 
 -------------------------------------------------------------------------------
---  Run timer. Built the first time it is allowed on screen, and ticked only while a
---  visit is actually in progress.
+--  Run timer. A shared tracker panel, built the first time it is allowed on screen,
+--  and ticked only while a visit is actually in progress.
 -------------------------------------------------------------------------------
 local function FrameWanted()
     if not On() or not S.Get("showFrame") then return false end
     if unlocked then return true end
-    return OpenRun() ~= nil
+    local open = OpenRun()
+    if not open then return false end
+    -- The X hides this visit. The next one, with its own entered time, shows again.
+    if dismissedAt and open.entered == dismissedAt then return false end
+    return true
 end
 
 local function StopClock()
     if clock then clock:Cancel(); clock = nil end
 end
 
-local function Place()
+local function LoadPosition()
     local pos = S.Get("pos")
-    frame:ClearAllPoints()
-    if type(pos) == "table" and pos.point then
-        frame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
-    else
-        frame:SetPoint("TOP", UIParent, "TOP", 0, DEFAULT_Y)
-    end
+    if type(pos) == "table" then return pos.point, pos.relPoint, pos.x, pos.y end
+end
+
+local function SavePosition(point, relPoint, x, y)
+    S.Set("pos", { point = point, relPoint = relPoint, x = x, y = y })
+end
+
+local function Mover(panel, onMoved)
+    return UI.AttachMover(panel, "Instance Tracker", onMoved,
+        "Instance Tracker/Settings", "Instance Tracker/Settings:timer")
+end
+
+local function OpenWindow()
+    if ns.OpenInstanceTrackerWindow then ns.OpenInstanceTrackerWindow() end
+end
+
+-- The X hides the timer for this visit and leaves Show Run Timer on.
+local function CloseTimer()
+    local open = OpenRun()
+    dismissedAt = open and open.entered or true
+    StopClock()
+    if frame then frame:Hide() end
+end
+
+local function AddLine(body, size, y)
+    local line = ns.Font(body, size, nil, T.fg)
+    line:SetJustifyH("LEFT")
+    line:SetWordWrap(false)
+    line:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -y)
+    line:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -y)
+    return line
+end
+
+local function NewBody(scroll)
+    local body = CreateFrame("Frame", nil, scroll)
+    local y = 0
+    body.time = AddLine(body, TIME_SIZE, y)
+    y = y + TIME_LINE + TIME_GAP
+    body.stats = AddLine(body, BODY_SIZE, y)
+    y = y + BODY_LINE + LINE_GAP
+    body.xp = AddLine(body, BODY_SIZE, y)
+    y = y + BODY_LINE + LINE_GAP
+    body.hour = AddLine(body, BODY_SIZE, y)
+    body:SetHeight(BODY_H)
+    return body
 end
 
 local function XPLine(open)
@@ -1525,53 +1571,36 @@ end
 
 local function Paint()
     local open = OpenRun()
+    local body = frame.body
     if open then
         frame.title:SetText(Where(open))
-        frame.time:SetText(FormatDuration(Elapsed(open)))
-        frame.stats:SetText(Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP")
+        body.time:SetText(FormatDuration(Elapsed(open)))
+        body.stats:SetText(Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP")
     else
         frame.title:SetText("Instance")
-        frame.time:SetText("0:00")
-        frame.stats:SetText(Coins(0) .. "   0 XP")
+        body.time:SetText("0:00")
+        body.stats:SetText(Coins(0) .. "   0 XP")
     end
-    frame.xp:SetText(XPLine(open))
-    frame.hour:SetText(HourLine())
+    body.xp:SetText(XPLine(open))
+    body.hour:SetText(HourLine())
+    body:SetHeight(BODY_H)
+    frame:Fit(BODY_H)
+    frame:Paint()
 end
 
 local function Build()
-    frame = CreateFrame("Frame", "NaowhForeverInstanceTracker", UIParent)
-    frame:SetSize(FRAME_W, FRAME_H)
-    frame:SetMovable(true)
-    frame:SetClampedToScreen(true)
-    frame:EnableMouse(false)
-    frame.bg = ns.Solid(frame, "BACKGROUND", T.bg, FRAME_ALPHA)
-    frame.bg:SetAllPoints()
-    ns.Border(frame, ns.Shared.Style.BORDER_RGB)
-    frame.title = ns.Font(frame, TITLE_SIZE, "OUTLINE", T.accent)
-    frame.title:SetPoint("TOPLEFT", PAD_X, -TITLE_TOP)
-    frame.title:SetPoint("TOPRIGHT", -PAD_X, -TITLE_TOP)
-    frame.title:SetJustifyH("LEFT")
-    frame.title:SetWordWrap(false)
-    frame.time = ns.Font(frame, TIME_SIZE, "OUTLINE", T.fg)
-    frame.time:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -TIME_GAP)
-    frame.time:SetJustifyH("LEFT")
-    frame.stats = ns.Font(frame, BODY_SIZE, "OUTLINE", T.fg)
-    frame.stats:SetPoint("TOPLEFT", frame.time, "BOTTOMLEFT", 0, -LINE_GAP)
-    frame.stats:SetPoint("RIGHT", frame, "RIGHT", -PAD_X, 0)
-    frame.stats:SetJustifyH("LEFT")
-    frame.stats:SetWordWrap(false)
-    frame.xp = ns.Font(frame, BODY_SIZE, "OUTLINE", T.fg)
-    frame.xp:SetPoint("TOPLEFT", frame.stats, "BOTTOMLEFT", 0, -LINE_GAP)
-    frame.xp:SetPoint("RIGHT", frame, "RIGHT", -PAD_X, 0)
-    frame.xp:SetJustifyH("LEFT")
-    frame.xp:SetWordWrap(false)
-    frame.hour = ns.Font(frame, BODY_SIZE, "OUTLINE", T.fg)
-    frame.hour:SetPoint("TOPLEFT", frame.xp, "BOTTOMLEFT", 0, -LINE_GAP)
-    frame.hour:SetPoint("RIGHT", frame, "RIGHT", -PAD_X, 0)
-    frame.hour:SetJustifyH("LEFT")
-    frame.hour:SetWordWrap(false)
-    frame.mover = UI.AttachMover(frame, "Instance Tracker", function(pos) S.Set("pos", pos) end,
-        "Instance Tracker/Display")
+    frame = ns.Shared.Parts.TrackerPanel("Instance", {
+        onTitle = OpenWindow,
+        titleTip = "Instance Tracker",
+        titleHint = "Click to open lockouts and history.",
+        onClose = CloseTimer,
+        newBody = NewBody,
+        settings = { page = SETTINGS_PAGE, card = TIMER_CARD, tip = "Instance Tracker settings",
+            hint = "Opens the Run Timer settings." },
+        load = LoadPosition, save = SavePosition,
+        place = { "TOP", "TOP", 0, DEFAULT_Y },
+        mover = Mover,
+    })
     frame:Hide()
 end
 
@@ -1582,9 +1611,10 @@ UpdateFrame = function()
         return
     end
     if not frame then Build() end
-    if not frame.placed then Place(); frame.placed = true end
+    frame:SetScale(ns.UIScale())
+    if not frame.placed then frame:Place(); frame.placed = true end
     Paint()
-    frame.mover:SetShown(unlocked == true)
+    if frame.mover then frame.mover:SetShown(unlocked == true) end
     frame:Show()
     if OpenRun() then
         if not clock then clock = C_Timer.NewTicker(1, UpdateFrame) end
@@ -1839,7 +1869,10 @@ end
 S.OnChange(function(key)
     if key == "pos" then return end
     if key == "enabled" then Apply()
-    elseif key == "showFrame" then UpdateFrame()
+    elseif key == "showFrame" then
+        -- Turning it back on brings the timer back for the visit the X hid.
+        if S.Get("showFrame") then dismissedAt = nil end
+        UpdateFrame()
     elseif key == "hourlyWarn" then WarnHour() end
 end)
 hooksecurefunc(ns, "Apply", Apply)

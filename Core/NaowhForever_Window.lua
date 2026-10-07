@@ -81,13 +81,13 @@ local MODULES = {
           { name = "Quest Tracker", reuse = true },
           { name = "Map", reuse = true },
       } },
+    -- Lockouts and history are a window of their own (open); only the settings live here.
     { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
+      open = "ToggleInstanceTrackerWindow",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
       subtitle = "Saved lockouts, visits, and how many new instances this character has entered this hour.",
       tabs = {
-          { name = "Lockouts", build = "BuildInstanceLockoutsPage", reuse = true },
-          { name = "History", build = "BuildInstanceHistoryPage", reuse = true },
-          { name = "Display", build = "BuildInstanceTrackerPage", reuse = true },
+          { name = "Settings", reuse = true },
       } },
     -- The list itself is a window of its own (open); only its settings live here.
     { name = "BiS List", group = "ADVENTURE", navIcon = "trophy", settings = "QoLSettings", enabledKey = "bis",

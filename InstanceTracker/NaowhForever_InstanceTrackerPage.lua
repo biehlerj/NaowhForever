@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
---  NaowhForever_InstanceTrackerPage.lua -- Lockouts, History and Display pages.
---  The rows are reused with the rest of the options window; opening a page only reads
---  what the tracker has already stored.
+--  NaowhForever_InstanceTrackerPage.lua -- the lockouts and history lists, and the
+--  settings cards. The lists are drawn in the module's own window. Opening one only
+--  reads what the tracker has already stored.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local UI = ns.UI
@@ -280,7 +280,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
         .. "Saved lockouts come from the game's instance list. New dungeon and raid instances "
         .. "on this character count toward a 10-per-hour cap. Another character has their own 10. "
         .. "Walking back into one you have not reset does not count. The chat warning is set "
-        .. "on the Display tab.", y); y = y - h
+        .. "under Instance Tracker settings.", y); y = y - h
     _, h = W:SectionHeader(parent, "THIS HOUR", y); y = y - h
 
     local count, cap, frees = IT.Hour()
@@ -407,134 +407,134 @@ function ns.BuildInstanceHistoryPage(parent, y)
     return y
 end
 
-function ns.BuildInstanceTrackerPage(parent, y)
-    local W = UI.Widgets
-    local _, h
-    _, h = W:Note(parent, "Turn Instance Tracker on with the switch at the top of this page. While it is on, lockouts and visits "
-        .. "are recorded, and each new dungeon or raid instance on this character counts toward 10 per hour. "
-        .. "Show Run Timer and Chat on Enter stay off until you turn them on. "
-        .. "Chat on Leave is under When You Leave, and each of its lines starts off. "
-        .. "Chat on Reset is under When You Reset, and it starts off. "
-        .. "Move the timer in Unlock Mode; it shows only inside a dungeon or raid.",
-        y); y = y - h
-    _, h = W:SectionHeader(parent, "THIS HOUR", y); y = y - h
-    _, h = W:DualRow(parent, y,
-        S.Slider("hourlyWarn", "Warn when this many are left", 1, 5, 1,
-            "Prints in your chat when this many new instances are left before this character's "
-            .. "10-per-hour cap. 1 warns at 9 of 10. 5 warns at 5 of 10.",
-            "enabled"),
-        { type = "label", text = "The cap is 10 for this character" }
-    ); y = y - h
-    _, h = W:SectionHeader(parent, "ON SCREEN", y); y = y - h
-    _, h = W:DualRow(parent, y,
-        S.Toggle("showFrame", "Show Run Timer",
-            "Time, coins looted, experience, experience per hour, "
-            .. "and instances entered this hour, while you are inside. Move it in Unlock Mode.",
-            "enabled"),
-        S.Toggle("enterChat", "Chat on Enter",
-            "Prints in your chat when you enter: the instance, your last visit, and whether you are already saved. "
-            .. "Coming back to one you have not reset says you resumed it. This is never sent to the group.",
-            "enabled")
-    ); y = y - h
-    _, h = W:SectionHeader(parent, "ALTS", y); y = y - h
-    _, h = W:DualRow(parent, y,
-        S.Toggle("trackAlts", "Track Alts",
-            "Keep every character you log into on this account: saved instances, visits, "
-            .. "rested experience and durability. Log each one once with the tracker on. "
-            .. "Off hides the others until you turn this back on. "
-            .. "Each character still has their own 10 per hour, and that count is kept either way.",
-            "enabled"),
-        { type = "label", text = "Off hides other characters" }
-    ); y = y - h
-    _, h = W:SectionHeader(parent, "WHEN YOU LEAVE", y); y = y - h
-    _, h = W:Note(parent, "Choose what to say when you leave a dungeon. Nothing is sent until Chat on Leave "
-        .. "is on, and each detail stays off until you check it. Your Chat prints it only for you. "
-        .. "Group sends it to party chat, and to raid chat only when Send to Raid Chat is on. "
-        .. "A raid is left out until Include Raids is on. Kill counts are not available, "
-        .. "because the combat log is closed.",
-        y); y = y - h
+-------------------------------------------------------------------------------
+--  Settings. One page in the options window. The lists live in the module window.
+-------------------------------------------------------------------------------
+local Settings = ns.Shared and ns.Shared.Settings
+if not Settings then return end
 
-    local function Leave(key, text, tip)
-        local cfg = S.Toggle(key, text, tip)
-        cfg.disabled = function()
-            return not S.Get("enabled") or not S.Get("leaveChat")
-        end
-        return cfg
-    end
+local OFF = "Turn on Instance Tracker"
+local WHERE = { { self = "Your Chat", group = "Group" }, { "self", "group" } }
+local RAID_WHY = "Choose Group above"
 
-    local where = S.Dropdown("leaveWhere", "Send It To",
-        { self = "Your Chat", group = "Group" },
-        { "self", "group" },
-        "Your Chat prints the summary only for you. Group sends it to party chat. "
-        .. "In a raid it is printed to you unless Send to Raid Chat is on. Alone, it is printed to you.")
-    where.setValue = function(v)
-        S.Set("leaveWhere", v)
-        UI:RefreshPage(true)
-    end
-    where.disabled = function()
-        return not S.Get("enabled") or not S.Get("leaveChat")
-    end
-    local raidChat = S.Toggle("leavePrintRaid", "Send to Raid Chat",
-        "With Group selected, send the summary to raid chat. Otherwise it is printed to you "
-        .. "while you are in a raid.")
-    raidChat.disabled = function()
-        return not S.Get("enabled") or not S.Get("leaveChat") or S.Get("leaveWhere") ~= "group"
-    end
-
-    _, h = W:DualRow(parent, y,
-        S.Toggle("leaveChat", "Chat on Leave",
-            "Print a summary when you leave. Nothing is included until you check it below.",
-            "enabled"),
-        where
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveTime", "Show Time", "How long the visit lasted."),
-        Leave("leaveXP", "Show Experience", "Experience gained during the visit.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveXPHour", "Show XP/Hour",
-            "Experience per hour for this visit. The first minute counts as a full minute."),
-        Leave("leaveGold", "Show Coins Looted",
-            "Coins looted during the visit. Repairs and vendor sales are not counted.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveDeaths", "Show Deaths", "How many times you died during the visit."),
-        Leave("leaveRep", "Show Reputation",
-            "Reputation gained while inside, from the faction lines in chat.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveAverage", "Show Average Experience",
-            "Average experience from this character's recorded visits to this same instance, including this one."),
-        Leave("leaveRunsLevel", "Show Runs This Level",
-            "How many visits this character has recorded at the current level, including this one.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveRunsToLevel", "Show Runs to Next Level",
-            "A rough count from the experience this visit gained and what you still need. "
-            .. "Left out at max level, or when this visit gained none."),
-        Leave("leaveActivity", "Skip If Nothing Happened",
-            "Skip the summary when the visit gained no experience, coins, reputation or deaths.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        Leave("leaveRaids", "Include Raids",
-            "Also print the summary when you leave a raid. Off means dungeons only."),
-        raidChat
-    ); y = y - h
-
-    _, h = W:SectionHeader(parent, "WHEN YOU RESET", y); y = y - h
-    _, h = W:Note(parent, "As group leader, a reset can be announced in party, raid, or instance chat. "
-        .. "Nothing is typed there until Chat on Reset is on. "
-        .. "Nova Instance Tracker users in the group still hear about the reset. "
-        .. "If you also have Nova Instance Tracker loaded, it announces, and this line is left out "
-        .. "so the group does not see it twice.",
-        y); y = y - h
-    _, h = W:DualRow(parent, y,
-        S.Toggle("resetChat", "Chat on Reset",
-            "As group leader, post the reset in party, raid, or instance chat. "
-            .. "Off still tells Nova Instance Tracker users in the group. "
-            .. "Left out when Nova Instance Tracker is loaded, so the line is not posted twice.",
-            "enabled"),
-        { type = "label", text = "Off until you turn it on" }
-    ); y = y - h
-    return y
+local function Enabled()
+    return S.Get("enabled") == true
 end
+
+local function Row(key, label, help)
+    return { key = key, label = label, toggle = true, needs = Enabled, why = OFF, help = help }
+end
+
+-- needs updates why before the row reads it: the module, then Group.
+local raid = Row("leavePrintRaid", "Send to Raid Chat", "Sends the summary to raid chat.")
+raid.needs = function()
+    if not Enabled() then
+        raid.why = OFF
+        return false
+    end
+    raid.why = RAID_WHY
+    return S.Get("leaveWhere") == "group"
+end
+
+local function Headline()
+    local IT = ns.InstanceTracker
+    if not IT.Enabled() then return "Instance Tracker is off" end
+    local open = IT.Open()
+    if open and open.instance then return "In " .. IT.PlaceName(open.instance, open.difficulty) end
+    local count, cap = IT.Hour()
+    return string.format("%d of %d instances this hour", count, cap)
+end
+
+local function Detail()
+    local IT = ns.InstanceTracker
+    if not IT.Enabled() then return "Turn it on to record lockouts and visits." end
+    local open = IT.Open()
+    if open and open.instance then return IT.Duration(IT.Elapsed(open)) .. " in this visit." end
+    local count, _, frees = IT.Hour()
+    if count > 0 then return "The next one frees in " .. IT.Duration(frees) .. "." end
+    return "No new instances this hour."
+end
+
+local function LeaveSummary(store)
+    return store.Get("leaveWhere") == "group" and "Sent to the group" or "Your chat only"
+end
+
+local function WindowSummary(store)
+    return ("%d%% opacity"):format(math.floor((store.Get("windowAlpha") or 1) * 100 + 0.5))
+end
+
+local page = Settings.Page("Instance Tracker/Settings", S)
+
+page:Window({
+    text = "Open Instance Tracker",
+    open = function() ns.OpenInstanceTrackerWindow() end,
+    headline = Headline,
+    detail = Detail,
+})
+
+page:Card({
+    id = "hour", name = "This Hour", order = 10,
+    help = "Warns in chat as you near the hourly instance cap.",
+    rows = {
+        { key = "hourlyWarn", label = "Warn when this many are left", slider = { 1, 5, 1 },
+          needs = Enabled, why = OFF, help = "How close to the cap before chat warns you." },
+    },
+})
+
+page:Card({
+    id = "timer", name = "Run Timer", order = 20, switch = "showFrame",
+    help = "Time, coins and experience while you are inside.",
+    summary = function() return "Inside a dungeon or raid" end,
+})
+
+page:Card({
+    id = "enter", name = "Chat on Enter", order = 30, switch = "enterChat",
+    help = "Prints in your chat when you enter an instance.",
+    summary = function() return "Your chat only" end,
+})
+
+page:Card({
+    id = "alts", name = "Track Alts", order = 40, switch = "trackAlts",
+    help = "Shows your other characters' lockouts and visits.",
+    summary = function() return "Other characters stay listed" end,
+})
+
+page:Card({
+    id = "leave", name = "When You Leave", order = 50, switch = "leaveChat",
+    help = "Prints a summary when you leave a dungeon.",
+    summary = LeaveSummary,
+    rows = {
+        Settings.Group("Where"),
+        { key = "leaveWhere", label = "Send It To", choice = WHERE, needs = Enabled, why = OFF,
+          help = "Your chat, or the group when you are in one." },
+        raid,
+        Settings.Group("Included"),
+        Row("leaveTime", "Show Time", "How long the visit lasted."),
+        Row("leaveXP", "Show Experience", "Experience gained during the visit."),
+        Row("leaveXPHour", "Show XP/Hour", "Experience per hour for this visit."),
+        Row("leaveGold", "Show Coins Looted", "Coins looted during the visit."),
+        Row("leaveDeaths", "Show Deaths", "How many times you died."),
+        Row("leaveRep", "Show Reputation", "Reputation gained while inside."),
+        Row("leaveAverage", "Show Average Experience", "Average experience from visits to this instance."),
+        Row("leaveRunsLevel", "Show Runs This Level", "Visits recorded at your current level."),
+        Row("leaveRunsToLevel", "Show Runs to Next Level", "A rough count of visits until you level."),
+        Row("leaveActivity", "Skip If Nothing Happened", "Skips the summary when the visit gained nothing."),
+        Row("leaveRaids", "Include Raids", "Also prints the summary when you leave a raid."),
+    },
+})
+
+page:Card({
+    id = "reset", name = "When You Reset", order = 60, switch = "resetChat",
+    help = "As group leader, posts the reset in group chat.",
+    summary = function() return "Posted in group chat" end,
+})
+
+page:Card({
+    id = "window", name = "Window", order = 90,
+    help = "The lockouts and visit list, in their own window.",
+    summary = WindowSummary,
+    rows = {
+        { key = "windowAlpha", label = "Window Opacity", slider = { ns.Shared.Style.OPACITY_MIN, 100, 5 },
+          unit = "%", scale = 0.01, help = "How solid the window is, in percent." },
+    },
+})
