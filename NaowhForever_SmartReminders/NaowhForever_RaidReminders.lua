@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 if not ns then return end
+local Parts = ns.Shared.Parts
 
 -------------------------------------------------------------------------------
 --  Data
@@ -172,8 +173,26 @@ local function ReleaseRegion(a, r)
     RestackRegions(a)
 end
 
-local function AlertFontPath()
-    return ns.AlertFontPath()
+-- Shared by every display type; ns.RaidReminderSizeDefaults carries them to the settings page.
+local LOOK_DEFAULTS = {
+    raidReminderOutline = "OUTLINE", raidReminderTextTheme = false, raidReminderBarTexture = "",
+    raidReminderBarBgAlpha = 0.9, raidReminderCircleBgAlpha = 0.5,
+}
+local function LookSetting(key)
+    local v = ns.DB()[key]
+    if v == nil then return LOOK_DEFAULTS[key] end
+    return v
+end
+
+-- fontName is the defensive alert's font too.
+local function SetDisplayFont(fs, size)
+    Parts.HudFont(fs, ns.DB().fontName, size, LookSetting("raidReminderOutline"), "none")
+end
+
+local WHITE = { r = 1, g = 1, b = 1 }
+local function TextColour()
+    if LookSetting("raidReminderTextTheme") then return ns.THEME.fg end
+    return WHITE
 end
 
 local TEXT_WIDTH_DEFAULT, TEXT_FONTSIZE_DEFAULT = 320, 16
@@ -203,7 +222,7 @@ local function CreateTextRegion(a)
     local r = CreateFrame("Frame", nil, a)
     r:SetSize(w, fs + 10)
     r.text = ns.Font(r, fs, "OUTLINE")
-    r.text:SetFont(AlertFontPath(), fs, "OUTLINE")
+    SetDisplayFont(r.text, fs)
     r.text:SetPoint("CENTER")
     r:Hide()
     return r
@@ -212,7 +231,7 @@ end
 local function SizeText(r)
     local w, fs = TextSize()
     r:SetSize(w, fs + 10)
-    r.text:SetFont(AlertFontPath(), fs, "OUTLINE")
+    SetDisplayFont(r.text, fs)
 end
 
 function ns.ResizeRaidReminderText()
@@ -234,10 +253,10 @@ local function CreateTimerRegion(a)
     local r = CreateFrame("Frame", nil, a)
     r:SetSize(w, h)
     r.label = ns.Font(r, cap, "OUTLINE")
-    r.label:SetFont(AlertFontPath(), cap, "OUTLINE")
+    SetDisplayFont(r.label, cap)
     r.label:SetPoint("TOP", r, "TOP", 0, 0)
     r.number = ns.Font(r, num, "OUTLINE")
-    r.number:SetFont(AlertFontPath(), num, "OUTLINE")
+    SetDisplayFont(r.number, num)
     r.number:SetPoint("TOP", r.label, "BOTTOM", 0, -2)
     r:Hide()
     return r
@@ -246,8 +265,8 @@ end
 local function SizeTimer(r)
     local cap, num, w, h = TimerSize()
     r:SetSize(w, h)
-    r.label:SetFont(AlertFontPath(), cap, "OUTLINE")
-    r.number:SetFont(AlertFontPath(), num, "OUTLINE")
+    SetDisplayFont(r.label, cap)
+    SetDisplayFont(r.number, num)
 end
 
 function ns.ResizeRaidReminderTimer()
@@ -273,7 +292,7 @@ local function CreateIconRegion(a)
     r.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     local fs = LabelSize("raidReminderIconTextSize")
     r.label = ns.Font(r, fs, "OUTLINE")
-    r.label:SetFont(AlertFontPath(), fs, "OUTLINE")
+    SetDisplayFont(r.label, fs)
     r.label:SetPoint("TOP", r.icon, "BOTTOM", 0, -2)
     r:Hide()
     return r
@@ -284,7 +303,7 @@ local function SizeIcon(r)
     local fs = LabelSize("raidReminderIconTextSize")
     r:SetSize(size, size + fs + 6)
     r.icon:SetSize(size, size)
-    r.label:SetFont(AlertFontPath(), fs, "OUTLINE")
+    SetDisplayFont(r.label, fs)
 end
 
 function ns.ResizeRaidReminderIcon()
@@ -294,11 +313,11 @@ function ns.ResizeRaidReminderIcon()
     RestackRegions(a)
 end
 
-local function StatusBarTexture()
-    local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
-    if not LSM then return nil end
-    local ok, path = pcall(LSM.Fetch, LSM, "statusbar", "NaowhGradient", true)
-    return ok and path or nil
+-- NaowhUI_Media's NaowhGradient when it is installed, else the copy this addon ships.
+local NAOWH_GRADIENT = "Interface\\AddOns\\NaowhForever\\Media\\NaowhGradient.tga"
+local function BarTexture()
+    local own = ns.UI.TexturePath("NaowhGradient", NAOWH_GRADIENT)
+    return ns.UI.TexturePath(LookSetting("raidReminderBarTexture"), own)
 end
 
 -- expirationTime is set fresh by ns.DisplayRaidReminder on every acquire, so a pooled
@@ -311,39 +330,33 @@ local function BarSize()
     return w, h
 end
 
-local function CreateBarRegion(a)
-    local w, h = BarSize()
-    local fs = LabelSize("raidReminderBarTextSize")
-    local r = CreateFrame("Frame", nil, a)
-    r:SetSize(w, h + fs + 4)
-
-    r.label = ns.Font(r, fs, "OUTLINE")
-    r.label:SetFont(AlertFontPath(), fs, "OUTLINE")
-    r.label:SetPoint("TOP", r, "TOP", 0, 0)
-
-    r.bar = CreateFrame("StatusBar", nil, r)
-    r.bar:SetSize(w, h)
-    r.bar:SetPoint("BOTTOM", r, "BOTTOM", 0, 0)
-    r.bar:SetMinMaxValues(0, 1)
-    r.bar:SetStatusBarTexture(StatusBarTexture() or "Interface\\TargetingFrame\\UI-StatusBar")
-    local T = ns.THEME
-    local bg = r.bar:CreateTexture(nil, "BACKGROUND")
-    ns.PixelInset(bg, -1, r.bar)
-    bg:SetColorTexture(T.bg.r, T.bg.g, T.bg.b, 0.9)
-    local fill = r.bar:GetStatusBarTexture()
-    if fill then fill:SetVertexColor(T.accent.r, T.accent.g, T.accent.b, 1) end
-    ns.Border(r.bar)
-
-    r:Hide()
-    return r
-end
-
 local function SizeBar(r)
     local w, h = BarSize()
     local fs = LabelSize("raidReminderBarTextSize")
+    local T = ns.THEME
     r:SetSize(w, h + fs + 4)
     r.bar:SetSize(w, h)
-    r.label:SetFont(AlertFontPath(), fs, "OUTLINE")
+    SetDisplayFont(r.label, fs)
+    r.bar:SetStatusBarTexture(BarTexture())
+    r.bar:GetStatusBarTexture():SetVertexColor(T.accent.r, T.accent.g, T.accent.b, 1)
+    r.bar.bg:SetColorTexture(T.bg.r, T.bg.g, T.bg.b, LookSetting("raidReminderBarBgAlpha"))
+end
+
+local function CreateBarRegion(a)
+    local r = CreateFrame("Frame", nil, a)
+    r.label = ns.Font(r, LabelSize("raidReminderBarTextSize"), "OUTLINE")
+    r.label:SetPoint("TOP", r, "TOP", 0, 0)
+
+    r.bar = CreateFrame("StatusBar", nil, r)
+    r.bar:SetPoint("BOTTOM", r, "BOTTOM", 0, 0)
+    r.bar:SetMinMaxValues(0, 1)
+    r.bar.bg = r.bar:CreateTexture(nil, "BACKGROUND")
+    ns.PixelInset(r.bar.bg, -1, r.bar)
+    ns.Border(r.bar)
+
+    SizeBar(r)
+    r:Hide()
+    return r
 end
 
 function ns.ResizeRaidReminderBar()
@@ -402,7 +415,8 @@ local function LayoutCircle(r, size, thickness, fs)
     r.fillL:SetSize(size, size)
     r.fillR:SetSize(size, size)
     r.hole:SetSize(size - 2 * thickness, size - 2 * thickness)
-    r.label:SetFont(AlertFontPath(), fs, "OUTLINE")
+    r.bg:SetVertexColor(0, 0, 0, LookSetting("raidReminderCircleBgAlpha"))
+    SetDisplayFont(r.label, fs)
 end
 
 local function CreateCircleRegion(a)
@@ -420,7 +434,6 @@ local function CreateCircleRegion(a)
     r.bg = r.ring:CreateTexture(nil, "BACKGROUND")
     r.bg:SetPoint("CENTER", r.ring, "CENTER")
     r.bg:SetTexture(CIRCLE_MASK_PATH)
-    r.bg:SetVertexColor(0, 0, 0, 0.5)
     r.bg:AddMaskTexture(r.hole)
 
     -- The clip frames are what turn a rotating half-disc into an arc; without
@@ -491,6 +504,15 @@ ns.RaidReminderSizeDefaults = {
     raidReminderCircleThickness = CIRCLE_THICKNESS_DEFAULT,
 }
 for key, size in pairs(LABEL_SIZE_DEFAULTS) do ns.RaidReminderSizeDefaults[key] = size end
+for key, value in pairs(LOOK_DEFAULTS) do ns.RaidReminderSizeDefaults[key] = value end
+
+-- Font, outline, bar and background changes, on every region already built.
+function ns.RestyleRaidReminders()
+    for displayType, a in pairs(anchors) do
+        ForEachRegion(a, REGION_SIZERS[displayType])
+        RestackRegions(a)
+    end
+end
 
 local function AcquireRegion(displayType)
     local a = GetAnchor(displayType)
@@ -719,7 +741,8 @@ function ns.DisplayRaidReminder(entry, preview)
             r.text:SetTextColor(display.color.r or 1, display.color.g or 1,
                 display.color.b or 1, display.color.a or 1)
         else
-            r.text:SetTextColor(1, 1, 1, 1)
+            local c = TextColour()
+            r.text:SetTextColor(c.r, c.g, c.b, 1)
         end
     elseif display.type == "icon" then
         r.icon:SetTexture(ResolveDisplayIconID(display) or 134400)
@@ -762,10 +785,10 @@ function ns.DisplayRaidReminder(entry, preview)
             r.fillR:SetVertexColor(color.r, color.g, color.b)
             r.label:SetTextColor(color.r, color.g, color.b)
         else
-            local T = ns.THEME
+            local T, c = ns.THEME, TextColour()
             r.fillL:SetVertexColor(T.accent.r, T.accent.g, T.accent.b)
             r.fillR:SetVertexColor(T.accent.r, T.accent.g, T.accent.b)
-            r.label:SetTextColor(1, 1, 1)
+            r.label:SetTextColor(c.r, c.g, c.b)
         end
         r.caption = caption
         r.expirationTime = GetTime() + dur
@@ -854,16 +877,15 @@ local CONFIG_ORDER = { "defensive", "text", "timer", "icon", "bar", "circle" }
 -- Session-local.
 local configShown = {}
 for _, dt in ipairs(CONFIG_ORDER) do configShown[dt] = true end
-local configActive = false
-local reopenWindowOnExit = false
 
 local SAMPLE_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
 
 -- Static placeholder content: no countdown, no hide timer.
 local function PopulateSample(displayType, r)
     if displayType == "text" then
+        local c = TextColour()
         r.text:SetText("Sample Reminder")
-        r.text:SetTextColor(1, 1, 1, 1)
+        r.text:SetTextColor(c.r, c.g, c.b, 1)
     elseif displayType == "icon" then
         r.icon:SetTexture(SAMPLE_ICON)
         r.label:SetText("Sample")
@@ -878,9 +900,9 @@ local function PopulateSample(displayType, r)
         r.bar:SetValue(0.6)
     elseif displayType == "circle" then
         r:SetScript("OnUpdate", nil)
+        local T, c = ns.THEME, TextColour()
         r.label:SetText("|T" .. SAMPLE_ICON .. ":0|t Sample (3.4)")
-        r.label:SetTextColor(1, 1, 1)
-        local T = ns.THEME
+        r.label:SetTextColor(c.r, c.g, c.b)
         r.fillL:SetVertexColor(T.accent.r, T.accent.g, T.accent.b)
         r.fillR:SetVertexColor(T.accent.r, T.accent.g, T.accent.b)
         -- Parked 40% through so the sweep's direction is visible while placing it.
@@ -910,90 +932,6 @@ local function SaveAnchorPos(displayType, point, relPoint, x, y)
         db.raidReminderAnchorPos = db.raidReminderAnchorPos or {}
         db.raidReminderAnchorPos[displayType] = { point = point, relPoint = relPoint, x = x, y = y }
     end
-end
-
--- Alignment grid matching EllesmereUI's unlock mode, measured outward from screen centre.
--- Alphas sit above EUI's 0.30/0.50, which read faint against the game world.
-local GRID_SPACING = 32
-local GRID_LINE_ALPHA = 0.45
-local GRID_CENTER_ALPHA = 0.70
-local gridOverlay
-
--- One physical pixel at any UI scale; fractional widths blur across two pixels.
-local function PixelMult()
-    local _, screenH = GetPhysicalScreenSize()
-    local scale = UIParent:GetEffectiveScale()
-    if not screenH or screenH <= 0 or not scale or scale <= 0 then return 1 end
-    return (768 / screenH) / scale
-end
-
-local function BuildGridOverlay()
-    if gridOverlay then return gridOverlay end
-    gridOverlay = CreateFrame("Frame", nil, UIParent)
-    gridOverlay:SetFrameStrata("BACKGROUND")
-    gridOverlay:SetFrameLevel(1)
-    gridOverlay:SetAllPoints(UIParent)
-    gridOverlay._lines = {}
-    gridOverlay:Hide()
-
-    function gridOverlay:Rebuild()
-        for i = 1, #self._lines do self._lines[i]:Hide() end
-        local w, h = UIParent:GetWidth(), UIParent:GetHeight()
-        local c = ns.THEME.accent
-        local mult = PixelMult()
-        local spacing = GRID_SPACING * mult
-        local function Snap(v) return math.floor(v / mult + 0.5) * mult end
-        local centerX, centerY = Snap(w / 2), Snap(h / 2)
-        local idx = 0
-
-        local function Line(isVert, pos, alpha)
-            idx = idx + 1
-            local tex = self._lines[idx]
-            if not tex then
-                tex = self:CreateTexture(nil, "BACKGROUND", nil, -7)
-                if tex.SetSnapToPixelGrid then
-                    tex:SetSnapToPixelGrid(false)
-                    tex:SetTexelSnappingBias(0)
-                end
-                self._lines[idx] = tex
-            end
-            tex:SetColorTexture(c.r, c.g, c.b, alpha)
-            tex:ClearAllPoints()
-            if isVert then
-                tex:SetSize(mult, h)
-                tex:SetPoint("TOPLEFT", UIParent, "TOPLEFT", pos, 0)
-            else
-                tex:SetSize(w, mult)
-                tex:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, -pos)
-            end
-            tex:Show()
-        end
-
-        local x = centerX - spacing
-        while x > 0 do Line(true, Snap(x), GRID_LINE_ALPHA); x = x - spacing end
-        x = centerX + spacing
-        while x < w do Line(true, Snap(x), GRID_LINE_ALPHA); x = x + spacing end
-
-        local y = centerY - spacing
-        while y > 0 do Line(false, Snap(y), GRID_LINE_ALPHA); y = y - spacing end
-        y = centerY + spacing
-        while y < h do Line(false, Snap(y), GRID_LINE_ALPHA); y = y + spacing end
-
-        Line(true, centerX, GRID_CENTER_ALPHA)
-        Line(false, centerY, GRID_CENTER_ALPHA)
-    end
-
-    return gridOverlay
-end
-
-function ns.SetAnchorGridShown(shown)
-    if not shown then
-        if gridOverlay then gridOverlay:Hide() end
-        return
-    end
-    local g = BuildGridOverlay()
-    g:Rebuild()
-    g:Show()
 end
 
 local function EnsureConfigHandle(displayType, a)
@@ -1067,7 +1005,7 @@ local function HideConfigVisual(displayType)
 end
 
 local function RefreshAllConfigVisuals()
-    if not configActive or ns.DB().enabled ~= true then return end
+    if not ns.IsRaidReminderAnchorConfigActive() or ns.DB().enabled ~= true then return end
     for _, displayType in ipairs(CONFIG_ORDER) do
         if configShown[displayType] then RefreshConfigVisual(displayType) end
     end
@@ -1076,7 +1014,7 @@ ns.RefreshRaidReminderAnchorConfig = RefreshAllConfigVisuals
 
 function ns.SetRaidReminderAnchorConfigShown(displayType, shown)
     configShown[displayType] = shown or nil
-    if not configActive then return end
+    if not ns.IsRaidReminderAnchorConfigActive() then return end
     if shown then RefreshConfigVisual(displayType) else HideConfigVisual(displayType) end
 end
 
@@ -1084,116 +1022,10 @@ function ns.IsRaidReminderAnchorConfigShown(displayType)
     return configShown[displayType] == true
 end
 
-local configToolbar
-
--- Exit Config takes the slot after the last checkbox. Column width fits the longest
--- label, "Show Defensive Anchor".
-local CONFIG_COL_W, CONFIG_ROW_H = 162, 24
-
-local function BuildConfigToolbar()
-    if configToolbar then return configToolbar end
-    local T = ns.THEME
-    local f = CreateFrame("Frame", "NaowhForeverRaidReminderAnchorConfig", UIParent)
-    f:SetSize(14 + CONFIG_COL_W * 2 + 14, 116)
-    f:SetPoint("TOP", UIParent, "TOP", 0, -140)
-    f:SetFrameStrata("FULLSCREEN_DIALOG")
-    f:SetFrameLevel(510)
-    f:SetToplevel(true)
-    f:SetClampedToScreen(true)
-    ns.AllowOffscreen(f)
-    ns.Solid(f, "BACKGROUND", { r = 0, g = 0, b = 0 }, 1):SetAllPoints()
-    ns.Border(f)
-    f:SetMovable(true)
-    f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-
-    local head = ns.Font(f, 12, "OUTLINE", T.accent)
-    head:SetPoint("TOP", f, "TOP", 0, -10)
-    head:SetText("Reminder Anchors")
-    f._head = head
-
-    local checks = {}
-    local lastRow = 0
-    for i, displayType in ipairs(CONFIG_ORDER) do
-        local col = (i - 1) % 2
-        local row = math.floor((i - 1) / 2)
-        lastRow = row
-        local chk = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-        chk:SetSize(20, 20)
-        chk:SetPoint("TOPLEFT", f, "TOPLEFT", 14 + col * CONFIG_COL_W, -32 - row * CONFIG_ROW_H)
-        local lbl = ns.Font(f, 11, nil, T.fg)
-        lbl:SetPoint("LEFT", chk, "RIGHT", 2, 1)
-        lbl:SetText("Show " .. DISPLAY_TYPE_LABEL[displayType] .. " Anchor")
-        chk:SetScript("OnClick", function(self)
-            ns.SetRaidReminderAnchorConfigShown(displayType, self:GetChecked() and true or false)
-        end)
-        checks[displayType] = chk
-    end
-
-    local exitCol = (#CONFIG_ORDER % 2 == 1) and 1 or 0
-    local exitRow = (#CONFIG_ORDER % 2 == 1) and lastRow or (lastRow + 1)
-    ns.Button(f, "Exit Config", CONFIG_COL_W - 14, 22, function() ns.HideRaidReminderAnchorConfig() end)
-        :SetPoint("TOPLEFT", f, "TOPLEFT", 14 + exitCol * CONFIG_COL_W, -31 - exitRow * CONFIG_ROW_H)
-    local snapCol = 1 - exitCol
-    local snapRow = exitCol == 0 and exitRow or exitRow + 1
-    local snap = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-    snap:SetSize(20, 20)
-    snap:SetPoint("TOPLEFT", f, "TOPLEFT", 14 + snapCol * CONFIG_COL_W, -32 - snapRow * CONFIG_ROW_H)
-    local snapLbl = ns.Font(f, 11, nil, T.fg)
-    snapLbl:SetPoint("LEFT", snap, "RIGHT", 2, 1)
-    snapLbl:SetText("Snap Elements")
-    snap:SetScript("OnClick", function(self) ns.UnlockModeSettings.Set("snap", self:GetChecked() and true or false) end)
-    ns.Tooltip(snap, "Snap Elements", "A dragged element lines its edges and centre up with the nearest one.")
-    f._snap = snap
-    f:SetHeight(44 + (snapRow + 1) * CONFIG_ROW_H)
-
-    f._checks = checks
-    configToolbar = f
-    return f
-end
-
-function ns.ShowRaidReminderAnchorConfig()
-    -- Stash before arming: hiding the window runs HideRaidReminderAnchorConfig via
-    -- OnHide, which disarmed the mode in the same click when armed first.
-    local reopen = ns.StashOptionsWindow and ns.StashOptionsWindow() or false
-    configActive = true
-    ns.UI.BeginMoverMode()
-    reopenWindowOnExit = reopen
-    local f = BuildConfigToolbar()
-    -- With Smart Reminders off its anchors stay hidden; the toolbar still carries Exit Config.
-    local on = ns.DB().enabled == true
-    f._head:SetText(on and "Reminder Anchors" or "Smart Reminders is off")
-    for _, displayType in ipairs(CONFIG_ORDER) do
-        local chk = f._checks[displayType]
-        if chk then
-            chk:SetChecked(configShown[displayType] == true)
-            chk:SetEnabled(on)
-        end
-    end
-    f._snap:SetChecked(ns.UnlockModeSettings.Get("snap") ~= false)
-    f:Show()
-    ns.SetAnchorGridShown(true)
-    RefreshAllConfigVisuals()
-end
-
--- windowClosing: called from the options window's own OnHide, which must not reopen it.
-function ns.HideRaidReminderAnchorConfig(windowClosing)
-    configActive = false
-    ns.UI.EndMoverMode()
-    ns.SetAnchorGridShown(false)
-    if configToolbar then configToolbar:Hide() end
+-- TODO: the anchors stay out of the HUD Editor until they are usable there.
+hooksecurefunc(ns, "HideRaidReminderAnchorConfig", function()
     for _, displayType in ipairs(CONFIG_ORDER) do HideConfigVisual(displayType) end
-    if reopenWindowOnExit then
-        reopenWindowOnExit = false
-        if not windowClosing and ns.OpenOptionsWindow then ns.OpenOptionsWindow() end
-    end
-end
-
-function ns.IsRaidReminderAnchorConfigActive()
-    return configActive
-end
+end)
 
 -- Rows for each anchor's gear popup. Timer has no box, so its two font sizes are its rows.
 local TEXT_SIZE_MIN, TEXT_SIZE_MAX = 8, 48

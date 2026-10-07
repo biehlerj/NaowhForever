@@ -12,82 +12,9 @@
 local ns = _G.NaowhForever
 if not ns then return end
 
--------------------------------------------------------------------------------
---  DB
--------------------------------------------------------------------------------
--- Flat scalars only: a nested default would hand out a live reference to DEFAULTS itself.
--- Everything ships off by the owner's direction; until enabled, no events or frames exist.
-local DEFAULTS = {
-    enabled   = false,
-    showIcon  = false,
-    showText  = false,
-    showBar   = false,
-    soundOn   = false,
-    soundKey  = "none",
-    fallbackOn = false,
-    coveredSkip = false,
-    coveredCastWindow = 6,   -- how long your own cast counts as cover
-    leadTime   = 3,     -- seconds before impact that the alert fires
-    lingerSec  = 3,     -- display duration; early dismissal on cast is opt-in
-    cdmGlow    = false, -- glow the called defensive on the Cooldown Manager bar
-    voiceOn   = false,
-    voiceNone = "Call for external",
-    externalChat = false,
-    voiceVol  = 100,
-    iconSize  = 64,
-    -- 21 matches the old derived floor(iconSize * 0.34) at the default iconSize of 64.
-    textSize   = 21,
-    textSide   = "BOTTOM",   -- TOP, BOTTOM, LEFT or RIGHT
-    -- bossSource ("timeline", "bigwigs" or "dbm") has no default: unset follows the
-    -- installed boss mod, see ns.BossSource().
-    -- pos = { point, relPoint, x, y } once moved in Unlock Mode; nil = default centre.
-}
-
--- Profile tables already migrated and default-filled. Keyed by table so nothing lands in
--- SavedVariables; per table, not once at init, because SettingsRoot() follows profile switches.
-local prepared = setmetatable({}, { __mode = "k" })
-
-local function TRDB()
-    local root = ns.SettingsRoot()
-    if type(root.tankReminder) ~= "table" then root.tankReminder = {} end
-    local t = root.tankReminder
-    if prepared[t] then return t end
-    prepared[t] = true
-    -- Migration: the pre-presets flat list per spec becomes that spec's "Default" preset.
-    if type(t.lists) == "table" and next(t.lists) ~= nil and type(t.presets) ~= "table" then
-        t.presets = {}
-        t.activePreset = t.activePreset or {}
-        for specKey, list in pairs(t.lists) do
-            t.presets[specKey] = { p1 = { name = "Default", list = list } }
-            t.activePreset[specKey] = "p1"
-        end
-        t.lists = nil
-    end
-    -- The text used to be positioned on its own; it rides the icon now.
-    t.textPos = nil
-    -- Broadcasts outside any encounter used to be catalogued under "0", which nothing reads.
-    if type(t.bwCatalogue) == "table" then t.bwCatalogue["0"] = nil end
-    -- Older builds pre-filled the callout editor with "Use <name>", so saved callouts still
-    -- carry the prefix the spoken default dropped.
-    if type(t.callouts) == "table" then
-        for id, text in pairs(t.callouts) do
-            local bare = type(text) == "string" and text:match("^[Uu]se%s+(.+)$")
-            if bare then t.callouts[id] = bare end
-        end
-    end
-    -- Call Together was briefly stored as a chain to the entry below; nothing reads it now.
-    if type(t.presets) == "table" then
-        for _, specPresets in pairs(t.presets) do
-            if type(specPresets) == "table" then
-                for _, p in pairs(specPresets) do
-                    if type(p) == "table" then p.chain = nil end
-                end
-            end
-        end
-    end
-    for k, v in pairs(DEFAULTS) do if t[k] == nil then t[k] = v end end
-    return t
-end
+-- The module's settings in the active profile, defaults filled in by the core.
+local TRDB = ns.DB
+local Parts = ns.Shared.Parts
 
 local function IsSpellDisabled(spellID)
     local d = TRDB().disabled
@@ -543,6 +470,10 @@ ns.DefensiveLook = Look
 
 function Look.TextColour()
     if TRDB().defensiveTextColorOn then return DefensiveTextColor() end
+    if TRDB().defensiveTextTheme then
+        local fg = ns.THEME.fg
+        return fg.r, fg.g, fg.b, 1
+    end
     return 1, 1, 1, 1
 end
 
@@ -586,8 +517,8 @@ end
 local function ApplyTextLayout()
     if not (frame and textFrame) then return end
     local t = TRDB()
-    local side = t.textSide or DEFAULTS.textSide
-    local line = (t.textSize or DEFAULTS.textSize) + 4
+    local side = t.textSide or ns.SettingDefault("textSide")
+    local line = (t.textSize or ns.SettingDefault("textSize")) + 4
 
     textFrame:ClearAllPoints()
     -- The bar's toggle is gone from the UI but a stored showBar outlives it.
@@ -622,12 +553,11 @@ local function NaowhMedia(kind, name)
     return ok and path or nil
 end
 
-local function AlertFont()
-    local selected = TRDB().fontName
-    local path = type(selected) == "string" and NaowhMedia("font", selected)
-    return path or ns.UIFontPath()
+local function SetAlertFont(fs, size)
+    local outline = TRDB().defensiveOutline
+    if outline == nil then outline = "OUTLINE" end
+    Parts.HudFont(fs, TRDB().fontName, size, outline, "none")
 end
-ns.AlertFontPath = AlertFont
 
 -- Display only, never clickable. Alpha 0 hides the art but NOT hit-testing, so a losing
 -- slot left mouse-enabled would still be a live mouse target sitting over the screen.
@@ -645,7 +575,7 @@ local function CreateSlot(index)
     -- branch, which is why text can name the defensive in combat when speech cannot.
     -- A FontString cannot carry the tank gate (textures only).
     slot.label = slot:CreateFontString(nil, "OVERLAY")
-    slot.label:SetFont(AlertFont(), 16, "OUTLINE")
+    SetAlertFont(slot.label, 16)
     slot.label:SetTextColor(T.fg.r, T.fg.g, T.fg.b, 1)
     slot.label:Hide()
 
@@ -693,14 +623,14 @@ function Reminder.Create()
     textFrame:Hide()
 
     frame.reminder = textFrame:CreateFontString(nil, "OVERLAY")
-    frame.reminder:SetFont(AlertFont(), REMINDER_SIZE, "OUTLINE")
+    SetAlertFont(frame.reminder, REMINDER_SIZE)
     ApplyDefensiveTextColor()
     frame.reminder:Hide()
 
     -- "Call for external": its alpha is the accumulator left over after the priority walk,
     -- 1 only when nothing on the list is up.
     frame.fallback = textFrame:CreateFontString(nil, "OVERLAY")
-    frame.fallback:SetFont(AlertFont(), 16, "OUTLINE")
+    SetAlertFont(frame.fallback, 16)
     local T = ns.THEME
     frame.fallback:SetTextColor(T.accentSoft.r, T.accentSoft.g, T.accentSoft.b, 1)
     frame.fallback:SetAlpha(0)
@@ -708,7 +638,7 @@ function Reminder.Create()
 
     -- Its own font string: the target name arrives secret and concatenating a secret raises.
     frame.castTarget = textFrame:CreateFontString(nil, "OVERLAY")
-    frame.castTarget:SetFont(AlertFont(), REMINDER_SIZE, "OUTLINE")
+    SetAlertFont(frame.castTarget, REMINDER_SIZE)
     frame.castTarget:Hide()
 
     -- No "you are targeted" marker: PlayerIsSpellTarget is secret and SetShown is
@@ -717,7 +647,7 @@ function Reminder.Create()
     -- Authoring mode changes every uncovered boss to call-everything; twice a callout that
     -- looked like wrong data was this switch left on, hence the tag and border.
     frame.learnTag = textFrame:CreateFontString(nil, "OVERLAY")
-    frame.learnTag:SetFont(AlertFont(), 12, "OUTLINE")
+    SetAlertFont(frame.learnTag, 12)
     frame.learnTag:SetTextColor(1, 0.65, 0.2, 1)
     frame.learnTag:SetText("AUTHORING MODE -- CALLING EVERY ABILITY")
     frame.learnTag:Hide()
@@ -733,22 +663,22 @@ end
 
 local function ApplySize()
     if not frame then return end
-    if frame.reminder then frame.reminder:SetFont(AlertFont(), REMINDER_SIZE, "OUTLINE") end
-    if frame.castTarget then frame.castTarget:SetFont(AlertFont(), REMINDER_SIZE, "OUTLINE") end
-    if frame.learnTag then frame.learnTag:SetFont(AlertFont(), 12, "OUTLINE") end
+    if frame.reminder then SetAlertFont(frame.reminder, REMINDER_SIZE) end
+    if frame.castTarget then SetAlertFont(frame.castTarget, REMINDER_SIZE) end
+    if frame.learnTag then SetAlertFont(frame.learnTag, 12) end
     local t = TRDB()
-    local size = t.iconSize or DEFAULTS.iconSize
-    local fontSize = t.textSize or DEFAULTS.textSize
+    local size = t.iconSize or ns.SettingDefault("iconSize")
+    local fontSize = t.textSize or ns.SettingDefault("textSize")
     local textOn = t.showText
     frame:SetSize(size, size)
     for i = 1, #slots do
         slots[i]:SetSize(size, size)
-        slots[i].label:SetFont(AlertFont(), fontSize, "OUTLINE")
+        SetAlertFont(slots[i].label, fontSize)
         slots[i].label:SetShown(textOn)
         slots[i].icon:SetShown(t.showIcon)
     end
     if frame.fallback then
-        frame.fallback:SetFont(AlertFont(), fontSize, "OUTLINE")
+        SetAlertFont(frame.fallback, fontSize)
         frame.fallback:SetText(t.voiceNone or "")
         frame.fallback:SetShown(textOn and t.fallbackOn ~= false)
     end
@@ -1898,70 +1828,6 @@ end
 -------------------------------------------------------------------------------
 --  Spoken callouts
 -------------------------------------------------------------------------------
--- "Game Default" stores no id and follows Blizzard's Text to Speech panel; an uninstalled
--- stored voice falls back rather than going silent. Cached because GetTtsVoices builds a
--- table per call. Blizzard's TTS panel raises no event on a voice change, so closing it or
--- Settings drops the cache; not combat start, where re-reading stalled every pull.
--- Upvalues in a do block rather than file locals: this chunk is at Lua's 200-local ceiling.
-do
-    local cachedWant, cachedID
-
-    function ns.InvalidateTTSVoice()
-        cachedWant, cachedID = nil, nil
-    end
-
-    local hookVoicePanels = CreateFrame("Frame")
-    hookVoicePanels:RegisterEvent("PLAYER_LOGIN")
-    hookVoicePanels:SetScript("OnEvent", function(self)
-        self:UnregisterAllEvents()
-        for _, panel in ipairs({ _G.SettingsPanel, _G.TextToSpeechFrame }) do
-            panel:HookScript("OnHide", ns.InvalidateTTSVoice)
-        end
-    end)
-
-    function ns.TTSVoiceID()
-        local want = TRDB().ttsVoiceID
-        if cachedID and cachedWant == want then return cachedID end
-        if not (C_VoiceChat and C_VoiceChat.GetTtsVoices) then return 0 end
-        local voices = C_VoiceChat.GetTtsVoices()
-        local resolved
-        if want and voices then
-            for i = 1, #voices do
-                if voices[i].voiceID == want then
-                    resolved = want
-                    break
-                end
-            end
-        end
-        if not resolved and TextToSpeech_GetSelectedVoice then
-            local ok, voice = pcall(TextToSpeech_GetSelectedVoice, Enum.TtsVoiceType.Standard)
-            if ok and voice and voice.voiceID then resolved = voice.voiceID end
-        end
-        if not resolved then
-            resolved = (voices and voices[1] and voices[1].voiceID) or 0
-        end
-        -- The voice list can be empty early in a session; do not cache a guess from it.
-        if voices and #voices > 0 then cachedWant, cachedID = want, resolved end
-        return resolved
-    end
-end
-
--- Game Default is keyed "" since a dropdown cannot carry nil as a value.
-function ns.TTSVoiceChoices()
-    local values, order = { [""] = "Game Default" }, { "" }
-    if C_VoiceChat and C_VoiceChat.GetTtsVoices then
-        local voices = C_VoiceChat.GetTtsVoices()
-        for i = 1, #(voices or {}) do
-            local v = voices[i]
-            if v and v.voiceID and v.name then
-                values[v.voiceID] = v.name
-                order[#order + 1] = v.voiceID
-            end
-        end
-    end
-    return values, order
-end
-
 local function Speak(text)
     if not (C_VoiceChat and C_VoiceChat.SpeakText) or not text or text == "" then return end
     -- (voiceID, text, rate, volume, overlap). The third argument is the rate, as in
@@ -2413,7 +2279,7 @@ function ns.ForceShowTest()
             .. "real boss.")
     end
     if hideTimer then hideTimer:Cancel() end
-    hideTimer = C_Timer.NewTimer(TRDB().lingerSec or DEFAULTS.lingerSec, HideReminder)
+    hideTimer = C_Timer.NewTimer(TRDB().lingerSec or ns.SettingDefault("lingerSec"), HideReminder)
 end
 
 -------------------------------------------------------------------------------
@@ -3515,7 +3381,7 @@ local function FireBigWigsAbility(sid, lateRetry, reminder)
     if reminder then lastAnnouncedSpellID = nil end
     local result = SpeakCallout(sid)
     if hideTimer then hideTimer:Cancel() end
-    hideTimer = C_Timer.NewTimer((reminder and reminder.dur) or TRDB().lingerSec or DEFAULTS.lingerSec, HideReminder)
+    hideTimer = C_Timer.NewTimer((reminder and reminder.dur) or TRDB().lingerSec or ns.SettingDefault("lingerSec"), HideReminder)
     return result
 end
 
@@ -4165,7 +4031,8 @@ function ns.WarnIfNoBossMod()
         source == "bigwigs" and "BigWigs" or "DBM"))
 end
 
-function ns.Apply()
+-- The core defines ns.Apply, the profile re-apply every module hooks.
+hooksecurefunc(ns, "Apply", function()
     if ns.Integrations then ns.Integrations.Refresh() end
     ns.PruneCustomReminderTimers()
     ns.PrunePendingBWFires()
@@ -4197,7 +4064,7 @@ function ns.Apply()
         and ns.BossSource() == "timeline" and ns.HealerRemindersEnabled()) then
         RegisterEventSounds()
     end
-end
+end)
 
 -------------------------------------------------------------------------------
 --  Preview
@@ -5376,13 +5243,14 @@ local function RelayoutAlert() ApplyTextLayout(); UpdatePreview() end
 
 ns.SmartReminderApply = {
     bossSource = function() ns.Apply() end,
-    showIcon = RefitAlert, showText = RefitAlert, fontName = RefitAlert,
+    showIcon = RefitAlert, showText = RefitAlert, fontName = RefitAlert, defensiveOutline = RefitAlert,
     iconSize = RefitAlert, textSize = RefitAlert, textSide = RelayoutAlert,
     cdmGlow = function(v) if not v then ns.StopCDMGlow() end end,
     soundOn = function() RegisterEventSounds() end,
     soundKey = function() RegisterEventSounds() end,
     defensiveTextColorOn = function() ApplyDefensiveTextColor() end,
     defensiveTextColor = function() ApplyDefensiveTextColor() end,
+    defensiveTextTheme = function() ApplyDefensiveTextColor() end,
     castTargetBoss = function() if ns.RefreshCastWatch then ns.RefreshCastWatch() end end,
 }
 
@@ -5582,33 +5450,6 @@ function ns.SetSoundFor(spellID, key)
     end
 end
 
--- Fresh tables per call: the SharedMedia appender mutates in place and caches by
--- table identity, so handing the same tables to two dropdowns collapses them into one.
-function ns.SoundChoices()
-    local EUI = ns.UI
-    if not (EUI and EUI.BuildAlertSoundTables) then return nil end
-    local paths, names, order = EUI.BuildAlertSoundTables()
-    if EUI.AppendSharedMediaSounds then EUI.AppendSharedMediaSounds(paths, names, order) end
-    names["none"] = nil
-    for i = #order, 1, -1 do
-        if order[i] == "none" then table.remove(order, i) end
-    end
-    return paths, names, order
-end
-
--- For the pack exporter. `pos` is not in DEFAULTS, so the exporter takes it separately.
-function ns.SettingKeys()
-    local out = {}
-    for k in pairs(DEFAULTS) do out[#out + 1] = k end
-    table.sort(out)
-    return out
-end
-
-function ns.SettingDefault(key)
-    return DEFAULTS[key]
-end
-
-ns.DB            = TRDB
 ns.UserList      = UserList
 ns.BossList      = BossList
 ns.ClearBossList = ClearBossList
@@ -5628,7 +5469,6 @@ ns.ShowPickerFor = function(_, encounterID, onDone)
 end
 ns.ShowCalloutEditor = function(...) return ShowCalloutEditor(...) end
 ns.MAX_SLOTS     = MAX_SLOTS
-function ns.CurrentSpec() return specID, isTank end
 function ns.RefreshRuntime()
     if ns.Integrations then ns.Integrations.Refresh() end
     ns.PruneCustomReminderTimers()
@@ -5674,7 +5514,6 @@ watcher:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
 -- A boss that phases in becomes targetable without the engage list changing; Blizzard's
 -- boss frames (TargetFrame.lua) refresh on this too.
 watcher:RegisterEvent("UNIT_TARGETABLE_CHANGED")
-watcher:RegisterEvent("VOICE_CHAT_TTS_VOICES_UPDATE")
 
 watcher:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
     -- First, and gated before the pcall: the most frequent event in the game.
@@ -5804,11 +5643,10 @@ watcher:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         return
     end
 
-    -- Spec-bound profiles take effect here. No return: PLAYER_LOGIN has its own handler below.
+    -- No return: PLAYER_LOGIN has its own handler below.
     if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_LOGIN"
         or event == "PLAYER_ENTERING_WORLD" then
         RefreshSpec()
-        if ns.ApplySpecProfile then ns.ApplySpecProfile(specID) end
     end
 
     if event == "PLAYER_REGEN_DISABLED" then
@@ -5828,11 +5666,6 @@ watcher:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         return
     end
 
-    if event == "VOICE_CHAT_TTS_VOICES_UPDATE" then
-        ns.InvalidateTTSVoice()
-        return
-    end
-
 
     if event == "PLAYER_LOGIN" then
         RegisterBossModHooks()
@@ -5845,7 +5678,6 @@ watcher:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
             EUI:RegisterOnHide(function()
                 previewing = false
                 UpdatePreview()
-                if ns.HideRaidReminderAnchorConfig then ns.HideRaidReminderAnchorConfig(true) end
             end)
         end
         -- Read only, never written.

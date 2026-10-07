@@ -41,6 +41,8 @@ read_globals = {
     "GetSpellCritChance", "GetSpellHitModifier", "UnitArmor", "UnitAttackPower", "UnitAttackSpeed", "UnitDamage",
     "UnitDefenseSkill", "UnitRangedAttackPower",
     "CheckInteractDistance", "ClearInspectPlayer", "InspectFrame", "NotifyInspect",
+    "INSPECTFRAME_SUBFRAMES", "InspectLevelText", "InspectModelFrame", "InspectPaperDollFrame",
+    "PANEL_INSET_BOTTOM_OFFSET", "PANEL_INSET_RIGHT_OFFSET",
     "ChatEdit_InsertLink", "ChatFrame1EditBox", "ChatFrameUtil", "CinematicFrame_CancelCinematic",
     "ClearCursor", "CloseQuest", "ColorPickerFrame", "CombatTextFont",
     "CombatTextFontOutline", "CompleteQuest", "ConfirmAcceptQuest",
@@ -51,16 +53,16 @@ read_globals = {
     "C_CurrencyInfo", "C_CurveUtil", "C_CVar", "C_DeathInfo", "C_DurationUtil",
     "C_EncounterEvents", "C_EncounterJournal", "C_EncounterTimeline", "C_EquipmentSet",
     "C_ActionBar", "C_FriendList", "C_GamepadUI", "C_GossipInfo", "C_GuildInfo", "C_InstanceEncounter",
-    "C_Item", "C_KeyBindings", "C_LootHistory", "C_MajorFactions", "C_Map", "C_MountJournal", "C_Transmog", "C_MerchantFrame", "C_NamePlate", "C_PaperDollInfo",
+    "C_Item", "C_KeyBindings", "C_LootHistory", "C_MajorFactions", "C_Map", "C_Navigation", "C_MountJournal", "C_Transmog", "C_MerchantFrame", "C_NamePlate", "C_PaperDollInfo",
     "C_PartyInfo", "C_QuestLog", "C_Reputation", "C_SeasonInfo",
     "C_RestrictedActions", "C_Secrets", "C_SpecializationInfo", "C_Spell", "C_SpellBook",
-    "C_StringUtil", "C_SuperTrack", "C_SwingTimer", "C_TaxiMap", "C_Texture", "C_Timer",
+    "C_StringUtil", "C_SuperTrack", "SuperTrackedFrame", "C_SwingTimer", "C_TaxiMap", "C_Texture", "C_Timer",
     "C_TooltipInfo", "C_TradeSkillUI", "C_Traits", "C_TransmogCollection", "C_TTSSettings",
     "C_UnitAuras", "C_VoiceChat", "date", "debugprofilestop", "DEFAULT_CHAT_FRAME",
     "DeleteCursorItem", "DeleteMacro", "DELETE_GOOD_ITEM", "DELETE_ITEM_CONFIRM_STRING",
     "EditMacro", "EJ_GetCurrentTier", "EJ_GetEncounterInfo", "EJ_GetEncounterInfoByIndex",
     "EJ_GetInstanceByIndex", "EJ_GetInstanceInfo", "EJ_SelectInstance", "EJ_SelectTier",
-    "COMBATLOG_XPGAIN_FIRSTPERSON_UNNAMED", "CommunitiesFrame", "EncounterJournal", "Enum", "EnumerateFrames", "ERR_BAG_FULL", "ERR_INV_FULL", "ERR_QUEST_PUSH_BUSY_S", "ERR_QUEST_PUSH_SUCCESS_S",
+    "COMBATLOG_XPGAIN_FIRSTPERSON_UNNAMED", "CommunitiesFrame", "FRIENDS_BUTTON_TYPE_BNET", "FRIENDS_BUTTON_TYPE_WOW", "FriendsFrame_UpdateFriendButton", "FriendsTooltip", "InspectUnit", "PlayerSpellsFrame", "GameTooltipText", "WOW_PROJECT_ID", "EncounterJournal", "Enum", "EnumerateFrames", "ERR_BAG_FULL", "ERR_INV_FULL", "ERR_QUEST_PUSH_BUSY_S", "ERR_QUEST_PUSH_SUCCESS_S",
     "EventRegistry", "EventToastManagerFrame", "EventUtil", "ScrollBoxListMixin",
     "FACTION_STANDING_INCREASED", "ChatFontNormal", "GameFontHighlight", "GameFontNormal", "GameTooltip",
     "GameTooltipTextLeft1", "GameTooltip_Hide", "GetActionInfo", "GetActiveTitle",
@@ -89,7 +91,7 @@ read_globals = {
     "GetRepairAllCost", "GetShapeshiftForm", "GetShapeshiftFormID",
     "GetSpecializationInfoByID", "GetSpellBaseCooldown", "GetSubZoneText", "GetTaxiMapID",
     "GetTime", "GetTitleText", "GetTrainerServiceCost", "GetTrainerServiceIcon", "GetTrainerServiceInfo",
-    "GetTrainerServiceSkillReq", "GetUnitName", "GetXPExhaustion", "GetZoneText", "GOLD_AMOUNT",
+    "GetTrainerServiceSkillReq", "GetUnitName", "GetUnitSpeed", "GetXPExhaustion", "GetZoneText", "GOLD_AMOUNT",
     "HandleModifiedItemClick", "hash_EmoteTokenList", "HideUIPanel", "hooksecurefunc", "IconDataProviderExtraType",
     "IconDataProviderMixin",
     "InCinematic", "InCombatLockdown", "INSTANCE_RESET_FAILED", "INSTANCE_RESET_FAILED_OFFLINE",
@@ -97,7 +99,7 @@ read_globals = {
     "INVSLOT_TRINKET1", "INVSLOT_TRINKET2", "IsAltKeyDown", "IsControlKeyDown", "IsInGroup",
     "IsInGuild", "IsInInstance", "IsInRaid", "IsModifiedClick", "IsMounted",
     "IsMouseButtonDown", "IsPlayerMoving", "IsPlayerSpell", "IsQuestCompletable", "IsResting",
-    "issecrettable", "issecretvalue", "IsSecureCmd", "IsShiftKeyDown", "IsStealthed", "IsTradeskillTrainer",
+    "issecrettable", "issecretvalue", "issecurevariable", "IsSecureCmd", "IsShiftKeyDown", "IsStealthed", "IsTradeskillTrainer",
     "IsXPUserDisabled", "Item", "ItemEventListener", "ItemRefTooltip",
     "ItemRefTooltipTextLeft1", "ITEM_QUALITY_COLORS", "LE_PARTY_CATEGORY_INSTANCE", "LibStub",
     "LOCALIZED_CLASS_NAMES_MALE", "LoggingCombat", "LootFrame", "LootSlot",
@@ -136,6 +138,7 @@ read_globals = {
     "UpdateAddOnMemoryUsage", "WHITE_FONT_COLOR", "wipe", "WorldFrame", "WorldMapFrame",
     "ZoneTextFrame",
     "ClickSendMailItemButton", "GetInboxHeaderInfo", "GetInboxItem", "GetInboxNumItems",
+    "GetSendMailItem",
     "GetLooseMacroIcons", "GetLooseMacroItemIcons", "GetMacroIcons", "GetMacroItemIcons",
     "HasSendMailItem", "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
 }
@@ -153,5 +156,5 @@ files["DungeonQuests/NaowhForever_DungeonQuests.lua"] = { ignore = { "421/id" } 
 files["NaowhForever_Professions/NaowhForever_Professions.lua"] = { ignore = { "431/rows", "421/bar", "431/W" } }
 files["NaowhForever_Professions/NaowhForever_RecipeFinder.lua"] = { ignore = { "431/list" } }
 files["QoL/NaowhForever_QoL.lua"] = { ignore = { "211/DRUID_FORM_VALUES", "211/DRUID_FORM_ORDER" } }
-files["SmartReminders/NaowhForever_Bosses.lua"] = { ignore = { "311/y", "431/set" } }
+files["NaowhForever_SmartReminders/NaowhForever_Bosses.lua"] = { ignore = { "311/y", "431/set" } }
 files["Tools/regression/test-buff-reminders.lua"] = { ignore = { "432/self" } }

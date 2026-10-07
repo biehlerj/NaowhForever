@@ -68,6 +68,16 @@ function Parts.HudText(fs, shadow)
     return fs
 end
 
+Parts.HUD_OUTLINES = { { NONE = "None", [""] = "Shadow", OUTLINE = "Outline", THICKOUTLINE = "Thick Outline" },
+    { "NONE", "", "OUTLINE", "THICKOUTLINE" } }
+
+-- font is a SharedMedia name ("" for the Addon Font); outline one of HUD_OUTLINES. Shadow ("")
+-- gets the HUD shadow for background (a Parts.HudBackdrop mode, or nil for the card's).
+function Parts.HudFont(fs, font, size, outline, background)
+    fs:SetFont(ns.UI.FontPath(font), size, outline == "NONE" and "" or outline)
+    return Parts.HudText(fs, outline == "" and (background or "card") or false)
+end
+
 Parts.HUD_BACKGROUNDS = { { card = "Card", soft = "Soft", none = "None" }, { "card", "soft", "none" } }
 local BACKGROUND_NAMES, NO_OPTS = Parts.HUD_BACKGROUNDS[1], {}
 local SOFT_CORNERS = {   -- point, its x and y outwards, then the round texture's quarter: left, right, top, bottom
@@ -315,7 +325,8 @@ function Parts.Fraction(part, whole)
     return text
 end
 
-local coins = {}
+local coins, coinsKept = {}, 0
+local COINS_KEPT = 500
 local GOLD, SILVER = 10000, 100   -- copper in a gold coin, in a silver one
 
 -- The amount with the game's coin icons ("1g 50s 25c"), made once each. With compact, only its
@@ -328,8 +339,13 @@ function Parts.Coins(copper, compact)
     end
     local text = coins[copper]
     if not text then
+        if coinsKept >= COINS_KEPT then
+            wipe(coins)
+            coinsKept = 0
+        end
         text = C_CurrencyInfo.GetCoinTextureString(copper)
         coins[copper] = text
+        coinsKept = coinsKept + 1
     end
     return text
 end
