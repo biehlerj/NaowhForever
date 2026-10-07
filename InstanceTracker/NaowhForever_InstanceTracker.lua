@@ -12,8 +12,8 @@
 --  timer is allowed on screen. Coin amounts come from loot messages (the client's own
 --  GOLD_AMOUNT phrases), not from a combat log, which Forever does not give to addons.
 --  Lockouts and visits are account data, so a profile switch does not wipe them.
---  A character is stored under the full name, first and surname. UnitName is only the
---  first name on Forever, so two alts who share it would otherwise be one record.
+--  A character is stored under its UnitGUID (Shared.CharacterData). Names are not
+--  unique on Forever. The name kept on the record is only what the pages show.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local UI = ns.UI
@@ -87,27 +87,37 @@ local function Secret(v)
     return issecretvalue and issecretvalue(v)
 end
 
-local function RawStore()
-    local store = ns.AccountSettings().instanceTracker
-    if type(store) ~= "table" then return nil end
-    return store
+-- Each character is account.instanceTrackerChars[UnitGUID]. The old name-keyed
+-- instanceTracker blob is left unread: a name cannot tell two alts apart.
+local CHARS_KEY = "instanceTrackerChars"
+local GUID_PREFIX = "Player-"
+
+local function PlayerGUID()
+    local guid = UnitGUID("player")
+    if Secret(guid) or type(guid) ~= "string" or guid == "" then return nil end
+    return guid
 end
 
-local function EnsureStore()
-    local account = ns.AccountSettings()
-    local store = account.instanceTracker
-    if type(store) ~= "table" then
-        store = { chars = {}, runs = {} }
-        account.instanceTracker = store
-    end
-    if type(store.chars) ~= "table" then store.chars = {} end
-    if type(store.runs) ~= "table" then store.runs = {} end
-    return store
+local function AllChars()
+    local all = ns.AccountSettings()[CHARS_KEY]
+    if type(all) ~= "table" then return nil end
+    return all
+end
+
+local function IsCharKey(key)
+    return type(key) == "string" and key:find(GUID_PREFIX, 1, true) == 1
+end
+
+-- This character's record. Nil before the game knows who you are, or when the
+-- GUID comes back secret. create writes the record.
+local function Mine(create)
+    if not PlayerGUID() then return end
+    return ns.Shared.CharacterData(CHARS_KEY, create)
 end
 
 local function OpenRun()
-    local store = RawStore()
-    local open = store and store.open
+    local row = Mine(false)
+    local open = row and row.open
     if type(open) ~= "table" then return nil end
     return open
 end
@@ -128,7 +138,7 @@ local function BareName(name)
     return name:match("^[^-]+") or name
 end
 
--- UnitName is the first name ("Glyadin"). Older rows were filed under that.
+-- UnitName is the first name ("Glyadin"). Nova messages arrive under a name.
 local function FirstName()
     return BareName(UnitName("player"))
 end
@@ -138,121 +148,11 @@ local function FullName()
     return BareName(UnitFullName("player"))
 end
 
-local function PlayerClass()
-    local _, class = UnitClass("player")
-    if Secret(class) or type(class) ~= "string" or class == "" then return nil end
-    return class
-end
-
-local function RealmAgrees(stored, realm)
-    if type(stored) ~= "string" or stored == "" then return true end
-    return stored == realm
-end
-
--- A row with no class stored can be this character. A row with a class needs a match,
--- and a class the game will not show yet is left for a later login read.
-local function ClassAgrees(stored, class)
-    if type(stored) ~= "string" or stored == "" then return true end
-    if not class then return false end
-    return stored == class
-end
-
-local function HasClass(stored)
-    return type(stored) == "string" and stored ~= ""
-end
-
--- Move this character's first-name rows onto the full name. Another alt who only
--- shares the first name keeps a row whose class is not this one. True when the
--- move is finished; false when a class still has to be read before it is safe.
-local function ClaimFirstName(store, full, first)
-    if first == "" or first == full then return true end
-    local realm, class = RealmKey(), PlayerClass()
-    local group = type(store.chars) == "table" and store.chars[realm] or nil
-    local old = type(group) == "table" and group[first] or nil
-    local open = store.open
-    -- A classed row cannot be told from the other alt's until this class is known.
-    if not class then
-        if type(old) == "table" and HasClass(old.class) then return false end
-        if type(store.runs) == "table" then
-            for i = 1, #store.runs do
-                local row = store.runs[i]
-                if type(row) == "table" and row.char == first and RealmAgrees(row.realm, realm)
-                    and HasClass(row.class) then
-                    return false
-                end
-            end
-        end
-        if type(open) == "table" and open.char == first and RealmAgrees(open.realm, realm)
-            and HasClass(open.class) then
-            return false
-        end
-    end
-
-    local sheetAgrees = type(old) ~= "table" or ClassAgrees(old.class, class)
-    if type(old) == "table" and sheetAgrees and type(group[full]) ~= "table" then
-        group[full] = old
-        group[first] = nil
-    end
-
-    local function Take(row, field)
-        if type(row) ~= "table" or row[field] ~= first or not RealmAgrees(row.realm, realm) then
-            return
-        end
-        local stored = row.class
-        local hasClass = type(stored) == "string" and stored ~= ""
-        if hasClass then
-            if stored ~= class then return end
-        elseif not sheetAgrees then
-            return
-        end
-        row[field] = full
-        if type(row.realm) ~= "string" or row.realm == "" then row.realm = realm end
-    end
-    if type(store.runs) == "table" then
-        for i = 1, #store.runs do Take(store.runs[i], "char") end
-    end
-    Take(open, "char")
-
-    if sheetAgrees then
-        if type(store.hour) == "table" then
-            for i = 1, #store.hour do
-                local row = store.hour[i]
-                if type(row) == "table" and row.who == first and RealmAgrees(row.realm, realm) then
-                    row.who = full
-                    if type(row.realm) ~= "string" or row.realm == "" then row.realm = realm end
-                end
-            end
-        end
-        local live = type(store.live) == "table" and store.live[realm] or nil
-        if type(live) == "table" and type(live[first]) == "table" and type(live[full]) ~= "table" then
-            live[full] = live[first]
-            live[first] = nil
-        end
-        local noted = store.hourNoted
-        if type(noted) == "table" then
-            local oldKey, newKey = realm .. "\031" .. first, realm .. "\031" .. full
-            if noted[oldKey] ~= nil and noted[newKey] == nil then
-                noted[newKey] = noted[oldKey]
-                noted[oldKey] = nil
-            end
-        end
-    end
-    return true
-end
-
--- Forever names carry a surname: UnitName is "Glyadin", UnitFullName is "Glyadin Skywolf".
--- Until the old first-name rows have been moved, this stays the first name, so a new
--- row is not opened beside them.
-local namedFull
-local function CharName()
-    local full, first = FullName(), FirstName()
-    if full == "" then return first end
-    if not namedFull then
-        local store = RawStore()
-        if not store or ClaimFirstName(store, full, first) then namedFull = true end
-    end
-    if not namedFull then return first end
-    return full
+-- Shown on the sheet, the history line and the hourly warning. The GUID is the key.
+local function DisplayName()
+    local full = FullName()
+    if full ~= "" then return full end
+    return FirstName()
 end
 
 local function WholeNumber(v)
@@ -305,31 +205,22 @@ local function SnapshotChar(row)
     if durability ~= nil then row.durability = durability end
 end
 
--- The character row lockouts and the sheet hang off.
+-- The character record lockouts, visits and the sheet hang off.
 local function TouchChar()
-    local name = CharName()
-    if name == "" then return end
-    local store = EnsureStore()
-    local realm = RealmKey()
-    store.chars[realm] = store.chars[realm] or {}
-    local row = store.chars[realm][name]
-    if not row then
-        row = { lockouts = {} }
-        store.chars[realm][name] = row
-    end
+    local row = Mine(true)
+    if not row then return end
+    local name = DisplayName()
+    if name ~= "" then row.name = name end
+    row.realm = RealmKey()
+    if type(row.lockouts) ~= "table" then row.lockouts = {} end
     SnapshotChar(row)
-    return row, realm, name
+    return row
 end
 
--- Experience and level-up. A row that does not exist yet still gets the full sheet,
+-- Experience and level-up. A record that does not exist yet still gets the full sheet,
 -- durability included, so the first write is complete.
 local function TouchXP()
-    local name = CharName()
-    if name == "" then return end
-    local store = RawStore()
-    local realm = RealmKey()
-    local group = store and store.chars and store.chars[realm]
-    local row = type(group) == "table" and group[name] or nil
+    local row = Mine(false)
     if type(row) ~= "table" then
         TouchChar()
         return
@@ -429,27 +320,25 @@ local function PlayerGhost()
 end
 
 local function SamePlace(open, name, mapID, difficulty)
-    if open.char ~= CharName() or open.realm ~= RealmKey() then return false end
     if open.instance ~= name or (open.difficulty or "") ~= difficulty then return false end
     local saved = open.mapID or 0
     return saved == 0 or mapID == 0 or saved == mapID
 end
 
-local function LastRun(realm, char, instance)
-    local store = RawStore()
-    if not store or type(store.runs) ~= "table" then return end
-    for i = 1, #store.runs do
-        local run = store.runs[i]
-        if run.realm == realm and run.char == char and run.instance == instance then
+local function LastRun(instance)
+    local row = Mine(false)
+    local runs = row and row.runs
+    if type(runs) ~= "table" then return end
+    for i = 1, #runs do
+        local run = runs[i]
+        if type(run) == "table" and run.instance == instance then
             return run
         end
     end
 end
 
 local function MatchingLockout(instance)
-    local store = RawStore()
-    local group = store and store.chars and store.chars[RealmKey()]
-    local row = group and group[CharName()]
+    local row = Mine(false)
     if not row or type(row.lockouts) ~= "table" then return end
     local now = time()
     for i = 1, #row.lockouts do
@@ -573,7 +462,7 @@ end
 local function AnnounceEnter(open)
     if not S.Get("enterChat") or not open.instance then return end
     ns.Print(ns.L("Entered %s.", Where(open)))
-    local last = LastRun(open.realm, open.char, open.instance)
+    local last = LastRun(open.instance)
     if last and last.left and last.entered then
         ns.Print(ns.L("Last visit: %s, looted %s.",
             FormatDuration(last.left - last.entered), Coins(last.loot)))
@@ -612,15 +501,14 @@ local function Reputation(rep)
 end
 
 local function RunsFor(open, instanceOnly)
-    local store = RawStore()
+    local row = Mine(false)
+    local runs = row and row.runs
     local list = {}
-    if not store or type(store.runs) ~= "table" then return list end
-    for i = 1, #store.runs do
-        local run = store.runs[i]
-        if run.realm == open.realm and run.char == open.char then
-            if not instanceOnly or run.instance == open.instance then
-                list[#list + 1] = run
-            end
+    if type(runs) ~= "table" then return list end
+    for i = 1, #runs do
+        local run = runs[i]
+        if type(run) == "table" and (not instanceOnly or run.instance == open.instance) then
+            list[#list + 1] = run
         end
     end
     return list
@@ -851,7 +739,7 @@ local function NoteGroup(open)
     local changed = false
     for i = 1, #members do
         local member = members[i]
-        if member.name ~= open.char then
+        if member.name ~= open.name then
             local row = known[member.name]
             if not row then
                 if not group then
@@ -872,37 +760,22 @@ local function NoteGroup(open)
 end
 
 -- Newest visits sit at the front. This character keeps MAX_RUNS of their own.
--- Another character's visits stay, so a long session does not push them off.
-local function TrimCharRuns(runs, realm, char)
-    local kept, write = 0, 1
-    for i = 1, #runs do
-        local run = runs[i]
-        if run.realm == realm and run.char == char then
-            kept = kept + 1
-            if kept <= MAX_RUNS then
-                runs[write] = run
-                write = write + 1
-            end
-        else
-            runs[write] = run
-            write = write + 1
-        end
-    end
-    for i = #runs, write, -1 do runs[i] = nil end
+local function TrimRuns(runs)
+    for i = #runs, MAX_RUNS + 1, -1 do runs[i] = nil end
 end
 
 -- at is a logout stamp, used when the leave itself was not seen live. quiet skips the
 -- display refresh when the caller is about to start another visit immediately.
 CloseRun = function(announce, at, quiet)
-    local store = RawStore()
-    local open = store and store.open
+    local row = Mine(false)
+    local open = row and row.open
     if type(open) ~= "table" then
         SetRunEvents(false)
         return
     end
-    store.open = nil
+    row.open = nil
     SetRunEvents(false)
-    if type(store.runs) ~= "table" then store.runs = {} end
+    if type(row.runs) ~= "table" then row.runs = {} end
     local left = at or time()
     if left < (open.entered or left) then left = time() end
     local span = Elapsed(open, left)
@@ -919,9 +792,9 @@ CloseRun = function(announce, at, quiet)
     local worth = span >= 1 or (open.loot or 0) > 0 or (open.xp or 0) > 0
         or (open.deaths or 0) > 0 or repGain
     if worth then
-        local runs = store.runs
+        local runs = row.runs
         table.insert(runs, 1, {
-            realm = open.realm, char = open.char, class = open.class,
+            name = open.name, class = open.class,
             instance = open.instance, mapID = open.mapID, kind = open.kind,
             difficulty = open.difficulty or "",
             entered = start, left = start + span, level = open.level,
@@ -929,7 +802,7 @@ CloseRun = function(announce, at, quiet)
             rep = open.rep, toldSave = open.toldSave and true or nil,
             group = group,
         })
-        TrimCharRuns(runs, open.realm, open.char)
+        TrimRuns(runs)
         if announce then AnnounceLeave(open, span) end
     end
     if quiet then return end
@@ -958,56 +831,48 @@ local function CopyKey(mapID, difficulty, name)
     return tostring(mapID) .. ":" .. (difficulty or "")
 end
 
-local function CharLives(store, create)
-    local name = CharName()
-    if name == "" then return end
-    if type(store.live) ~= "table" then
+-- Copies this character has not reset, on their own record.
+local function CharLives(create)
+    local row = Mine(create)
+    if not row then return end
+    if type(row.live) ~= "table" then
         if not create then return end
-        store.live = {}
+        row.live = {}
     end
-    local realm = RealmKey()
-    local byRealm = store.live[realm]
-    if type(byRealm) ~= "table" then
-        if not create then return end
-        byRealm = {}
-        store.live[realm] = byRealm
-    end
-    local mine = byRealm[name]
-    if type(mine) ~= "table" then
-        if not create then return end
-        mine = {}
-        byRealm[name] = mine
-    end
-    return mine
+    return row.live
 end
 
 local function ByAt(a, b)
     return a.at < b.at
 end
 
-local function PruneHour(store)
-    local list = store.hour
+-- Drops hour entries older than an hour. Oldest first. Clearing the cached count
+-- only matters for this character; an alt's list is pruned when the page reads it.
+local function PruneHour(row)
+    if type(row) ~= "table" then return {} end
+    local list = row.hour
+    local mine = Mine(false) == row
     if type(list) ~= "table" then
         list = {}
-        store.hour = list
-        hourSnap = nil
+        row.hour = list
+        if mine then hourSnap = nil end
         return list
     end
     local now = time()
     local n, w, ordered, prev, removed = #list, 1, true, nil, false
     for i = 1, n do
-        local row = list[i]
-        if type(row) == "table" and type(row.at) == "number" and now - row.at < HOUR then
-            if prev and prev.at > row.at then ordered = false end
-            prev = row
-            if w ~= i then list[w] = row end
+        local entry = list[i]
+        if type(entry) == "table" and type(entry.at) == "number" and now - entry.at < HOUR then
+            if prev and prev.at > entry.at then ordered = false end
+            prev = entry
+            if w ~= i then list[w] = entry end
             w = w + 1
         else
             removed = true
         end
     end
     for i = n, w, -1 do list[i] = nil end
-    if removed then hourSnap = nil end
+    if removed and mine then hourSnap = nil end
     if not ordered then table.sort(list, ByAt) end
     return list
 end
@@ -1019,19 +884,13 @@ local function WarnDistance()
     return n
 end
 
-local function SameChar(row, realm, name)
-    if type(row) ~= "table" or name == "" or row.who ~= name then return false end
-    if type(row.realm) ~= "string" or row.realm == "" then return true end
-    return row.realm == realm
-end
-
-local function HourFor(list, realm, name)
+local function HourFor(list)
     local count, oldest = 0, nil
     for i = 1, #list do
-        local row = list[i]
-        if SameChar(row, realm, name) then
+        local entry = list[i]
+        if type(entry) == "table" and type(entry.at) == "number" then
             count = count + 1
-            if not oldest or row.at < oldest then oldest = row.at end
+            if not oldest or entry.at < oldest then oldest = entry.at end
         end
     end
     local frees = 0
@@ -1042,23 +901,11 @@ local function HourFor(list, realm, name)
     return count, frees, oldest
 end
 
--- Oldest first, this character only. PruneHour has already ordered the full list.
--- Only the page path copies this character's rows.
-local function CharacterHour(store, realm, name)
-    local list = PruneHour(store)
-    local mine = {}
-    for i = 1, #list do
-        if SameChar(list[i], realm, name) then
-            mine[#mine + 1] = list[i]
-        end
-    end
-    return mine
-end
-
-local function HourSnapshot(store)
-    if not store then return 0, HOURLY_CAP, 0 end
+local function HourSnapshot()
+    local row = Mine(false)
+    if not row then return 0, HOURLY_CAP, 0 end
     local now = time()
-    if hourSnap and hourSnap.store == store
+    if hourSnap and hourSnap.row == row
         and (not hourSnap.oldest or now < hourSnap.oldest + HOUR) then
         local frees = 0
         if hourSnap.oldest then
@@ -1067,35 +914,29 @@ local function HourSnapshot(store)
         end
         return hourSnap.count, HOURLY_CAP, frees
     end
-    local count, frees, oldest = HourFor(PruneHour(store), RealmKey(), CharName())
-    hourSnap = { store = store, count = count, oldest = oldest }
+    local count, frees, oldest = HourFor(PruneHour(row))
+    hourSnap = { row = row, count = count, oldest = oldest }
     return count, HOURLY_CAP, frees
 end
 
--- One note per character, so an alt already warned does not swallow this character's.
-local function NotedMap(store)
-    if type(store.hourNoted) ~= "table" then store.hourNoted = {} end
-    return store.hourNoted
-end
-
+-- The note sits on this character, so an alt already warned does not swallow it.
 local function WarnHour()
     if not On() then return end
-    local store = RawStore()
-    if not store then return end
-    local name = CharName()
+    local row = Mine(false)
+    if not row then return end
+    local count, cap, frees = HourSnapshot()
+    local name = row.name
+    if type(name) ~= "string" or name == "" then name = DisplayName() end
     if name == "" then return end
-    local count, cap, frees = HourSnapshot(store)
-    local noted = NotedMap(store)
-    local key = RealmKey() .. "\031" .. name
     local left = cap - count
     if left < 0 then left = 0 end
     if count <= 0 or left > WarnDistance() then
-        noted[key] = nil
+        row.hourNoted = nil
         return
     end
     local state = left <= 0 and "cap" or "close"
-    if noted[key] == state then return end
-    noted[key] = state
+    if row.hourNoted == state then return end
+    row.hourNoted = state
     local when = FormatDuration(frees)
     if left <= 0 then
         ns.Print(ns.L("%s has used %d of %d instances this hour. A new instance will not let you in. The next one frees in %s.",
@@ -1113,16 +954,16 @@ end
 local function ScheduleExpiry()
     StopExpiry()
     if not On() then return end
-    local store = RawStore()
-    if not store then return end
-    local list = PruneHour(store)
+    local row = Mine(false)
+    if not row then return end
+    local list = PruneHour(row)
     if #list == 0 then return end
     local delay = list[1].at + HOUR - time()
     if delay < 1 then delay = 1 end
     local gen = expiryGen
     C_Timer.After(delay, function()
         if gen ~= expiryGen then return end
-        local current = RawStore()
+        local current = Mine(false)
         if current then PruneHour(current) end
         WarnHour()
         UpdateFrame()
@@ -1186,9 +1027,10 @@ end
 -- countIt is false for a login or reload: that copy already existed. An existing
 -- stamp stays put on that path, so a resume does not push the hour forward.
 local function NoteInstanceEntry(name, mapID, difficulty, countIt)
-    local store = EnsureStore()
-    local lives = CharLives(store, true)
-    if not lives then return end
+    local row = Mine(true)
+    if not row then return end
+    if type(row.live) ~= "table" then row.live = {} end
+    local lives = row.live
     local key = CopyKey(mapID, difficulty, name)
     local now = time()
     if not CountsEntry(lives[key], now, HOUR, countIt) then
@@ -1198,12 +1040,10 @@ local function NoteInstanceEntry(name, mapID, difficulty, countIt)
         return
     end
     lives[key] = { name = name or "", at = now }
-    if type(store.hour) ~= "table" then store.hour = {} end
-    store.hour[#store.hour + 1] = {
-        at = now, name = name or "", map = mapID, who = CharName(), realm = RealmKey(),
-    }
+    if type(row.hour) ~= "table" then row.hour = {} end
+    row.hour[#row.hour + 1] = { at = now, name = name or "", map = mapID }
     hourSnap = nil
-    PruneHour(store)
+    PruneHour(row)
     WarnHour()
     ScheduleExpiry()
 end
@@ -1384,9 +1224,7 @@ end
 -- end Nova reset wire format
 
 local function ForgetCopy(name)
-    local store = RawStore()
-    if not store then return end
-    local mine = CharLives(store, false)
+    local mine = CharLives(false)
     if not mine then return end
     if name then
         ClearNamedCopy(mine, name)
@@ -1536,9 +1374,10 @@ local function OnNovaReset(prefix, payload, channel, sender)
 end
 
 local function TakeSameCopy(name, mapID, difficulty)
-    local store = RawStore()
-    if not store or type(store.runs) ~= "table" then return end
-    local mine = CharLives(store, false)
+    local row = Mine(false)
+    local runs = row and row.runs
+    if type(runs) ~= "table" then return end
+    local mine = CharLives(false)
     local stored = mine and mine[CopyKey(mapID, difficulty, name)]
     if not stored then return end
     local now = time()
@@ -1548,23 +1387,22 @@ local function TakeSameCopy(name, mapID, difficulty)
         if not Secret(inGroup) and inGroup then grouped = true end
     end
     local current = CurrentGroup()
-    for i = 1, #store.runs do
-        local run = store.runs[i]
+    for i = 1, #runs do
+        local run = runs[i]
         if type(run) == "table" and SamePlace(run, name, mapID, difficulty) then
             if not CanResume(stored, run.left, now, HOUR) then return end
             -- A different group is a new copy. The old visit stays in the history.
             if GroupsDiffer(run.group, current, grouped) then return end
-            table.remove(store.runs, i)
+            table.remove(runs, i)
             return run
         end
     end
 end
 
 BeginRun = function(name, kind, difficulty, mapID, announce)
-    local row, realm, char = TouchChar()
+    local row = TouchChar()
     if not row then return end
-    local store = EnsureStore()
-    local open = store.open
+    local open = row.open
     if type(open) == "table" and SamePlace(open, name, mapID, difficulty) then
         -- Drop the time passed while logged out or reloading, then keep counting.
         if open.seen then
@@ -1585,12 +1423,13 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
         CloseRun(announce, (not announce) and open.seen or nil, true)
     end
     local prior = TakeSameCopy(name, mapID, difficulty)
+    local who = row.name or ""
     if prior then
         local now = time()
         local skipped = now - (tonumber(prior.left) or now)
         if skipped < 0 then skipped = 0 end
-        store.open = {
-            realm = prior.realm or realm, char = prior.char or char,
+        row.open = {
+            name = prior.name or who,
             class = prior.class or row.class, level = prior.level or row.level,
             instance = name, mapID = mapID ~= 0 and mapID or prior.mapID,
             kind = kind, difficulty = difficulty,
@@ -1600,26 +1439,26 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
             wantSave = (announce and not prior.toldSave) and true or nil,
             group = prior.group,
         }
-        NoteGroup(store.open)
+        NoteGroup(row.open)
         NoteInstanceEntry(name, mapID, difficulty, false)
         NoteXP(true)
         SetRunEvents(true)
-        if announce then AnnounceResume(store.open) end
+        if announce then AnnounceResume(row.open) end
         UpdateFrame()
         UI:RefreshPage(true)
         return
     end
-    store.open = {
-        realm = realm, char = char, class = row.class, level = row.level,
+    row.open = {
+        name = who, class = row.class, level = row.level,
         instance = name, mapID = mapID, kind = kind, difficulty = difficulty,
         entered = time(), loot = 0, xp = 0, deaths = 0,
         wantSave = announce and true or false,
     }
-    NoteGroup(store.open)
+    NoteGroup(row.open)
     NoteInstanceEntry(name, mapID, difficulty, announce and true or false)
     NoteXP(true)
     SetRunEvents(true)
-    if announce then AnnounceEnter(store.open) end
+    if announce then AnnounceEnter(row.open) end
     UpdateFrame()
     UI:RefreshPage(true)
 end
@@ -1674,7 +1513,7 @@ local function XPLine(open)
 end
 
 local function HourLine()
-    local count, cap, frees = HourSnapshot(RawStore())
+    local count, cap, frees = HourSnapshot()
     local text = string.format("Instances this hour: %d of %d", count, cap)
     if count > 0 then text = text .. "   " .. FormatDuration(frees) end
     local left = cap - count
@@ -1788,27 +1627,22 @@ ns.InstanceTracker = {
 }
 
 function ns.InstanceTracker.Characters()
-    local list, store = {}, RawStore()
-    if not store or type(store.chars) ~= "table" then return list end
-    local myRealm, myName = RealmKey(), CharName()
+    local list, all = {}, AllChars()
+    if not all then return list end
+    local mineGUID, myRealm = PlayerGUID(), RealmKey()
     local track = S.Get("trackAlts")
-    local hour = PruneHour(store)
-    for realm, group in pairs(store.chars) do
-        if type(group) == "table" then
-            for name, row in pairs(group) do
-                local mine = realm == myRealm and name == myName
-                if type(row) == "table" and (track or mine) then
-                    local count, frees = HourFor(hour, realm, name)
-                    list[#list + 1] = {
-                        realm = realm, name = name, class = row.class,
-                        level = row.level or 0, mine = mine,
-                        xp = row.xp, xpMax = row.xpMax, rested = row.rested,
-                        durability = row.durability, seen = row.seen,
-                        hour = count, hourFrees = frees,
-                        lockouts = CopyLocks(type(row.lockouts) == "table" and row.lockouts or {}),
-                    }
-                end
-            end
+    for guid, row in pairs(all) do
+        local mine = guid == mineGUID
+        if IsCharKey(guid) and type(row) == "table" and (track or mine) then
+            local count, frees = HourFor(PruneHour(row))
+            list[#list + 1] = {
+                guid = guid, realm = row.realm or "", name = row.name or "",
+                class = row.class, level = row.level or 0, mine = mine,
+                xp = row.xp, xpMax = row.xpMax, rested = row.rested,
+                durability = row.durability, seen = row.seen,
+                hour = count, hourFrees = frees,
+                lockouts = CopyLocks(type(row.lockouts) == "table" and row.lockouts or {}),
+            }
         end
     end
     table.sort(list, function(a, b)
@@ -1822,48 +1656,51 @@ function ns.InstanceTracker.Characters()
     return list
 end
 
+local function ByLeave(a, b)
+    return (a.left or a.entered or 0) > (b.left or b.entered or 0)
+end
+
 function ns.InstanceTracker.Runs()
-    local store = RawStore()
-    if not store or type(store.runs) ~= "table" then return {} end
-    if S.Get("trackAlts") then return store.runs end
-    local realm, name = RealmKey(), CharName()
+    local row = Mine(false)
+    local mine = row and row.runs
+    if type(mine) ~= "table" then mine = {} end
+    if not S.Get("trackAlts") then return mine end
+    local all = AllChars()
+    if not all then return mine end
     local list = {}
-    for i = 1, #store.runs do
-        local run = store.runs[i]
-        if run.realm == realm and run.char == name then
-            list[#list + 1] = run
+    for guid, char in pairs(all) do
+        if IsCharKey(guid) and type(char) == "table" and type(char.runs) == "table" then
+            for i = 1, #char.runs do
+                local run = char.runs[i]
+                if type(run) == "table" then list[#list + 1] = run end
+            end
         end
     end
+    table.sort(list, ByLeave)
     return list
 end
 
 function ns.InstanceTracker.ClearHistory()
-    local store = RawStore()
-    if not store or type(store.runs) ~= "table" then return end
+    local all = AllChars()
+    if not all then return end
     if S.Get("trackAlts") then
-        store.runs = {}
+        for guid, row in pairs(all) do
+            if IsCharKey(guid) and type(row) == "table" then row.runs = {} end
+        end
         return
     end
-    local realm, name = RealmKey(), CharName()
-    local runs, write = store.runs, 1
-    for i = 1, #runs do
-        local run = runs[i]
-        if run.realm ~= realm or run.char ~= name then
-            runs[write] = run
-            write = write + 1
-        end
-    end
-    for i = #runs, write, -1 do runs[i] = nil end
+    local row = Mine(false)
+    if row then row.runs = {} end
 end
 
 function ns.InstanceTracker.Hour()
-    return HourSnapshot(RawStore())
+    return HourSnapshot()
 end
 
 function ns.InstanceTracker.HourEntries()
-    local store = RawStore()
-    if not store then return {} end
-    local mine = CharacterHour(store, RealmKey(), CharName())
+    local row = Mine(false)
+    if not row then return {} end
+    local mine = PruneHour(row)
     local rows = {}
     for i = #mine, 1, -1 do rows[#rows + 1] = mine[i] end
     return rows
@@ -1871,24 +1708,19 @@ end
 
 -- Other characters who still have entries inside the hour, fullest first.
 function ns.InstanceTracker.HourOthers()
-    local store = RawStore()
-    if not store then return {} end
-    local list = PruneHour(store)
-    local realm, name = RealmKey(), CharName()
-    local grouped, order = {}, {}
-    for i = 1, #list do
-        local row = list[i]
-        if not SameChar(row, realm, name) then
-            local key = (row.realm or "") .. "\031" .. (row.who or "")
-            local bucket = grouped[key]
-            if not bucket then
-                bucket = { who = row.who or "", realm = row.realm, count = 0, at = row.at }
-                grouped[key] = bucket
-                order[#order + 1] = bucket
-            end
-            bucket.count = bucket.count + 1
-            if type(row.at) == "number" and row.at < (bucket.at or row.at) then
-                bucket.at = row.at
+    local all = AllChars()
+    if not all then return {} end
+    local mineGUID = PlayerGUID()
+    local order = {}
+    for guid, row in pairs(all) do
+        if IsCharKey(guid) and guid ~= mineGUID and type(row) == "table" then
+            local list = PruneHour(row)
+            if #list > 0 then
+                local count, _, oldest = HourFor(list)
+                order[#order + 1] = {
+                    guid = guid, who = row.name or "", realm = row.realm,
+                    count = count, at = oldest,
+                }
             end
         end
     end

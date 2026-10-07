@@ -156,7 +156,7 @@ local function RunLine(run)
     local IT = ns.InstanceTracker
     local span = IT.Duration((run.left or run.entered or 0) - (run.entered or 0))
     local when = date("%m/%d %H:%M", run.entered or time())
-    local who = ns.ClassColoredName(run.char or "?", run.class)
+    local who = ns.ClassColoredName(run.name or "?", run.class)
     local text = string.format("%s   %s   %s   %s   %s   %s XP", when, who,
         IT.PlaceName(run.instance, run.difficulty), span, IT.Coins(run.loot),
         BreakUpLargeNumbers(run.xp or 0))
@@ -305,16 +305,13 @@ function ns.BuildInstanceLockoutsPage(parent, y)
     local chars = ns.InstanceTracker.Characters()
     local listed = {}
     for i = 1, #chars do
-        listed[chars[i].realm .. "\031" .. chars[i].name] = true
-        -- Hour rows saved before a realm was stored match on the name alone.
-        listed["\031" .. chars[i].name] = true
+        if chars[i].guid then listed[chars[i].guid] = true end
     end
     local others = IT.HourOthers()
     local stray = {}
     for i = 1, #others do
         local row = others[i]
-        local key = (row.realm or "") .. "\031" .. (row.who or "")
-        if not listed[key] then stray[#stray + 1] = row end
+        if not listed[row.guid] then stray[#stray + 1] = row end
     end
     if #stray > 0 then
         _, h = W:Note(parent, "Other characters, each with their own 10 this hour. "
@@ -385,7 +382,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
     local open = IT.Open()
     if open and open.instance then
         local elapsed = IT.Duration(IT.Elapsed(open))
-        y = VisitLine(parent, y, "In progress   " .. ns.ClassColoredName(open.char or "?", open.class)
+        y = VisitLine(parent, y, "In progress   " .. ns.ClassColoredName(open.name or "?", open.class)
             .. "   " .. IT.PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
             .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP",
             open.group)
