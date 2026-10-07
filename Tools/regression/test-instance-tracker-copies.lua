@@ -13,7 +13,7 @@ end
 
 local tracker = Read("InstanceTracker/NaowhForever_InstanceTracker.lua")
 local code = Slice(tracker, "local function CopyFresh(stored, now, hour)", "\n-- end copy memory")
-    .. "\nreturn { Fresh = CopyFresh, Counts = CountsEntry, Differ = GroupsDiffer }\n"
+    .. "\nreturn { Fresh = CopyFresh, Counts = CountsEntry, Differ = GroupsDiffer, Resume = CanResume }\n"
 local chunk = assert(loadstring(code))
 setfenv(chunk, setmetatable({}, { __index = _G }))
 local Copy = chunk()
@@ -50,19 +50,11 @@ Case("an hour-old stamp counts again", function()
     assert(Copy.Counts(stored, NOW, HOUR, true))
 end)
 
-Case("a name saved before stamps counts again", function()
-    assert(not Copy.Fresh("Deadmines", NOW, HOUR))
-    assert(Copy.Counts("Deadmines", NOW, HOUR, true))
-    assert(Copy.Counts({ name = "Deadmines" }, NOW, HOUR, true))
-    assert(Copy.Counts(nil, NOW, HOUR, true))
-end)
-
 Case("a login or reload does not count", function()
     local old = { name = "Deadmines", at = NOW - 86400 }
     local fresh = { name = "Deadmines", at = NOW - 10 }
     assert(not Copy.Counts(old, NOW, HOUR, false))
     assert(not Copy.Counts(fresh, NOW, HOUR, false))
-    assert(not Copy.Counts("Deadmines", NOW, HOUR, false))
     assert(not Copy.Counts(nil, NOW, HOUR, false))
 end)
 
@@ -94,6 +86,21 @@ Case("a different group is a new visit", function()
     assert(Copy.Differ(groupA, {}, false))
     assert(Copy.Differ({}, { Member("Cara") }, true))
     assert(Copy.Differ(nil, { Member("Cara") }, false))
+end)
+
+Case("a stamp and a leave inside the hour can resume", function()
+    local stored = { name = "Deadmines", at = NOW - (HOUR - 1) }
+    assert(Copy.Resume(stored, NOW - 60, NOW, HOUR))
+    assert(not Copy.Counts(stored, NOW, HOUR, true))
+end)
+
+Case("an hour-old stamp or leave does not resume", function()
+    local oldStamp = { name = "Deadmines", at = NOW - HOUR }
+    assert(not Copy.Resume(oldStamp, NOW - 60, NOW, HOUR))
+    assert(Copy.Counts(oldStamp, NOW, HOUR, true))
+    local oldLeave = { name = "Deadmines", at = NOW - (HOUR + 60) }
+    assert(not Copy.Resume(oldLeave, NOW - HOUR, NOW, HOUR))
+    assert(Copy.Counts(oldLeave, NOW, HOUR, true))
 end)
 
 print(count .. " instance tracker copy regressions passed")

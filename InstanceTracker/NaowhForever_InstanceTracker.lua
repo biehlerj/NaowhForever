@@ -1,11 +1,12 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_InstanceTracker.lua -- saved lockouts for each character on this
 --  account, a record of each dungeon or raid visit, and how many new instances this
---  character has entered in the last hour. Coming back to the same group in a copy
---  this character has not reset continues that visit, and the time outside is not
---  counted. A different group starts a new visit. Who else was in the group is kept
---  on that visit. With Track Alts on, every character you log
---  into keeps that hour, its saved instances, and a snapshot of rest and durability.
+--  character has entered in the last hour. Coming back to the same group within that
+--  hour, in a copy this character has not reset, continues that visit, and the time
+--  outside is not counted. A later return or a different group starts a new visit.
+--  Who else was in the group is kept on that visit. With Track Alts on, every
+--  character you log into keeps that hour, its saved instances, and a snapshot of
+--  rest and durability.
 --
 --  Off until the module is enabled. The display frame is built the first time the run
 --  timer is allowed on screen. Coin amounts come from loot messages (the client's own
@@ -971,10 +972,11 @@ end
 -------------------------------------------------------------------------------
 --  Hourly instance entries. A new dungeon or raid instance counts. Walking back into
 --  one this character has not reset does not, for the hour after that entry. A later
---  zone-in counts again. A name saved before those stamps does not hold the count.
+--  zone-in counts again.
 --  The client's own reset line clears that memory, and so does a reset a Nova
---  Instance Tracker group leader announces. The same group continues the visit. A
---  different group is a new one, so the earlier loot and group stay on that record.
+--  Instance Tracker group leader announces. The same group continues the visit
+--  within that hour. A later return or a different group is a new one, so the
+--  earlier loot and group stay on that record.
 --  The cap is 10 new instances in a rolling hour, for this character. Another
 --  character on the account has their own 10.
 -------------------------------------------------------------------------------
@@ -1161,9 +1163,8 @@ local function ScheduleExpiry()
     end)
 end
 
--- A stamp inside the hour is still this copy. An older stamp, or a name saved
--- before stamps existed, is not. A login does not count. The block through
--- GroupsDiffer is loaded by the regression.
+-- A stamp inside the hour is still this copy. An older stamp is not. A login
+-- does not count. The block through CanResume is loaded by the regression.
 local function CopyFresh(stored, now, hour)
     if type(stored) ~= "table" or type(stored.at) ~= "number" then return false end
     if type(now) ~= "number" or type(hour) ~= "number" then return false end
@@ -1202,6 +1203,15 @@ local function GroupsDiffer(saved, current, inGroup)
     if savedN == 0 and hereN == 0 then return false end
     if hereN == 0 and inGroup then return false end
     return true
+end
+
+-- A closed visit reopens only while the hour still treats the stamp as this copy,
+-- and the saved run was left inside that same hour.
+local function CanResume(stored, left, now, hour)
+    if not CopyFresh(stored, now, hour) then return false end
+    if type(left) ~= "number" then return false end
+    local away = now - left
+    return away >= 0 and away < hour
 end
 -- end copy memory
 
@@ -1396,9 +1406,7 @@ local function ClearNamedCopy(lives, name)
     if type(lives) ~= "table" or type(name) ~= "string" or name == "" then return false end
     local cleared = false
     for key, stored in pairs(lives) do
-        local storedName = stored
-        if type(stored) == "table" then storedName = stored.name end
-        if storedName == name then
+        if type(stored) == "table" and stored.name == name then
             lives[key] = nil
             cleared = true
         end
@@ -1563,7 +1571,8 @@ local function TakeSameCopy(name, mapID, difficulty)
     local store = RawStore()
     if not store or type(store.runs) ~= "table" then return end
     local mine = CharLives(store, false)
-    if not mine or not mine[CopyKey(mapID, difficulty, name)] then return end
+    local stored = mine and mine[CopyKey(mapID, difficulty, name)]
+    if not stored then return end
     local now = time()
     local grouped = false
     if IsInGroup then
@@ -1574,8 +1583,7 @@ local function TakeSameCopy(name, mapID, difficulty)
     for i = 1, #store.runs do
         local run = store.runs[i]
         if type(run) == "table" and SamePlace(run, name, mapID, difficulty) then
-            local away = now - (tonumber(run.left) or 0)
-            if away < 0 or away >= AWAY_CAP then return end
+            if not CanResume(stored, run.left, now, HOUR) then return end
             -- A different group is a new copy. The old visit stays in the history.
             if GroupsDiffer(run.group, current, grouped) then return end
             table.remove(store.runs, i)

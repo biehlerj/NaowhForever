@@ -369,9 +369,9 @@ function ns.BuildInstanceHistoryPage(parent, y)
         .. "Each dungeon or raid visit while Instance Tracker is on: how long you were "
         .. "inside, the coins you looted and the experience you gained. Reputation gained "
         .. "is listed under the visit. Who else was in the group is a count on the right; "
-        .. "point at the line for the names. Coming back "
-        .. "before you reset it continues that visit, and the time outside is not counted. "
-        .. "Other characters "
+        .. "point at the line for the names. Coming back to the same group within "
+        .. "the hour, before you reset it, continues that visit, and the time outside "
+        .. "is not counted. Other characters "
         .. "are kept only when Track Alts is on. Repairs and vendor sales are not counted. "
         .. "Older visits drop off the end of the list.", y); y = y - h
     _, h = W:Button(parent, "Clear History", y, function()

@@ -37,7 +37,11 @@ end
 local STILL = "has been reset (Players still inside old instance can zone out and enter new)."
 
 local function Lives()
-    return { ["36:"] = "Ragefire Chasm", ["36:Heroic"] = "Ragefire Chasm", ["33:"] = "Shadowfang Keep" }
+    return {
+        ["36:"] = { name = "Ragefire Chasm", at = 1 },
+        ["36:Heroic"] = { name = "Ragefire Chasm", at = 1 },
+        ["33:"] = { name = "Shadowfang Keep", at = 1 },
+    }
 end
 
 Case("a name with spaces round-trips as one addon message", function()
@@ -57,17 +61,9 @@ Case("the three reset commands clear only that instance", function()
         assert(instance == "Ragefire Chasm", cmd)
         assert(Nit.Clear(lives, instance))
         assert(lives["36:"] == nil and lives["36:Heroic"] == nil, cmd .. " clears every copy of that name")
-        assert(lives["33:"] == "Shadowfang Keep", cmd .. " leaves a different instance")
+        assert(lives["33:"].name == "Shadowfang Keep", cmd .. " leaves a different instance")
         assert(#hour == 2 and hour[1].name == "Ragefire Chasm", "the hour list is not shortened")
     end
-    local stamped = {
-        ["36:"] = { name = "Ragefire Chasm", at = 1 },
-        ["36:Heroic"] = { name = "Ragefire Chasm", at = 1 },
-        ["33:"] = "Shadowfang Keep",
-    }
-    assert(Nit.Clear(stamped, "Ragefire Chasm"))
-    assert(stamped["36:"] == nil and stamped["36:Heroic"] == nil, "a stamp clears by name")
-    assert(stamped["33:"] == "Shadowfang Keep", "a string row is left")
 end)
 
 Case("only a reset without the chat line is printed", function()
