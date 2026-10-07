@@ -4,9 +4,9 @@
 --  character has entered in the last hour. Coming back to the same group within that
 --  hour, in a copy this character has not reset, continues that visit, and the time
 --  outside is not counted. A later return or a different group starts a new visit.
---  Who else was in the group is kept on that visit. With Track Alts on, every
---  character you log into keeps that hour, its saved instances, and a snapshot of
---  rest and durability.
+--  Who else was in the group is kept on that visit. Other characters' lockouts,
+--  visits, and the rest and durability sheet stay saved, and show only when
+--  Track Alts is on. Each character keeps their own hour.
 --
 --  Off until the module is enabled. The display frame is built the first time the run
 --  timer is allowed on screen. Coin amounts come from loot messages (the client's own
@@ -77,7 +77,7 @@ local frame, clock, unlocked
 local goldPattern, silverPattern, copperPattern, repPattern
 local events
 
-local UpdateFrame, CloseRun, BeginRun, PruneAlts
+local UpdateFrame, CloseRun, BeginRun
 
 local function On()
     return S.Get("enabled")
@@ -318,7 +318,6 @@ local function TouchChar()
         store.chars[realm][name] = row
     end
     SnapshotChar(row)
-    PruneAlts()
     return row, realm, name
 end
 
@@ -336,57 +335,6 @@ local function TouchXP()
         return
     end
     SnapshotXP(row)
-end
-
--- Off keeps the character you are playing. The hourly list is left alone: each
--- character's 10 is their own, and it still has to be there the next time you log them in.
--- This login cannot gain another character's rows while Track Alts stays off, so a
--- finished prune for this realm and name is not repeated on experience or durability.
-local prunedRealm, prunedName
-PruneAlts = function()
-    if S.Get("trackAlts") then
-        prunedRealm, prunedName = nil, nil
-        return
-    end
-    local store = RawStore()
-    if not store then return end
-    local realm, name = RealmKey(), CharName()
-    if name == "" then return end
-    if prunedRealm == realm and prunedName == name then return end
-    if type(store.chars) == "table" then
-        for key, group in pairs(store.chars) do
-            if key ~= realm then
-                store.chars[key] = nil
-            elseif type(group) == "table" then
-                for char in pairs(group) do
-                    if char ~= name then group[char] = nil end
-                end
-            end
-        end
-    end
-    local runs = store.runs
-    if type(runs) == "table" then
-        local foreign
-        for i = 1, #runs do
-            local run = runs[i]
-            if run.realm ~= realm or run.char ~= name then
-                foreign = true
-                break
-            end
-        end
-        if foreign then
-            local write = 1
-            for i = 1, #runs do
-                local run = runs[i]
-                if run.realm == realm and run.char == name then
-                    runs[write] = run
-                    write = write + 1
-                end
-            end
-            for i = #runs, write, -1 do runs[i] = nil end
-        end
-    end
-    prunedRealm, prunedName = realm, name
 end
 
 local function FormatDuration(seconds)
@@ -923,6 +871,26 @@ local function NoteGroup(open)
     return changed
 end
 
+-- Newest visits sit at the front. This character keeps MAX_RUNS of their own.
+-- Another character's visits stay, so a long session does not push them off.
+local function TrimCharRuns(runs, realm, char)
+    local kept, write = 0, 1
+    for i = 1, #runs do
+        local run = runs[i]
+        if run.realm == realm and run.char == char then
+            kept = kept + 1
+            if kept <= MAX_RUNS then
+                runs[write] = run
+                write = write + 1
+            end
+        else
+            runs[write] = run
+            write = write + 1
+        end
+    end
+    for i = #runs, write, -1 do runs[i] = nil end
+end
+
 -- at is a logout stamp, used when the leave itself was not seen live. quiet skips the
 -- display refresh when the caller is about to start another visit immediately.
 CloseRun = function(announce, at, quiet)
@@ -961,7 +929,7 @@ CloseRun = function(announce, at, quiet)
             rep = open.rep, toldSave = open.toldSave and true or nil,
             group = group,
         })
-        while #runs > MAX_RUNS do runs[#runs] = nil end
+        TrimCharRuns(runs, open.realm, open.char)
         if announce then AnnounceLeave(open, span) end
     end
     if quiet then return end
@@ -1871,7 +1839,21 @@ end
 
 function ns.InstanceTracker.ClearHistory()
     local store = RawStore()
-    if store then store.runs = {} end
+    if not store or type(store.runs) ~= "table" then return end
+    if S.Get("trackAlts") then
+        store.runs = {}
+        return
+    end
+    local realm, name = RealmKey(), CharName()
+    local runs, write = store.runs, 1
+    for i = 1, #runs do
+        local run = runs[i]
+        if run.realm ~= realm or run.char ~= name then
+            runs[write] = run
+            write = write + 1
+        end
+    end
+    for i = #runs, write, -1 do runs[i] = nil end
 end
 
 function ns.InstanceTracker.Hour()
@@ -2015,7 +1997,6 @@ local function Apply()
     events:RegisterEvent("PLAYER_LEVEL_UP")
     -- Core already stamped the countdown. Store it, without asking the server again.
     SaveLockouts()
-    PruneAlts()
     TouchChar()
     if frame then frame.placed = nil end
     SyncZone(false)
@@ -2027,8 +2008,7 @@ S.OnChange(function(key)
     if key == "pos" then return end
     if key == "enabled" then Apply()
     elseif key == "showFrame" then UpdateFrame()
-    elseif key == "hourlyWarn" then WarnHour()
-    elseif key == "trackAlts" and not S.Get("trackAlts") then PruneAlts() end
+    elseif key == "hourlyWarn" then WarnHour() end
 end)
 hooksecurefunc(ns, "Apply", Apply)
 hooksecurefunc(ns, "ShowRaidReminderAnchorConfig", function()

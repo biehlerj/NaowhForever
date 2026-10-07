@@ -318,7 +318,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
     end
     if #stray > 0 then
         _, h = W:Note(parent, "Other characters, each with their own 10 this hour. "
-            .. "Turn on Track Alts to keep their saved instances and character sheet.", y); y = y - h
+            .. "Turn on Track Alts to see their saved instances and character sheet.", y); y = y - h
         for i = 1, #stray do
             local row = stray[i]
             local who = row.who ~= "" and row.who or "?"
@@ -338,7 +338,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
 
     _, h = W:SectionHeader(parent, "CHARACTERS", y); y = y - h
     _, h = W:Note(parent, "A character shows up here after you log into it with Instance Tracker on. "
-        .. "Track Alts keeps the others: rested experience, durability and saved "
+        .. "Track Alts shows the others: rested experience, durability and saved "
         .. "instances, from the last time that character was logged in. "
         .. "Reset times are from when this page was opened.", y); y = y - h
 
@@ -371,8 +371,8 @@ function ns.BuildInstanceHistoryPage(parent, y)
         .. "is listed under the visit. Who else was in the group is a count on the right; "
         .. "point at the line for the names. Coming back to the same group within "
         .. "the hour, before you reset it, continues that visit, and the time outside "
-        .. "is not counted. Other characters "
-        .. "are kept only when Track Alts is on. Repairs and vendor sales are not counted. "
+        .. "is not counted. Other characters stay saved, and show here when Track Alts is on. "
+        .. "Repairs and vendor sales are not counted. "
         .. "Older visits drop off the end of the list.", y); y = y - h
     _, h = W:Button(parent, "Clear History", y, function()
         ns.Confirm(ns.L("Clear instance history? Lockouts are kept."), function()
@@ -444,10 +444,10 @@ function ns.BuildInstanceTrackerPage(parent, y)
         S.Toggle("trackAlts", "Track Alts",
             "Keep every character you log into on this account: saved instances, visits, "
             .. "rested experience and durability. Log each one once with the tracker on. "
-            .. "Off keeps only the character you are playing, and drops the others. "
+            .. "Off hides the others until you turn this back on. "
             .. "Each character still has their own 10 per hour, and that count is kept either way.",
             "enabled"),
-        { type = "label", text = "Off drops other characters" }
+        { type = "label", text = "Off hides other characters" }
     ); y = y - h
     _, h = W:SectionHeader(parent, "WHEN YOU LEAVE", y); y = y - h
     _, h = W:Note(parent, "Choose what to say when you leave a dungeon. Nothing is sent until Chat on Leave "
