@@ -477,13 +477,13 @@ page:Card({
     help = "Warns in chat as you near the hourly instance cap.",
     rows = {
         { key = "hourlyWarn", label = "Warn when this many are left", slider = { 1, 5, 1 },
-          needs = Enabled, why = OFF, help = "How close to the cap before chat warns you." },
+          needs = Enabled, why = OFF, help = "Sets how close to the cap the warning starts." },
     },
 })
 
 page:Card({
     id = "timer", name = "Run Timer", order = 20, switch = "showFrame",
-    help = "Time, coins and experience while you are inside.",
+    help = "Shows this visit's time, coins, and experience.",
     summary = function() return "Inside a dungeon or raid" end,
 })
 
@@ -506,18 +506,18 @@ page:Card({
     rows = {
         Settings.Group("Where"),
         { key = "leaveWhere", label = "Send It To", choice = WHERE, needs = Enabled, why = OFF,
-          help = "Your chat, or the group when you are in one." },
+          help = "Prints the summary in your chat or in the group." },
         raid,
         Settings.Group("Included"),
-        Row("leaveTime", "Show Time", "How long the visit lasted."),
-        Row("leaveXP", "Show Experience", "Experience gained during the visit."),
-        Row("leaveXPHour", "Show XP/Hour", "Experience per hour for this visit."),
-        Row("leaveGold", "Show Coins Looted", "Coins looted during the visit."),
-        Row("leaveDeaths", "Show Deaths", "How many times you died."),
-        Row("leaveRep", "Show Reputation", "Reputation gained while inside."),
-        Row("leaveAverage", "Show Average Experience", "Average experience from visits to this instance."),
-        Row("leaveRunsLevel", "Show Runs This Level", "Visits recorded at your current level."),
-        Row("leaveRunsToLevel", "Show Runs to Next Level", "A rough count of visits until you level."),
+        Row("leaveTime", "Show Time", "Adds how long the visit lasted."),
+        Row("leaveXP", "Show Experience", "Adds the experience gained."),
+        Row("leaveXPHour", "Show XP/Hour", "Adds the experience per hour."),
+        Row("leaveGold", "Show Coins Looted", "Adds the coins looted."),
+        Row("leaveDeaths", "Show Deaths", "Adds the deaths."),
+        Row("leaveRep", "Show Reputation", "Adds the reputation gained."),
+        Row("leaveAverage", "Show Average Experience", "Adds the average experience here."),
+        Row("leaveRunsLevel", "Show Runs This Level", "Adds the visits at this level."),
+        Row("leaveRunsToLevel", "Show Runs to Next Level", "Adds the visits until you level."),
         Row("leaveActivity", "Skip If Nothing Happened", "Skips the summary when the visit gained nothing."),
         Row("leaveRaids", "Include Raids", "Also prints the summary when you leave a raid."),
     },
@@ -525,16 +525,16 @@ page:Card({
 
 page:Card({
     id = "reset", name = "When You Reset", order = 60, switch = "resetChat",
-    help = "As group leader, posts the reset in group chat.",
+    help = "Posts the reset in group chat when you are leading.",
     summary = function() return "Posted in group chat" end,
 })
 
 page:Card({
     id = "window", name = "Window", order = 90,
-    help = "The lockouts and visit list, in their own window.",
+    help = "Keeps lockouts and visits in their own window.",
     summary = WindowSummary,
     rows = {
         { key = "windowAlpha", label = "Window Opacity", slider = { ns.Shared.Style.OPACITY_MIN, 100, 5 },
-          unit = "%", scale = 0.01, help = "How solid the window is, in percent." },
+          unit = "%", scale = 0.01, help = "Sets how solid the window is." },
     },
 })
