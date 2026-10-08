@@ -41,7 +41,7 @@ Check(page:find('id = "timer"', 1, true) and page:find('switch = "showFrame"', 1
     "Run Timer is the showFrame card")
 Check(page:find("function ns.BuildInstanceTrackerPage", 1, true) == nil,
     "the hand-built Display page is gone")
-Check(page:find("function ns.BuildInstanceLockoutsPage", 1, true) ~= nil
+Check(page:find("function ns.BuildInstanceHourPage", 1, true) ~= nil
     and page:find("function ns.BuildInstanceHistoryPage", 1, true) ~= nil,
     "the list builders stay for the module window")
 
@@ -59,9 +59,9 @@ end
 Check(helps >= 20, "the settings cards carry help")
 
 Check(lists:find("Parts.Window(", 1, true) ~= nil, "the lists sit in a module window")
-Check(lists:find("BuildInstanceLockoutsPage", 1, true) ~= nil
+Check(lists:find("BuildInstanceHourPage", 1, true) ~= nil
     and lists:find("BuildInstanceHistoryPage", 1, true) ~= nil,
-    "Lockouts and History are the window's tabs")
+    "This Hour and History are the window's tabs")
 Check(lists:find("function ns.ToggleInstanceTrackerWindow", 1, true) ~= nil,
     "the slash command can open the window")
 
@@ -69,7 +69,7 @@ Check(window:find('name = "Instance Tracker"[^}]-open = "ToggleInstanceTrackerWi
     "the module opens its own window")
 Check(window:find('open = "ToggleInstanceTrackerWindow"[^}]-name = "Settings"', 1) ~= nil,
     "options keeps a settings tab")
-Check(window:find("BuildInstanceLockoutsPage", 1, true) == nil
+Check(window:find("BuildInstanceHourPage", 1, true) == nil
     and window:find("BuildInstanceHistoryPage", 1, true) == nil
     and window:find("BuildInstanceTrackerPage", 1, true) == nil,
     "the lists are not options tabs")

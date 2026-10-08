@@ -51,7 +51,7 @@ Core\NaowhForever_Search.lua
 # a page is drawn with. Its own XML loads its files in order (see Shared/README.md).
 Shared\Shared.xml
 
-# Instance Tracker: lockouts, visits and the run timer. The page and window read the tracker.
+# Instance Tracker: this hour, visits and the run timer. The page and window read the tracker.
 InstanceTracker\NaowhForever_InstanceTracker.lua
 InstanceTracker\NaowhForever_InstanceTrackerPage.lua
 InstanceTracker\NaowhForever_InstanceTrackerWindow.lua

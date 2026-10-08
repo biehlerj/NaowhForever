@@ -1,32 +1,14 @@
-local function Read(path)
-    local f = assert(io.open(path, "rb"))
-    local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
-    return source
+local f = assert(io.open(arg[1] or "TopBar/NaowhForever_TopBar.lua", "rb"))
+local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
+local function Slice(a, b)
+    local first = assert(source:find(a, 1, true))
+    return source:sub(first, assert(source:find(b, first + #a, true)) - 1)
 end
-local function Slice(source, a, b)
-    local first = assert(source:find(a, 1, true), a)
-    return source:sub(first, assert(source:find(b, first + #a, true), b) - 1)
-end
-
-local core = Read(arg[1] or "Core/NaowhForever_SavedInstances.lua")
-local top = Read(arg[2] or "TopBar/NaowhForever_TopBar.lua")
-
--- The countdown lives in Core. The clock only names and sorts what that read returns.
-local preamble = "local function Secret(v)\n    return issecretvalue and issecretvalue(v)\nend\n"
-local code = preamble
-    .. Slice(core, "function ns.FormatRemaining(resetAt)", "\nlocal watch")
-    .. "\n" .. Slice(top, "local function Lockouts()", "\nfunction ns.LockoutsCommand")
-    .. "\nreturn Lockouts\n"
 
 -- Saved instances as GetSavedInstanceInfo returns them: name, reset, locked, extended, total, done.
-local function World(saved, start)
-    local clock = start or 0
+local function Fixture(saved, now, updatedAt)
     local env = {
-        ns = { Shared = { Parts = { Fraction = function(part, whole)
-            return part .. "/" .. whole
-        end } } },
-        GetTime = function() return clock end,
-        time = function() return 0 end,
+        GetTime = function() return now end,
         GetNumSavedInstances = function() return #saved end,
         GetSavedInstanceInfo = function(i)
             local s = saved[i]
@@ -34,19 +16,10 @@ local function World(saved, start)
         end,
     }
     setmetatable(env, { __index = _G })
+    local code = Slice("local lockoutsAt = 0", "\nfunction ns.LockoutsCommand")
+        .. "\nlockoutsAt = " .. updatedAt .. "\nreturn Lockouts"
     local chunk = assert(loadstring(code)); setfenv(chunk, env)
-    return {
-        Lockouts = chunk(),
-        Note = function() env.ns.NoteInstanceInfo() end,
-        Refresh = function() env.ns.RefreshSavedInstances() end,
-        At = function(t) clock = t end,
-    }
-end
-local function Fixture(saved, now, updatedAt)
-    local world = World(saved, updatedAt)
-    world.Note()
-    world.At(now)
-    return world.Lockouts()
+    return chunk()()
 end
 local function Lines(list)
     local out = {}
@@ -66,21 +39,6 @@ end)
 Case("the reset counts down from the last update", function()
     local list = Fixture({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100 + 3600, 100)
     assert(Lines(list) == "Onyxia's Lair 1/1 in 2h 0m", Lines(list))
-end)
-Case("a later read does not push the countdown", function()
-    local world = World({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100)
-    world.Note()
-    world.At(100 + 40 * 60)
-    world.Refresh()
-    local list = world.Lockouts()
-    assert(Lines(list) == "Onyxia's Lair 1/1 in 2h 20m", Lines(list))
-end)
-Case("a read before the instance update does not start the countdown", function()
-    local world = World({ { "Onyxia's Lair", 3 * 3600, true, false, 1, 1 } }, 100)
-    world.Refresh()
-    world.At(100 + 40 * 60)
-    local list = world.Lockouts()
-    assert(#list == 0, Lines(list))
 end)
 Case("expired and unlocked instances are left out; extended ones stay", function()
     local list = Fixture({

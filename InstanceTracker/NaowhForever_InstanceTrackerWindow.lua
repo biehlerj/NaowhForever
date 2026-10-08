@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_InstanceTrackerWindow.lua -- Instance Tracker's own window
 --  (/nfinstance, its minimap and top bar button, the run timer's title, Open Instance
---  Tracker on its settings page): saved lockouts and the visit history, drawn by the
+--  Tracker on its settings page): this hour and the visit history, drawn by the
 --  list builders.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
@@ -19,14 +19,14 @@ local TABS_DROP = 8
 local TOP_Y = -6
 
 local TABS = {
-    { key = "lockouts", label = "Lockouts", tip = "Saved instances, and how many you entered this hour." },
+    { key = "hour", label = "This Hour", tip = "How many new instances you entered this hour." },
     { key = "history", label = "History", tip = "Each visit, with its time, coins and experience." },
 }
-local BUILD = { lockouts = "BuildInstanceLockoutsPage", history = "BuildInstanceHistoryPage" }
+local BUILD = { hour = "BuildInstanceHourPage", history = "BuildInstanceHistoryPage" }
 
 local window, scroll
 local contents = {}
-local shown = "lockouts"
+local shown = "hour"
 local queued
 
 local function Opacity()
@@ -80,7 +80,7 @@ local function Build()
     window = Parts.Window(WIDTH, HEIGHT, "instanceTrackerWindow")
     window.backdrop:Card(CARD, HEADER + CARD, CARD, FOOTER + CARD)
     local close = Parts.TitleBar(window, "Instance Tracker",
-        "Saved lockouts, visits, and this hour's instances.", PAGE)
+        "Visits, and this hour's instances.", PAGE)
     local _, opacity = Parts.Opacity(window, close, Opacity, SetOpacity)
     window.opacity = opacity
     Parts.FooterBrand(window, PAGE)

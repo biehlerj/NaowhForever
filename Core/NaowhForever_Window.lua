@@ -85,7 +85,7 @@ local MODULES = {
     { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
       open = "ToggleInstanceTrackerWindow",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
-      subtitle = "Saved lockouts, visits, and how many new instances this character has entered this hour.",
+      subtitle = "Visits, and how many new instances this character has entered this hour.",
       tabs = {
           { name = "Settings", reuse = true },
       } },

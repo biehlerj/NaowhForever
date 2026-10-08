@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
---  NaowhForever_InstanceTrackerPage.lua -- the lockouts and history lists, and the
+--  NaowhForever_InstanceTrackerPage.lua -- this hour and the history list, and the
 --  settings cards. The lists are drawn in the module's own window. Opening one only
 --  reads what the tracker has already stored.
 -------------------------------------------------------------------------------
@@ -8,12 +8,10 @@ local UI = ns.UI
 local T = ns.THEME
 local S = ns.InstanceTrackerSettings
 
--- Lockouts and History rows. Sizes are pixels at the addon's UI scale.
+-- This Hour and History rows. Sizes are pixels at the addon's UI scale.
 local LINE_H = 20          -- one visit line, and the shortest a wrapped line may be
 local LINE_FONT = 12       -- the row's text; also the shortest a wrapped string may measure
 local LINE_INSET = 4       -- text from a row's edges
-local COUNT_GAP = 12       -- between the visit facts and the group count on the right
-local HOVER = 0.08         -- the visit under the cursor, so the names belong to it
 local FALLBACK_W = 960     -- used when the page has no width yet
 local GROUP_GAP = 6        -- under a character, an hour list, or an in-progress visit
 
@@ -79,25 +77,6 @@ end
 local function OffText()
     if ns.InstanceTracker.Enabled() then return "" end
     return "Instance Tracker is off, so nothing new is recorded. "
-end
-
-local function LockLine(lock)
-    local parts = { lock.name or "" }
-    if type(lock.difficulty) == "string" and lock.difficulty ~= "" then
-        parts[#parts + 1] = lock.difficulty
-    end
-    if (lock.maxPlayers or 0) > 0 then
-        parts[#parts + 1] = lock.maxPlayers .. "-player"
-    end
-    if (lock.encounters or 0) > 0 then
-        parts[#parts + 1] = ns.Shared.Parts.Fraction(lock.progress or 0, lock.encounters)
-    end
-    if (lock.id or 0) > 0 then
-        parts[#parts + 1] = "ID " .. lock.id
-    end
-    if lock.extended then parts[#parts + 1] = "extended" end
-    parts[#parts + 1] = "resets in " .. ns.InstanceTracker.Remaining(lock.resetAt)
-    return ns.Color("muted", table.concat(parts, "  -  "))
 end
 
 local function CharLine(char)
@@ -181,103 +160,11 @@ local function RepLine(parent, y, rep)
     return WrapLine(parent, y, text)
 end
 
--- Other people kept on the visit. This character is already named on the line.
-local function GroupCount(group)
-    if type(group) ~= "table" then return 0 end
-    local n = 0
-    for i = 1, #group do
-        local member = group[i]
-        if type(member) == "table" and type(member.name) == "string" and member.name ~= "" then
-            n = n + 1
-        end
-    end
-    return n
-end
-
--- One name a line, in class color. A paragraph of names is what made the page tall.
-local function GroupTip(group)
-    if type(group) ~= "table" then return end
-    local lines = {}
-    for i = 1, #group do
-        local member = group[i]
-        if type(member) == "table" and type(member.name) == "string" and member.name ~= "" then
-            lines[#lines + 1] = ns.ClassColoredName(member.name, member.class)
-        end
-    end
-    if #lines == 0 then return end
-    return table.concat(lines, "\n")
-end
-
-local function ShowGroup(row)
-    local text = GroupTip(row.group)
-    if not text then return end
-    UI.ShowWidgetTooltip(row, text, { anchor = "cursor", justify = "LEFT" })
-end
-
--- A visit. The facts stay on the left. How many other people were there sits on the right,
--- and pointing at the row lists them. A visit with no one else is an ordinary line.
-local function VisitLine(parent, y, text, group)
-    if UI.searchScan then return y - LINE_H end
-    local row = UI.Keep(parent, "visit", function(p)
-        local f = CreateFrame("Frame", nil, p)
-        f:SetHeight(LINE_H)
-        f.text = ns.Font(f, LINE_FONT, nil, T.fg)
-        f.text:SetJustifyH("LEFT")
-        f.text:SetWordWrap(false)
-        f.count = ns.Font(f, LINE_FONT, nil, T.muted)
-        f.count:SetPoint("RIGHT", -LINE_INSET, 0)
-        f.count:SetJustifyH("RIGHT")
-        f.hover = ns.Solid(f, "BACKGROUND", T.fg, HOVER)
-        f.hover:SetAllPoints()
-        f.hover:Hide()
-        f:SetScript("OnEnter", function(self)
-            self.hover:Show()
-            ShowGroup(self)
-        end)
-        f:SetScript("OnLeave", function(self)
-            self.hover:Hide()
-            UI.HideWidgetTooltip()
-        end)
-        return f
-    end)
-    local n = GroupCount(group)
-    row.group = n > 0 and group or nil
-    row:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, y)
-    row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -UI.CONTENT_PAD, y)
-    row:SetHeight(LINE_H)
-    row.text:SetFont(UI.FontPath(""), LINE_FONT, "")
-    row.text:SetTextColor(T.fg.r, T.fg.g, T.fg.b, 1)
-    row.text:ClearAllPoints()
-    row.text:SetPoint("LEFT", LINE_INSET, 0)
-    row.text:SetText(text)
-    row.count:SetFont(UI.FontPath(""), LINE_FONT, "")
-    row.count:SetTextColor(T.muted.r, T.muted.g, T.muted.b, 1)
-    if n > 0 then
-        row.count:SetText("with " .. n)
-        row.count:Show()
-        row.text:SetPoint("RIGHT", row.count, "LEFT", -COUNT_GAP, 0)
-        row:EnableMouse(true)
-        if row:IsMouseOver() then
-            row.hover:Show()
-            ShowGroup(row)
-        else
-            row.hover:Hide()
-        end
-    else
-        row.count:Hide()
-        row.text:SetPoint("RIGHT", -LINE_INSET, 0)
-        row:EnableMouse(false)
-        row.hover:Hide()
-        if row:IsMouseOver() then UI.HideWidgetTooltip() end
-    end
-    return y - LINE_H
-end
-
-function ns.BuildInstanceLockoutsPage(parent, y)
+function ns.BuildInstanceHourPage(parent, y)
     local W, IT = UI.Widgets, ns.InstanceTracker
     local _, h
     _, h = W:Note(parent, OffText()
-        .. "Saved lockouts come from the game's instance list. New dungeon and raid instances "
+        .. "New dungeon and raid instances "
         .. "on this character count toward a 10-per-hour cap. Another character has their own 10. "
         .. "Walking back into one you have not reset does not count. The chat warning is set "
         .. "under Instance Tracker settings.", y); y = y - h
@@ -315,7 +202,7 @@ function ns.BuildInstanceLockoutsPage(parent, y)
     end
     if #stray > 0 then
         _, h = W:Note(parent, "Other characters, each with their own 10 this hour. "
-            .. "Turn on Track Alts to see their saved instances and character sheet.", y); y = y - h
+            .. "Turn on Track Alts to see their character sheet.", y); y = y - h
         for i = 1, #stray do
             local row = stray[i]
             local who = row.who ~= "" and row.who or "?"
@@ -335,9 +222,8 @@ function ns.BuildInstanceLockoutsPage(parent, y)
 
     _, h = W:SectionHeader(parent, "CHARACTERS", y); y = y - h
     _, h = W:Note(parent, "A character shows up here after you log into it with Instance Tracker on. "
-        .. "Track Alts shows the others: rested experience, durability and saved "
-        .. "instances, from the last time that character was logged in. "
-        .. "Reset times are from when this page was opened.", y); y = y - h
+        .. "Track Alts shows the others: rested experience and durability, "
+        .. "from the last time that character was logged in.", y); y = y - h
 
     if #chars == 0 then
         _, h = W:Note(parent, "No characters recorded yet.", y); y = y - h
@@ -351,9 +237,6 @@ function ns.BuildInstanceLockoutsPage(parent, y)
         local rest = RestLine(char)
         if rest then y = Line(parent, y, rest) end
         if not char.mine then y = Line(parent, y, AltHourLine(char)) end
-        for n = 1, #char.lockouts do
-            y = Line(parent, y, "    " .. LockLine(char.lockouts[n]))
-        end
         y = y - GROUP_GAP
     end
     return y
@@ -365,14 +248,13 @@ function ns.BuildInstanceHistoryPage(parent, y)
     _, h = W:Note(parent, OffText()
         .. "Each dungeon or raid visit while Instance Tracker is on: how long you were "
         .. "inside, the coins you looted and the experience you gained. Reputation gained "
-        .. "is listed under the visit. Who else was in the group is a count on the right; "
-        .. "point at the line for the names. Coming back to the same group within "
+        .. "is listed under the visit. Coming back to the same group within "
         .. "the hour, before you reset it, continues that visit, and the time outside "
         .. "is not counted. Other characters stay saved, and show here when Track Alts is on. "
         .. "Repairs and vendor sales are not counted. "
         .. "Older visits drop off the end of the list.", y); y = y - h
     _, h = W:Button(parent, "Clear History", y, function()
-        ns.Confirm(ns.L("Clear instance history? Lockouts are kept."), function()
+        ns.Confirm(ns.L("Clear instance history?"), function()
             IT.ClearHistory()
             UI:RefreshPage(true)
         end)
@@ -382,10 +264,9 @@ function ns.BuildInstanceHistoryPage(parent, y)
     local open = IT.Open()
     if open and open.instance then
         local elapsed = IT.Duration(IT.Elapsed(open))
-        y = VisitLine(parent, y, "In progress   " .. ns.ClassColoredName(open.name or "?", open.class)
+        y = Line(parent, y, "In progress   " .. ns.ClassColoredName(open.name or "?", open.class)
             .. "   " .. IT.PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
-            .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP",
-            open.group)
+            .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP")
         y = RepLine(parent, y, open.rep)
         y = y - GROUP_GAP
     end
@@ -397,7 +278,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
     end
     local shown = math.min(#runs, IT.PAGE_RUNS)
     for i = 1, shown do
-        y = VisitLine(parent, y, RunLine(runs[i]), runs[i].group)
+        y = Line(parent, y, RunLine(runs[i]))
         y = RepLine(parent, y, runs[i].rep)
     end
     if #runs > shown then
@@ -447,7 +328,7 @@ end
 
 local function Detail()
     local IT = ns.InstanceTracker
-    if not IT.Enabled() then return "Turn it on to record lockouts and visits." end
+    if not IT.Enabled() then return "Turn it on to record visits." end
     local open = IT.Open()
     if open and open.instance then return IT.Duration(IT.Elapsed(open)) .. " in this visit." end
     local count, _, frees = IT.Hour()
@@ -495,7 +376,7 @@ page:Card({
 
 page:Card({
     id = "alts", name = "Track Alts", order = 40, switch = "trackAlts",
-    help = "Shows your other characters' lockouts and visits.",
+    help = "Shows your other characters' visits and this hour.",
     summary = function() return "Other characters stay listed" end,
 })
 
@@ -511,7 +392,6 @@ page:Card({
         Settings.Group("Included"),
         Row("leaveTime", "Show Time", "Adds how long the visit lasted."),
         Row("leaveXP", "Show Experience", "Adds the experience gained."),
-        Row("leaveXPHour", "Show XP/Hour", "Adds the experience per hour."),
         Row("leaveGold", "Show Coins Looted", "Adds the coins looted."),
         Row("leaveDeaths", "Show Deaths", "Adds the deaths."),
         Row("leaveRep", "Show Reputation", "Adds the reputation gained."),
@@ -531,7 +411,7 @@ page:Card({
 
 page:Card({
     id = "window", name = "Window", order = 90,
-    help = "Keeps lockouts and visits in their own window.",
+    help = "Keeps this hour and visits in their own window.",
     summary = WindowSummary,
     rows = {
         { key = "windowAlpha", label = "Window Opacity", slider = { ns.Shared.Style.OPACITY_MIN, 100, 5 },

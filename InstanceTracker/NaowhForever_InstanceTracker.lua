@@ -1,17 +1,18 @@
 -------------------------------------------------------------------------------
---  NaowhForever_InstanceTracker.lua -- saved lockouts for each character on this
---  account, a record of each dungeon or raid visit, and how many new instances this
---  character has entered in the last hour. Coming back to the same group within that
---  hour, in a copy this character has not reset, continues that visit, and the time
---  outside is not counted. A later return or a different group starts a new visit.
---  Who else was in the group is kept on that visit. Other characters' lockouts,
---  visits, and the rest and durability sheet stay saved, and show only when
---  Track Alts is on. Each character keeps their own hour.
+--  NaowhForever_InstanceTracker.lua -- a record of each dungeon or raid visit, and
+--  how many new instances this character has entered in the last hour. Coming back
+--  to the same group within that hour, in a copy this character has not reset,
+--  continues that visit, and the time outside is not counted. A later return or a
+--  different group starts a new visit. The names on a visit are only for that
+--  check. The Journal already lists who was there on a kill. Other characters'
+--  visits, and the rest and durability sheet, stay saved, and show only when
+--  Track Alts is on. Each character keeps their own hour. Saved instances stay on
+--  the Top Bar.
 --
 --  Off until the module is enabled. The run timer is a shared tracker panel, built the
 --  first time it is allowed on screen. Coin amounts come from loot messages (the client's own
 --  GOLD_AMOUNT phrases), not from a combat log, which Forever does not give to addons.
---  Lockouts and visits are account data, so a profile switch does not wipe them.
+--  Visits are account data, so a profile switch does not wipe them.
 --  A character is stored under its UnitGUID (Shared.CharacterData). Names are not
 --  unique on Forever. The name kept on the record is only what the pages show.
 -------------------------------------------------------------------------------
@@ -30,7 +31,6 @@ local S = UI.ModuleSettings("instanceTracker", {
     leaveWhere = "self",
     leaveTime = false,
     leaveXP = false,
-    leaveXPHour = false,
     leaveGold = false,
     leaveDeaths = false,
     leaveRep = false,
@@ -42,7 +42,7 @@ local S = UI.ModuleSettings("instanceTracker", {
     -- Dungeons only until this is on. Raid chat is a separate choice.
     leaveRaids = false,
     leavePrintRaid = false,
-    -- Other characters' lockouts, visits and the snapshot. Each has their own 10 per hour.
+    -- Other characters' visits and the snapshot. Each has their own 10 per hour.
     trackAlts = false,
     -- How many entries short of this character's 10-per-hour cap to warn. 1 warns at 9 of 10.
     hourlyWarn = 1,
@@ -58,19 +58,19 @@ local HOURLY_CAP = 10
 
 -- Run timer. Sizes are pixels at the addon's UI scale.
 local TIME_GAP = 2           -- between the clock and the lines under it
-local LINE_GAP = 1           -- between the loot, xp and hour lines
+local LINE_GAP = 1           -- between the loot and hour lines
 local TIME_SIZE = 16
-local BODY_SIZE = 12         -- the loot, xp and hour lines
+local BODY_SIZE = 12         -- the loot and hour lines
 local TIME_LINE = 20         -- the clock's line, taller than its font
 local BODY_LINE = 16         -- a stat line
 local DEFAULT_Y = -180       -- where the timer first sits, under the top of the screen
 local COIN_ICON = 12         -- the coin textures beside a loot amount
-local BODY_H = TIME_LINE + TIME_GAP + (BODY_LINE + LINE_GAP) * 2 + BODY_LINE
+local BODY_H = TIME_LINE + TIME_GAP + BODY_LINE + LINE_GAP + BODY_LINE
 local SETTINGS_PAGE = "Instance Tracker/Settings"
 local TIMER_CARD = "timer"
 
 -- At the hourly cap the line is red; inside the warn distance it is amber.
--- Not theme tokens (same hues as LIMITED and NOT POSSIBLE YET). The lockouts page
+-- Not theme tokens (same hues as LIMITED and NOT POSSIBLE YET). This Hour
 -- reads these same tables from ns.InstanceTracker.
 local CAP_RGB = { r = 1, g = 0x60 / 255, b = 0x60 / 255 }
 local WARN_RGB = { r = 1, g = 0xa3 / 255, b = 0 }
@@ -208,14 +208,13 @@ local function SnapshotChar(row)
     if durability ~= nil then row.durability = durability end
 end
 
--- The character record lockouts, visits and the sheet hang off.
+-- The character record visits and the sheet hang off.
 local function TouchChar()
     local row = Mine(true)
     if not row then return end
     local name = DisplayName()
     if name ~= "" then row.name = name end
     row.realm = RealmKey()
-    if type(row.lockouts) ~= "table" then row.lockouts = {} end
     SnapshotChar(row)
     return row
 end
@@ -252,15 +251,6 @@ local function Elapsed(open, now)
     local elapsed = now - (tonumber(open.entered) or now) - skipped
     if elapsed < 0 then return 0 end
     return elapsed
-end
-
--- Experience per hour. A visit shorter than a minute is treated as one minute, so the
--- first seconds do not print an enormous rate. The leave line passes the visit span;
--- the run frame passes Elapsed.
-local function XPPerHour(xp, elapsed)
-    elapsed = tonumber(elapsed) or 0
-    if elapsed < 0 then elapsed = 0 end
-    return (xp or 0) / (math.max(elapsed, 60) / 3600)
 end
 
 -- Plain coins for a line sent to the group. Textures from the coin API are for this client.
@@ -338,50 +328,6 @@ local function LastRun(instance)
             return run
         end
     end
-end
-
-local function MatchingLockout(instance)
-    local row = Mine(false)
-    if not row or type(row.lockouts) ~= "table" then return end
-    local now = time()
-    for i = 1, #row.lockouts do
-        local lock = row.lockouts[i]
-        if lock.name == instance and lock.resetAt and lock.resetAt > now then
-            return lock
-        end
-    end
-end
-
--- Core stamps the countdown on UPDATE_INSTANCE_INFO and is the only walk of
--- GetSavedInstanceInfo. This stores the locked rows on the character.
-local function ReadLockouts()
-    local list = {}
-    for _, lock in ipairs(ns.SavedInstances()) do
-        if lock.locked then
-            lock.reset, lock.left = nil, nil
-            list[#list + 1] = lock
-        end
-    end
-    return list
-end
-
-local function SaveLockouts()
-    -- Nothing to store until UPDATE_INSTANCE_INFO. A login or profile switch before
-    -- that must not replace the saved countdown with an empty list.
-    if not On() or not ns.SavedInstancesReady() then return end
-    local row = TouchChar()
-    if not row then return end
-    row.lockouts = ReadLockouts()
-    row.updated = time()
-    local open = OpenRun()
-    if open and open.wantSave and not open.toldSave and S.Get("enterChat") then
-        local lock = MatchingLockout(open.instance)
-        if lock then
-            open.toldSave = true
-            ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, ns.FormatRemaining(lock.resetAt)))
-        end
-    end
-    UI:RefreshPage(true)
 end
 
 -- Experience and level stay registered while the module is on, so the alt sheet
@@ -470,11 +416,6 @@ local function AnnounceEnter(open)
         ns.Print(ns.L("Last visit: %s, looted %s.",
             FormatDuration(last.left - last.entered), Coins(last.loot)))
     end
-    local lock = MatchingLockout(open.instance)
-    if lock then
-        open.toldSave = true
-        ns.Print(ns.L("Saved to %s. Resets in %s.", open.instance, ns.FormatRemaining(lock.resetAt)))
-    end
 end
 
 local function VisitActive(open)
@@ -548,9 +489,6 @@ local function LeaveFacts(open, span, plain)
     if S.Get("leaveTime") then add(FormatDuration(span)) end
     if S.Get("leaveXP") then
         add(ns.L("%s XP", BreakUpLargeNumbers(open.xp or 0)))
-    end
-    if S.Get("leaveXPHour") then
-        add(ns.L("%s XP/hr", BreakUpLargeNumbers(math.floor(XPPerHour(open.xp, span) + 0.5))))
     end
     if S.Get("leaveGold") then
         add(plain and PlainCoins(open.loot) or Coins(open.loot))
@@ -713,18 +651,15 @@ local function CurrentGroup()
         local mine = UnitIsUnit(unit, "player")
         if not Secret(mine) and not mine then
             local name = MemberName(unit)
-            if name then
-                local _, class = UnitClass(unit)
-                if Secret(class) or type(class) ~= "string" or class == "" then class = nil end
-                list[#list + 1] = { name = name, class = class }
-            end
+            if name then list[#list + 1] = { name = name } end
         end
     end
     return list
 end
 
--- Write the group onto the visit. Someone who leaves before the end stays, so the
--- history shows who was there. A name that has not loaded yet is filled in later.
+-- Write the group onto the visit, names only. Someone who leaves before the end
+-- stays, so a later return can tell this group from a new one. A name that has
+-- not loaded yet is filled in later. The Journal lists who was there on a kill.
 local function NoteGroup(open)
     if type(open) ~= "table" then return false end
     local members = CurrentGroup()
@@ -749,12 +684,9 @@ local function NoteGroup(open)
                     group = {}
                     open.group = group
                 end
-                row = { name = member.name, class = member.class }
+                row = { name = member.name }
                 group[#group + 1] = row
                 known[member.name] = row
-                changed = true
-            elseif member.class and row.class ~= member.class then
-                row.class = member.class
                 changed = true
             end
         end
@@ -802,8 +734,7 @@ CloseRun = function(announce, at, quiet)
             difficulty = open.difficulty or "",
             entered = start, left = start + span, level = open.level,
             loot = open.loot or 0, xp = open.xp or 0, deaths = open.deaths or 0,
-            rep = open.rep, toldSave = open.toldSave and true or nil,
-            group = group,
+            rep = open.rep, group = group,
         })
         TrimRuns(runs)
         if announce then AnnounceLeave(open, span) end
@@ -1415,9 +1346,8 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
             end
             open.seen = nil
         end
-        open.wantSave = nil
         NoteInstanceEntry(name, mapID, difficulty, false)
-        if NoteGroup(open) then UI:RefreshPage(true) end
+        NoteGroup(open)
         SetRunEvents(true)
         UpdateFrame()
         return
@@ -1438,9 +1368,7 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
             kind = kind, difficulty = difficulty,
             entered = prior.entered or now, skipped = skipped,
             loot = prior.loot or 0, xp = prior.xp or 0, deaths = prior.deaths or 0,
-            rep = prior.rep, toldSave = prior.toldSave and true or nil,
-            wantSave = (announce and not prior.toldSave) and true or nil,
-            group = prior.group,
+            rep = prior.rep, group = prior.group,
         }
         NoteGroup(row.open)
         NoteInstanceEntry(name, mapID, difficulty, false)
@@ -1455,7 +1383,6 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
         name = who, class = row.class, level = row.level,
         instance = name, mapID = mapID, kind = kind, difficulty = difficulty,
         entered = time(), loot = 0, xp = 0, deaths = 0,
-        wantSave = announce and true or false,
     }
     NoteGroup(row.open)
     NoteInstanceEntry(name, mapID, difficulty, announce and true or false)
@@ -1546,16 +1473,9 @@ local function NewBody(scroll)
     y = y + TIME_LINE + TIME_GAP
     body.stats = AddLine(body, BODY_SIZE, y)
     y = y + BODY_LINE + LINE_GAP
-    body.xp = AddLine(body, BODY_SIZE, y)
-    y = y + BODY_LINE + LINE_GAP
     body.hour = AddLine(body, BODY_SIZE, y)
     body:SetHeight(BODY_H)
     return body
-end
-
-local function XPLine(open)
-    local rate = open and math.floor(XPPerHour(open.xp, Elapsed(open)) + 0.5) or 0
-    return "XP/hr " .. BreakUpLargeNumbers(rate)
 end
 
 local function HourLine()
@@ -1581,7 +1501,6 @@ local function Paint()
         body.time:SetText("0:00")
         body.stats:SetText(Coins(0) .. "   0 XP")
     end
-    body.xp:SetText(XPLine(open))
     body.hour:SetText(HourLine())
     body:SetHeight(BODY_H)
     frame:Fit(BODY_H)
@@ -1592,7 +1511,7 @@ local function Build()
     frame = ns.Shared.Parts.TrackerPanel("Instance", {
         onTitle = OpenWindow,
         titleTip = "Instance Tracker",
-        titleHint = "Click to open lockouts and history.",
+        titleHint = "Click to open this hour and history.",
         onClose = CloseTimer,
         newBody = NewBody,
         settings = { page = SETTINGS_PAGE, card = TIMER_CARD, tip = "Instance Tracker settings",
@@ -1623,22 +1542,6 @@ UpdateFrame = function()
     end
 end
 
-local function CopyLocks(locks)
-    local now, copy = time(), {}
-    for i = 1, #locks do
-        local lock = locks[i]
-        if type(lock) == "table" and lock.resetAt and lock.resetAt > now then
-            copy[#copy + 1] = lock
-        end
-    end
-    table.sort(copy, function(a, b)
-        if a.isRaid ~= b.isRaid then return a.isRaid and not b.isRaid end
-        if a.name ~= b.name then return tostring(a.name) < tostring(b.name) end
-        return (a.resetAt or 0) < (b.resetAt or 0)
-    end)
-    return copy
-end
-
 ns.InstanceTracker = {
     MAX_RUNS = MAX_RUNS,
     PAGE_RUNS = 40,
@@ -1647,7 +1550,6 @@ ns.InstanceTracker = {
     Open = OpenRun,
     Duration = FormatDuration,
     Elapsed = Elapsed,
-    Remaining = ns.FormatRemaining,
     PlaceName = PlaceName,
     Reputation = Reputation,
     Coins = Coins,
@@ -1671,7 +1573,6 @@ function ns.InstanceTracker.Characters()
                 xp = row.xp, xpMax = row.xpMax, rested = row.rested,
                 durability = row.durability, seen = row.seen,
                 hour = count, hourFrees = frees,
-                lockouts = CopyLocks(type(row.lockouts) == "table" and row.lockouts or {}),
             }
         end
     end
@@ -1792,8 +1693,6 @@ events:SetScript("OnEvent", function(_, event, ...)
         local login, reload = ...
         SyncZone(not login and not reload)
         QueueSheet()
-    elseif event == "UPDATE_INSTANCE_INFO" then
-        SaveLockouts()
     elseif event == "PLAYER_LOGOUT" then
         TouchChar()
         local open = OpenRun()
@@ -1820,7 +1719,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         end
     elseif event == "GROUP_ROSTER_UPDATE" then
         local open = OpenRun()
-        if open and NoteGroup(open) then UI:RefreshPage(true) end
+        if open then NoteGroup(open) end
     elseif event == "UPDATE_INVENTORY_DURABILITY" then
         QueueSheet()
     elseif event == "PLAYER_XP_UPDATE" or event == "PLAYER_LEVEL_UP" then
@@ -1847,7 +1746,6 @@ local function Apply()
         return
     end
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
-    events:RegisterEvent("UPDATE_INSTANCE_INFO")
     events:RegisterEvent("PLAYER_LOGOUT")
     events:RegisterEvent("CHAT_MSG_SYSTEM")
     events:RegisterEvent("CHAT_MSG_ADDON")
@@ -1857,8 +1755,6 @@ local function Apply()
     events:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
     events:RegisterEvent("PLAYER_XP_UPDATE")
     events:RegisterEvent("PLAYER_LEVEL_UP")
-    -- Core already stamped the countdown. Store it, without asking the server again.
-    SaveLockouts()
     TouchChar()
     if frame then frame.placed = nil end
     SyncZone(false)
