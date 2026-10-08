@@ -81,7 +81,7 @@ local MODULES = {
           { name = "Quest Tracker", reuse = true },
           { name = "Map", reuse = true },
       } },
-    -- Lockouts and history are a window of their own (open); only the settings live here.
+    -- This hour and the visit history are a window of their own (open); only the settings live here.
     { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
       open = "ToggleInstanceTrackerWindow",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",

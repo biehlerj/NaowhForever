@@ -52,7 +52,6 @@ local S = UI.ModuleSettings("instanceTracker", {
 ns.InstanceTrackerSettings = S
 
 local MAX_RUNS = 80
-local AWAY_CAP = 86400 * 14
 local HOUR = 3600
 local HOURLY_CAP = 10
 
@@ -70,10 +69,10 @@ local SETTINGS_PAGE = "Instance Tracker/Settings"
 local TIMER_CARD = "timer"
 
 -- At the hourly cap the line is red; inside the warn distance it is amber.
--- Not theme tokens (same hues as LIMITED and NOT POSSIBLE YET). This Hour
--- reads these same tables from ns.InstanceTracker.
-local CAP_RGB = { r = 1, g = 0x60 / 255, b = 0x60 / 255 }
-local WARN_RGB = { r = 1, g = 0xa3 / 255, b = 0 }
+-- The house colors for no room left and running low. This Hour reads the same
+-- tables from ns.InstanceTracker.
+local CAP_RGB = ns.Shared.Style.RED_RGB
+local WARN_RGB = ns.Shared.Style.WARN_RGB
 
 local frame, clock, unlocked
 local dismissedAt             -- the visit whose X hid the timer, until the next one
@@ -1174,6 +1173,7 @@ local function ResetPattern(global)
 end
 
 local resetPatterns
+local resetOrder = { "zoning", "offline", "inside", "success" }
 local function ClassifyReset(text)
     if type(text) ~= "string" or Secret(text) then return end
     if not resetPatterns then
@@ -1184,9 +1184,8 @@ local function ClassifyReset(text)
             success = ResetPattern(INSTANCE_RESET_SUCCESS),
         }
     end
-    local order = { "zoning", "offline", "inside", "success" }
-    for i = 1, #order do
-        local kind = order[i]
+    for i = 1, #resetOrder do
+        local kind = resetOrder[i]
         local pattern = resetPatterns[kind]
         if pattern then
             local name = text:match(pattern)
@@ -1339,9 +1338,10 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
     local open = row.open
     if type(open) == "table" and SamePlace(open, name, mapID, difficulty) then
         -- Drop the time passed while logged out or reloading, then keep counting.
+        -- A long absence is still time away, so the timer does not count it.
         if open.seen then
             local away = time() - open.seen
-            if away > 0 and away < AWAY_CAP then
+            if away > 0 then
                 open.skipped = (open.skipped or 0) + away
             end
             open.seen = nil
