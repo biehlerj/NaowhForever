@@ -24,8 +24,9 @@ Shared/
   Parts.lua    components: rank stars, item icon and its check, an item's slot marks (item level, star, Forever's mark), links, icon buttons, the
                backdrop and its cards, panels, the side panel, chat sharing, lined-up numbers,
                money with its coins (Parts.Coins, made once each; compact, its largest coin only),
-               an atlas badge on an icon's top corner (Parts.ItemBadge, Bag Space's clock and quest "!"), a timer line the client runs
-               down by itself (Parts.TimerLine), a row of labels spread evenly (Parts.LabelRow), a HUD
+               an atlas badge on an icon's top corner (Parts.ItemBadge, Bag Space's clock and quest "!"), a short label
+               in a pill of its color (Parts.Pill and Parts.SetPill, Group Inspect's "NF"), a timer line the client runs
+               down by itself (Parts.TimerLine, and Parts.StopTimer to stop any timer bar), a row of labels spread evenly (Parts.LabelRow), a HUD
                card's background: the card, a soft fade or none (Parts.HudBackdrop), and a HUD line's
                font, size and outline (Parts.HudFont)
   Window.lua   a window: the frame, title bar, icons, opacity slider, switch, search, footer,
@@ -71,7 +72,8 @@ Shared/
   on release), and a hover mark: `wash` (a faint fill) or `edge` (an accent line down its middle).
   Nothing runs per frame except while dragging. The Campfire's Simple bar preview uses it.
 - **A window:** `Parts.Window`, `Parts.TitleBar`, `Parts.Opacity`, `Parts.BarButton`,
-  `Parts.FooterBrand`. See `BiS/UI/Window.lua` for a short one.
+  `Parts.FooterBrand`, `Parts.Resizable` (a corner grip; the size is kept). See
+  `BiS/UI/Window.lua` for a short one.
 - **A tracker:** `Parts.TrackerPanel(title, opts)` builds a tracker's window once, on first
   use: the window look, the title (click and drag), a scrolling body, a cog, its place kept.
   Every option is optional:

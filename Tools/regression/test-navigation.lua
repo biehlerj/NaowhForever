@@ -68,7 +68,8 @@ function methods:CreateTexture() return New("Texture", nil, self) end
 function methods:GetObjectType() return self.kind end
 -- One unit is one screen pixel here, so ns.Hairline and ns.PixelInset keep the layout's numbers.
 function methods:GetEffectiveScale() return 1 end
-env.PixelUtil = { GetPixelToUIUnitFactor = function() return 1 end }
+env.PixelUtil = { GetPixelToUIUnitFactor = function() return 1 end,
+    GetNearestPixelSize = function(v) return math.floor(v + 0.5) end }
 function methods:IsVisible() return self:IsShown() end
 function methods:IsMouseOver() return false end
 function methods:CreateFontString() return New("FontString", nil, self) end
@@ -206,7 +207,7 @@ local UI = ns.UI
 ns.BuildQoLInterfacePage = function(parent, y) return y end
 for _, name in ipairs({ "JournalSettings", "DiscoverySettings", "ProfessionSettings", "MacroSettings", "AuraBuffSettings",
     "ThreatMeterSettings", "SwingTimerSettings", "TopBarSettings", "ActionBarSettings", "TrainingSettings",
-    "InstanceTrackerSettings" }) do
+    "InstanceTrackerSettings", "CompletoSettings" }) do
     ns[name] = UI.ModuleSettings(name, { enabled = false })
 end
 ns.DB = function() return settings end
@@ -236,9 +237,12 @@ Check(Text("Quality of Life / Interface") ~= nil and Head("Top Bar") ~= nil, "op
 Check(Text("ADVENTURE") and Text("COMBAT") and Text("UTILITIES"), "grouped navigation")
 Check(not Text("Close") and Button("Reload UI") ~= nil, "no footer: Reload UI sits in the header, closing is the X")
 Check(not Text("Custom Reminders"), "unfinished module is absent from navigation")
+Check(not Text("Smart Reminders"), "Smart Reminders is not shipped, so it is not listed")
+Check(disabled.NaowhForever_SmartReminders, "a Smart Reminders folder left from an old zip is switched off")
+disabled.NaowhForever_SmartReminders = nil
 Check(Button("Quality of Life").switch == nil, "navigation does not toggle modules")
 for _, name in ipairs({ "Quality of Life", "Dungeon Journal", "Instance Tracker", "Discovery", "BiS List", "Professions",
-    "Gear & Trinkets", "Blessings", "AuraBuffs", "Threat Meter", "Swing Timer", "Smart Reminders",
+    "Gear & Trinkets", "Blessings", "Completo", "AuraBuffs", "Threat Meter", "Swing Timer",
     "Macros", "Action Bars" }) do
     Check(Button(name).icon ~= nil, name .. " is listed with its glyph")
 end
@@ -247,9 +251,9 @@ local moduleList = Button("Action Bars").parent
 local moduleScroll = moduleList.parent
 local mainWindow = moduleScroll.parent.parent
 local originalHeight = mainWindow:GetHeight()
-mainWindow:SetHeight(790)
+mainWindow:SetHeight(822)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
-Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 790-high window")
+Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 822-high window")
 Check(not moduleScroll.ScrollBar:IsShown(), "navigation scrollbar hides when everything fits")
 local lastModule = Button("Action Bars")
 Check(-lastModule.points.TOPLEFT[4] + lastModule:GetHeight() <= moduleScroll:GetHeight(),
@@ -322,6 +326,8 @@ local function Setting(label)
     local text = Text(label)
     return text and text.parent.setting and text.parent or nil
 end
+-- Walked through from Co-Tank off with its debuffs on, the original defaults.
+S.Set("coTank", false); S.Set("coTankDebuffs", true); Flush()
 local coTank = Head("Co-Tank Frame")
 coTank.switch.scripts.OnClick(coTank.switch); Flush()
 Check(S.Get("coTank") and Setting("Max Icons") ~= nil, "turning a card on opens it")
@@ -344,7 +350,7 @@ Check(not S.Get("coTank") and Setting("Width").label.alpha < 1, "turned off, the
 coTank = Head("Co-Tank Frame")
 coTank.scripts.OnClick(coTank); Flush()
 Check(not Text("Max Icons"), "a click on its head closes it")
-Check(S.Get("coTankDebuffs"), "closing it keeps its settings")
+Check(not S.Get("coTank"), "closing it keeps its settings")
 UI.GoToSetting("QoL/Combat", "Out of Stealth Colour", "QoL/Combat:stealthReminder"); Flush()
 Check(Setting("Out of Stealth Colour") ~= nil, "a jump to a setting opens its card and shows the setting")
 ns.OpenOptionsWindow("QoL/Interface"); Flush()
@@ -581,8 +587,8 @@ Click(Button("Dungeon Journal")); Flush()
 switch.scripts.OnClick(); Flush()
 Check(ns.JournalSettings.Get("enabled") == true and confirmText == nil, "switching an addon module on needs no reload")
 switch.scripts.OnClick(); Flush()
-Check(confirmText and confirmText:find("BiS List", 1, true) and confirmText:find("both", 1, true),
-    "switching the journal off says BiS List goes with it")
+Check(confirmText and confirmText:find("BiS List", 1, true) and confirmText:find("Group Inspect", 1, true)
+    and confirmText:find("all of them", 1, true), "switching the journal off says BiS List, and Group Inspect with it, go too")
 Check(next(disabled) == nil, "nothing is disabled before the player confirms")
 confirmYes()
 Check(disabled.NaowhForever_DungeonJournal and disabled.NaowhForever_BiS, "confirming disables both addons")
@@ -619,6 +625,16 @@ Click(Button("Exit Config")); Flush()
 Check(not Text("Exit Config") and not ns.IsRaidReminderAnchorConfigActive(), "and Exit Config closes it")
 missingAddOns.NaowhForever_SmartReminders = nil
 
+ns.OpenOptionsWindow("Settings"); Flush()
+local groupInspectRows = 0
+for _, f in ipairs(frames) do
+    if f.text == "Group Inspect" and f:IsShown() and f.parent and f.parent:IsShown() then
+        groupInspectRows = groupInspectRows + 1
+    end
+end
+Check(groupInspectRows >= 3, "Group Inspect: in the sidebar, under Settings > Modules and in Minimap Icons")
+ns.OpenOptionsWindow("Group Inspect/Settings"); Flush()
+Check(Text("Group Inspect / Settings") ~= nil, "Group Inspect has a settings page of its own")
 ns.OpenOptionsWindow("Blessings/Settings"); Flush()
 Check(Text("Blessings / Settings") ~= nil, "existing module/tab deep links still work")
 ns.OpenOptionsWindow("QoL/Combat"); Flush()
@@ -652,6 +668,20 @@ for key, page in pairs(Settings.pages) do
         end
     end
 end
+-- With Gear & Trinkets and Blessings off, AuraBuffs is the first COMBAT module, listed after
+-- Macros; the group still sits above UTILITIES.
+missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = true, true
+local built = #frames
+Load("Core/NaowhForever_Window.lua")
+ns.OpenOptionsWindow(); Flush()
+local headY = {}
+for i = built + 1, #frames do
+    local f = frames[i]
+    if (f.text == "COMBAT" or f.text == "UTILITIES") and f.points.TOPLEFT then headY[f.text] = f.points.TOPLEFT[4] end
+end
+Check(headY.COMBAT and headY.UTILITIES and headY.COMBAT > headY.UTILITIES, "COMBAT stays above UTILITIES with its first modules off")
+missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = nil, nil
+
 print(cases .. " navigation checks passed")
 -- Available only to an offline renderer that loads this test environment.
 local capture = rawget(_G, "NAVIGATION_CAPTURE")
