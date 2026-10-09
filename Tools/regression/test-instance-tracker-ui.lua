@@ -85,4 +85,16 @@ Check(window:find("BuildInstanceHourPage", 1, true) == nil
     and window:find("BuildInstanceTrackerPage", 1, true) == nil,
     "the lists are not options tabs")
 
+Check(tracker:find("C_Timer.NewTicker(1, Tick)", 1, true) ~= nil
+    and tracker:find("C_Timer.NewTicker(1, UpdateFrame)", 1, true) == nil,
+    "the one-second ticker is the light tick")
+local tickAt = tracker:find("local function Tick()", 1, true)
+local tick = tickAt and tracker:sub(tickAt, tracker:find("\nlocal function Build()", tickAt, true) - 1)
+Check(tick ~= nil and tick:find("body.time:SetText", 1, true) ~= nil
+    and tick:find("body.hour:SetText", 1, true) ~= nil,
+    "the tick sets the clock and the hour line")
+Check(tick ~= nil and tick:find(":Fit(", 1, true) == nil and tick:find(":Paint(", 1, true) == nil
+    and tick:find("SetScale", 1, true) == nil and tick:find("Coins(", 1, true) == nil,
+    "the tick does not fit, paint, scale, or rebuild the coin string")
+
 print("OK " .. cases .. " instance tracker UI checks")

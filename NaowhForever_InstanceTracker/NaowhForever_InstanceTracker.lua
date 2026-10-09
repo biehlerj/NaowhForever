@@ -1,13 +1,13 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_InstanceTracker.lua -- a record of each dungeon or raid visit, and
---  how many new instances this character has entered in the last hour. Coming back
+--  how many new instances this account has entered in the last hour. Coming back
 --  to the same group within that hour, in a copy this character has not reset,
 --  continues that visit, and the time outside is not counted. A later return or a
 --  different group starts a new visit. The names on a visit are only for that
 --  check. The Journal already lists who was there on a kill. Other characters'
 --  visits, and the rest and durability sheet, stay saved, and show only when
---  Track Alts is on. Each character keeps their own hour. Saved instances stay on
---  the Top Bar.
+--  Track Alts is on. The hour is one cap for the whole account. Saved instances
+--  stay on the Top Bar.
 --
 --  Off until the module is enabled. The run timer is a shared tracker panel, built the
 --  first time it is allowed on screen. Coin amounts come from loot messages (the client's own
@@ -42,9 +42,9 @@ local S = UI.ModuleSettings("instanceTracker", {
     -- Dungeons only until this is on. Raid chat is a separate choice.
     leaveRaids = false,
     leavePrintRaid = false,
-    -- Other characters' visits and the snapshot. Each has their own 10 per hour.
+    -- Other characters' visits, and the rest and durability sheet. Not the hourly cap.
     trackAlts = false,
-    -- How many entries short of this character's 10-per-hour cap to warn. 1 warns at 9 of 10.
+    -- How many entries short of the account's 10-per-hour cap to warn. 1 warns at 9 of 10.
     hourlyWarn = 1,
     -- The module window, 0 to 1. The slider shows it as a percent.
     windowAlpha = 1,
@@ -751,8 +751,8 @@ end
 --  announces, and a zone-in with a different group clear that memory. The same
 --  group continues the visit within that hour. A later return or a different
 --  group is a new one, so the earlier loot and group stay on that record.
---  The cap is 10 new instances in a rolling hour, for this character. Another
---  character on the account has their own 10.
+--  The cap is 10 new instances in a rolling hour for the whole account. Each
+--  entry stays on the character who zoned in. The count is the sum.
 -------------------------------------------------------------------------------
 local expiryGen = 0
 local hourSnap
@@ -779,17 +779,14 @@ local function ByAt(a, b)
     return a.at < b.at
 end
 
--- Drops hour entries older than an hour. Oldest first. Clearing the cached count
--- only matters for this character; an alt's list is pruned when the page reads it.
+-- Drops hour entries older than an hour. Oldest first. Any removal drops the
+-- cached account count, because that count is the sum of every character.
 local function PruneHour(row)
     if type(row) ~= "table" then return {} end
     local list = row.hour
-    local mine = Mine(false) == row
     if type(list) ~= "table" then
-        list = {}
-        row.hour = list
-        if mine then hourSnap = nil end
-        return list
+        row.hour = {}
+        return row.hour
     end
     local now = time()
     local n, w, ordered, prev, removed = #list, 1, true, nil, false
@@ -805,7 +802,7 @@ local function PruneHour(row)
         end
     end
     for i = n, w, -1 do list[i] = nil end
-    if removed and mine then hourSnap = nil end
+    if removed then hourSnap = nil end
     if not ordered then table.sort(list, ByAt) end
     return list
 end
@@ -817,29 +814,49 @@ local function WarnDistance()
     return n
 end
 
-local function HourFor(list)
+-- Entries still inside the hour, across every character's list. A stamp an hour
+-- old or older drops out. The next free time is the oldest stamp that remains.
+-- The regression loads this function. Track Alts is not an input.
+local function AccountHour(lists, now, hour)
     local count, oldest = 0, nil
-    for i = 1, #list do
-        local entry = list[i]
-        if type(entry) == "table" and type(entry.at) == "number" then
-            count = count + 1
-            if not oldest or entry.at < oldest then oldest = entry.at end
+    if type(lists) ~= "table" or type(now) ~= "number" or type(hour) ~= "number" then
+        return 0, 0, nil
+    end
+    for i = 1, #lists do
+        local list = lists[i]
+        if type(list) == "table" then
+            for j = 1, #list do
+                local entry = list[j]
+                local at = type(entry) == "table" and entry.at or nil
+                if type(at) == "number" and now - at < hour then
+                    count = count + 1
+                    if not oldest or at < oldest then oldest = at end
+                end
+            end
         end
     end
     local frees = 0
     if oldest then
-        frees = oldest + HOUR - time()
+        frees = oldest + hour - now
         if frees < 0 then frees = 0 end
     end
     return count, frees, oldest
 end
 
+local function HourLists()
+    local lists, all = {}, AllChars()
+    if not all then return lists end
+    for guid, row in pairs(all) do
+        if IsCharKey(guid) and type(row) == "table" then
+            lists[#lists + 1] = PruneHour(row)
+        end
+    end
+    return lists
+end
+
 local function HourSnapshot()
-    local row = Mine(false)
-    if not row then return 0, HOURLY_CAP, 0 end
     local now = time()
-    if hourSnap and hourSnap.row == row
-        and (not hourSnap.oldest or now < hourSnap.oldest + HOUR) then
+    if hourSnap and (not hourSnap.oldest or now < hourSnap.oldest + HOUR) then
         local frees = 0
         if hourSnap.oldest then
             frees = hourSnap.oldest + HOUR - now
@@ -847,20 +864,20 @@ local function HourSnapshot()
         end
         return hourSnap.count, HOURLY_CAP, frees
     end
-    local count, frees, oldest = HourFor(PruneHour(row))
-    hourSnap = { row = row, count = count, oldest = oldest }
+    if not AllChars() and not PlayerGUID() then return 0, HOURLY_CAP, 0 end
+    local lists = HourLists()
+    local count, frees, oldest = AccountHour(lists, time(), HOUR)
+    hourSnap = { count = count, oldest = oldest }
     return count, HOURLY_CAP, frees
 end
 
 -- The note sits on this character, so an alt already warned does not swallow it.
+-- The numbers are the account's, and the line does not say who used one.
 local function WarnHour()
     if not On() then return end
     local row = Mine(false)
     if not row then return end
     local count, cap, frees = HourSnapshot()
-    local name = row.name
-    if type(name) ~= "string" or name == "" then name = DisplayName() end
-    if name == "" then return end
     local left = cap - count
     if left < 0 then left = 0 end
     if count <= 0 or left > WarnDistance() then
@@ -872,11 +889,11 @@ local function WarnHour()
     row.hourNoted = state
     local when = FormatDuration(frees)
     if left <= 0 then
-        ns.Print(ns.L("%s has used %d of %d instances this hour. A new instance will not let you in. The next one frees in %s.",
-            name, count, cap, when))
+        ns.Print(ns.L("This account has used %d of %d instances this hour. A new instance will not let you in. The next one frees in %s.",
+            count, cap, when))
     else
-        ns.Print(ns.L("%s has used %d of %d instances this hour. %d left before a new instance will not let you in. The next one frees in %s.",
-            name, count, cap, left, when))
+        ns.Print(ns.L("This account has used %d of %d instances this hour. %d left before a new instance will not let you in. The next one frees in %s.",
+            count, cap, left, when))
     end
 end
 
@@ -887,17 +904,14 @@ end
 local function ScheduleExpiry()
     StopExpiry()
     if not On() then return end
-    local row = Mine(false)
-    if not row then return end
-    local list = PruneHour(row)
-    if #list == 0 then return end
-    local delay = list[1].at + HOUR - time()
+    HourSnapshot()
+    if not hourSnap or not hourSnap.oldest then return end
+    local delay = hourSnap.oldest + HOUR - time()
     if delay < 1 then delay = 1 end
     local gen = expiryGen
     C_Timer.After(delay, function()
         if gen ~= expiryGen then return end
-        local current = Mine(false)
-        if current then PruneHour(current) end
+        hourSnap = nil
         WarnHour()
         UpdateFrame()
         UI:RefreshPage(true)
@@ -1484,7 +1498,7 @@ end
 
 local function HourLine()
     local count, cap, frees = HourSnapshot()
-    local text = string.format("Instances this hour: %d of %d", count, cap)
+    local text = string.format("Account this hour: %d of %d", count, cap)
     if count > 0 then text = text .. "   " .. FormatDuration(frees) end
     local left = cap - count
     if count > 0 and left <= WarnDistance() then
@@ -1509,6 +1523,18 @@ local function Paint()
     body:SetHeight(BODY_H)
     frame:Fit(BODY_H)
     frame:Paint()
+end
+
+-- The visit clock and the hour countdown move each second. Loot, experience, scale,
+-- fit, and the backdrop stay on UpdateFrame, which runs when those actually change.
+local function Tick()
+    local open = OpenRun()
+    if not (open and frame and frame:IsShown()) then
+        UpdateFrame()
+        return
+    end
+    frame.body.time:SetText(FormatDuration(Elapsed(open)))
+    frame.body.hour:SetText(HourLine())
 end
 
 local function Build()
@@ -1540,7 +1566,7 @@ UpdateFrame = function()
     if frame.mover then frame.mover:SetShown(unlocked == true) end
     frame:Show()
     if OpenRun() then
-        if not clock then clock = C_Timer.NewTicker(1, UpdateFrame) end
+        if not clock then clock = C_Timer.NewTicker(1, Tick) end
     else
         StopClock()
     end
@@ -1570,13 +1596,11 @@ function ns.InstanceTracker.Characters()
     for guid, row in pairs(all) do
         local mine = guid == mineGUID
         if IsCharKey(guid) and type(row) == "table" and (track or mine) then
-            local count, frees = HourFor(PruneHour(row))
             list[#list + 1] = {
                 guid = guid, realm = row.realm or "", name = row.name or "",
                 class = row.class, level = row.level or 0, mine = mine,
                 xp = row.xp, xpMax = row.xpMax, rested = row.rested,
                 durability = row.durability, seen = row.seen,
-                hour = count, hourFrees = frees,
             }
         end
     end
@@ -1633,37 +1657,13 @@ function ns.InstanceTracker.Hour()
 end
 
 function ns.InstanceTracker.HourEntries()
-    local row = Mine(false)
-    if not row then return {} end
-    local mine = PruneHour(row)
-    local rows = {}
-    for i = #mine, 1, -1 do rows[#rows + 1] = mine[i] end
-    return rows
-end
-
--- Other characters who still have entries inside the hour, fullest first.
-function ns.InstanceTracker.HourOthers()
-    local all = AllChars()
-    if not all then return {} end
-    local mineGUID = PlayerGUID()
-    local order = {}
-    for guid, row in pairs(all) do
-        if IsCharKey(guid) and guid ~= mineGUID and type(row) == "table" then
-            local list = PruneHour(row)
-            if #list > 0 then
-                local count, _, oldest = HourFor(list)
-                order[#order + 1] = {
-                    guid = guid, who = row.name or "", realm = row.realm,
-                    count = count, at = oldest,
-                }
-            end
-        end
+    local rows, lists = {}, HourLists()
+    for i = 1, #lists do
+        local list = lists[i]
+        for j = 1, #list do rows[#rows + 1] = list[j] end
     end
-    table.sort(order, function(a, b)
-        if a.count ~= b.count then return a.count > b.count end
-        return (a.who or "") < (b.who or "")
-    end)
-    return order
+    table.sort(rows, function(a, b) return (a.at or 0) > (b.at or 0) end)
+    return rows
 end
 
 function ns.InstanceTracker.EntryLeft(row)

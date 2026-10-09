@@ -115,22 +115,6 @@ local function RestLine(char)
     return JoinMuted(parts)
 end
 
-local function AltHourLine(char)
-    local IT = ns.InstanceTracker
-    local count = char.hour or 0
-    local text = string.format("This hour: %d of %d", count, IT.HOURLY_CAP)
-    if count > 0 then
-        text = text .. "   next frees in " .. IT.Duration(char.hourFrees or 0)
-    end
-    local left = IT.HOURLY_CAP - count
-    if count > 0 and left <= IT.WarnDistance() then
-        text = HourPaint(left, text)
-    else
-        text = ns.Color("muted", text)
-    end
-    return "    " .. text
-end
-
 local function RunLine(run)
     local IT = ns.InstanceTracker
     local span = IT.Duration((run.left or run.entered or 0) - (run.entered or 0))
@@ -165,13 +149,13 @@ function ns.BuildInstanceHourPage(parent, y)
     local _, h
     _, h = W:Note(parent, OffText()
         .. "New dungeon and raid instances "
-        .. "on this character count toward a 10-per-hour cap. Another character has their own 10. "
+        .. "on this account count toward one 10-per-hour cap. "
         .. "Walking back into one you have not reset does not count. The chat warning is set "
         .. "under Instance Tracker settings.", y); y = y - h
     _, h = W:SectionHeader(parent, "THIS HOUR", y); y = y - h
 
     local count, cap, frees = IT.Hour()
-    local summary = string.format("Instances this hour: %d of %d", count, cap)
+    local summary = string.format("Account this hour: %d of %d", count, cap)
     if count > 0 then summary = summary .. "   next frees in " .. IT.Duration(frees) end
     local left = cap - count
     if count > 0 and left <= IT.WarnDistance() then
@@ -189,42 +173,13 @@ function ns.BuildInstanceHourPage(parent, y)
         end
         y = y - GROUP_GAP
     end
-    local chars = ns.InstanceTracker.Characters()
-    local listed = {}
-    for i = 1, #chars do
-        if chars[i].guid then listed[chars[i].guid] = true end
-    end
-    local others = IT.HourOthers()
-    local stray = {}
-    for i = 1, #others do
-        local row = others[i]
-        if not listed[row.guid] then stray[#stray + 1] = row end
-    end
-    if #stray > 0 then
-        _, h = W:Note(parent, "Other characters, each with their own 10 this hour. "
-            .. "Turn on Track Alts to see their character sheet.", y); y = y - h
-        for i = 1, #stray do
-            local row = stray[i]
-            local who = row.who ~= "" and row.who or "?"
-            if type(row.realm) == "string" and row.realm ~= "" then
-                who = who .. "   " .. ns.Color("muted", row.realm)
-            end
-            local countText = string.format("%d of %d   next frees in %s",
-                row.count, cap, IT.Duration(IT.EntryLeft(row)))
-            local leftOthers = cap - row.count
-            if row.count > 0 and leftOthers <= IT.WarnDistance() then
-                countText = HourPaint(leftOthers, countText)
-            end
-            y = Line(parent, y, who .. "   " .. countText)
-        end
-        y = y - GROUP_GAP
-    end
 
     _, h = W:SectionHeader(parent, "CHARACTERS", y); y = y - h
     _, h = W:Note(parent, "A character shows up here after you log into it with Instance Tracker on. "
         .. "Track Alts shows the others: rested experience and durability, "
         .. "from the last time that character was logged in.", y); y = y - h
 
+    local chars = ns.InstanceTracker.Characters()
     if #chars == 0 then
         _, h = W:Note(parent, "No characters recorded yet.", y); y = y - h
         return y
@@ -236,7 +191,6 @@ function ns.BuildInstanceHourPage(parent, y)
         if sheet then y = Line(parent, y, sheet) end
         local rest = RestLine(char)
         if rest then y = Line(parent, y, rest) end
-        if not char.mine then y = Line(parent, y, AltHourLine(char)) end
         y = y - GROUP_GAP
     end
     return y
@@ -323,7 +277,7 @@ local function Headline()
     local open = IT.Open()
     if open and open.instance then return "In " .. IT.PlaceName(open.instance, open.difficulty) end
     local count, cap = IT.Hour()
-    return string.format("%d of %d instances this hour", count, cap)
+    return string.format("%d of %d instances on this account", count, cap)
 end
 
 local function Detail()
@@ -376,7 +330,7 @@ page:Card({
 
 page:Card({
     id = "alts", name = "Track Alts", order = 40, switch = "trackAlts",
-    help = "Shows your other characters' visits and this hour.",
+    help = "Shows your other characters' visits.",
     summary = function() return "Other characters stay listed" end,
 })
 

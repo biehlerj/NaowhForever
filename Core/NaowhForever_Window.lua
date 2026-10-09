@@ -86,7 +86,7 @@ local MODULES = {
       addon = "NaowhForever_InstanceTracker",
       open = "ToggleInstanceTrackerWindow",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
-      subtitle = "Visits, and how many new instances this character has entered this hour.",
+      subtitle = "Visits, and how many new instances this account has entered this hour.",
       tabs = {
           { name = "Settings", reuse = true },
       } },

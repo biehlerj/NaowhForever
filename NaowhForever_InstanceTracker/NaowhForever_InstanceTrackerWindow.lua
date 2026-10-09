@@ -19,7 +19,7 @@ local TABS_DROP = 8
 local TOP_Y = -6
 
 local TABS = {
-    { key = "hour", label = "This Hour", tip = "How many new instances you entered this hour." },
+    { key = "hour", label = "This Hour", tip = "How many new instances this account has entered this hour." },
     { key = "history", label = "History", tip = "Each visit, with its time, coins and experience." },
 }
 local BUILD = { hour = "BuildInstanceHourPage", history = "BuildInstanceHistoryPage" }
@@ -41,7 +41,7 @@ local function Note()
     local IT = ns.InstanceTracker
     if not IT then return "" end
     local count, cap = IT.Hour()
-    return string.format("%d of %d this hour", count, cap)
+    return string.format("%d of %d on this account", count, cap)
 end
 
 local function Paint()
