@@ -614,6 +614,13 @@ ns.OpenOptionsWindow("Professions/Settings"); Flush()
 Check(Text("MODULES") ~= nil, "a link to a module that is off lands on Settings, where it is turned back on")
 missingAddOns.NaowhForever_Professions = nil
 
+missingAddOns.NaowhForever_InstanceTracker = true
+for _, page in ipairs(UI.SearchPages()) do
+    Check(not (page.module and page.module.name == "Instance Tracker"),
+        "Instance Tracker is not searched while its addon is not loaded")
+end
+missingAddOns.NaowhForever_InstanceTracker = nil
+
 -- Smart Reminders is a module addon too. While it is off, the core still owns Unlock Mode.
 missingAddOns.NaowhForever_SmartReminders = true
 for _, page in ipairs(UI.SearchPages()) do
@@ -671,16 +678,20 @@ end
 -- With Gear & Trinkets and Blessings off, AuraBuffs is the first COMBAT module, listed after
 -- Macros; the group still sits above UTILITIES.
 missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = true, true
+missingAddOns.NaowhForever_InstanceTracker = true
 local built = #frames
 Load("Core/NaowhForever_Window.lua")
 ns.OpenOptionsWindow(); Flush()
-local headY = {}
+local headY, trackerNav = {}, false
 for i = built + 1, #frames do
     local f = frames[i]
     if (f.text == "COMBAT" or f.text == "UTILITIES") and f.points.TOPLEFT then headY[f.text] = f.points.TOPLEFT[4] end
+    if f.text == "Instance Tracker" and f:IsShown() then trackerNav = true end
 end
 Check(headY.COMBAT and headY.UTILITIES and headY.COMBAT > headY.UTILITIES, "COMBAT stays above UTILITIES with its first modules off")
+Check(not trackerNav, "Instance Tracker is left out of the sidebar while its addon is not loaded")
 missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = nil, nil
+missingAddOns.NaowhForever_InstanceTracker = nil
 
 print(cases .. " navigation checks passed")
 -- Available only to an offline renderer that loads this test environment.

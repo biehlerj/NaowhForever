@@ -11,7 +11,7 @@ local function Slice(source, a, b)
     return source:sub(first, assert(source:find(b, first + #a, true), b) - 1)
 end
 
-local tracker = Read("InstanceTracker/NaowhForever_InstanceTracker.lua")
+local tracker = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTracker.lua")
 local code = Slice(tracker, "local function CopyFresh(stored, now, hour)", "\n-- end copy memory")
     .. "\nreturn { Fresh = CopyFresh, Counts = CountsEntry, Differ = GroupsDiffer, Resume = CanResume }\n"
 local chunk = assert(loadstring(code))

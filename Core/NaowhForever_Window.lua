@@ -83,6 +83,7 @@ local MODULES = {
       } },
     -- This hour and the visit history are a window of their own (open); only the settings live here.
     { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
+      addon = "NaowhForever_InstanceTracker",
       open = "ToggleInstanceTrackerWindow",
       command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
       subtitle = "Visits, and how many new instances this character has entered this hour.",
@@ -377,7 +378,7 @@ local function ActiveNav()
     return page.module and page.module.name or page.key
 end
 
-local NAV_ROW, NAV_OFF_ALPHA = 30, 0.45
+local NAV_ROW, NAV_OFF_ALPHA = 28, 0.45
 local MISS_ALPHA = 0.3     -- a page, tab or module without a match for the sidebar's search
 local NO_TABS = {}
 
@@ -1310,7 +1311,7 @@ local function CreateWindow()
             local btn = NavigationButton(nav, DisplayName(mod), ny,
                 function() ShowPage(lastPages[mod.name] or mod.tabs[1].key) end, mod.navIcon)
             -- Spaced to fit every module in the default 822-high window (test-navigation.lua).
-            btn:SetHeight(30)
+            btn:SetHeight(NAV_ROW)
             NavExtras(btn, mod)
             navButtons[mod.name] = btn
             ny = ny - NAV_ROW
