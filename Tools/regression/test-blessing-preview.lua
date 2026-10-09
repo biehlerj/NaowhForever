@@ -38,7 +38,7 @@ function methods:SetWidth(w) self.w = w end
 function methods:SetAllPoints() self.all = true end
 function methods:GetWidth() if self.all then return self.parent:GetWidth() end return self.w end
 function methods:GetHeight() if self.all then return self.parent:GetHeight() end return self.h end
-function methods:SetPoint(_, relative, _, x) self.anchor, self.x = relative, x end
+function methods:SetPoint(point, relative, _, x, y) self.point, self.anchor, self.x, self.y = point, relative, x, y end
 function methods:GetFrameLevel() return self.level end
 function methods:SetFrameLevel(v) self.level = v end
 function methods:GetEffectiveScale() return 1 end
@@ -48,6 +48,7 @@ function methods:SetText(t) self.text = t end
 -- Roughly how wide text draws: half its font size per letter.
 function methods:GetUnboundedStringWidth() return #(self.text or "") * (self.size or 10) / 2 end
 function methods:SetTexture(t) self.texture = t end
+function methods:SetTexCoord(...) self.coords = { ... } end
 function methods:SetVertexColor(r, g, b) self.vertex = { r, g, b } end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
 function methods:CreateTexture() return New("Texture", self) end
@@ -55,7 +56,8 @@ function methods:CreateFontString() return New("FontString", self) end
 
 local settings = {}
 local defaults = { blessings = true, blessBarSize = 30, blessSpacing = 6, blessGroupSpacing = 6,
-    blessTimerSize = 14, blessShowLabels = true, blessTimers = true, blessShowAura = true, blessShowFury = false }
+    blessTimerSize = 14, blessShowLabels = true, blessTimers = true, blessShowAura = true, blessShowFury = false,
+    blessLabelStyle = "name", blessLayout = "horizontal" }
 local sets = 0
 local S = {}
 function S.Get(k) local v = settings[k]; if v == nil then return defaults[k] end return v end
@@ -71,7 +73,7 @@ local ns = {
     Apply = function() end, ShowRaidReminderAnchorConfig = function() end, HideRaidReminderAnchorConfig = function() end,
     AccountSettings = function() return account end,
     OpenBlessingsWindow = function() end,
-    PixelInset = function() end, Border = function() end, UIFontPath = function() return "font" end,
+    PixelInset = function() end, Border = function(f) f.bordered = true end, UIFontPath = function() return "font" end,
     Font = function(parent) return New("FontString", parent) end,
     Solid = function(parent) return New("Texture", parent) end,
     Color = function(_, text) return text end,
@@ -111,7 +113,7 @@ local function Pick(label)
     end
 end
 
-local shift, cursorX, templated = false, 0, 0
+local shift, cursorX, cursorY, templated = false, 0, 0, 0
 local env = setmetatable({
     NaowhForever = ns,
     CreateFrame = function(kind, _, parent, template)
@@ -132,7 +134,7 @@ local env = setmetatable({
         generate(owner, menu)
     end },
     IsShiftKeyDown = function() return shift end,
-    GetCursorPosition = function() return cursorX, 0 end,
+    GetCursorPosition = function() return cursorX, cursorY end,
 }, { __index = _G })
 env._G = env
 
@@ -224,6 +226,31 @@ grip.scripts.OnMouseUp(grip, "LeftButton")
 check("letting go stops the drag", grip.scripts.OnUpdate == nil and not grip.dragging)
 settings.blessGroupSpacing = nil
 
+-- Direction: Vertical stacks the bar top to bottom, the class labels beside the buttons and
+-- the gap after the aura dragged up or down; Horizontal puts it all back.
+settings.blessLayout = "vertical"
+studio.paint(preview, "group")
+local first, second = preview.cells[1], preview.cells[2]
+check("vertical: the class buttons stack from the top", first.point == "TOP" and second.point == "TOP"
+    and first.x == 0 and second.y == first.y - 36)
+check("vertical: the bar is a column", preview.bar.w == 30 and preview.bar.h == 216)
+check("vertical: the + sits at the top", preview.plus.point == "TOP")
+check("vertical: class labels beside their buttons", first.label.point == "LEFT" and first.label.anchor == first)
+check("vertical: the gap is a band across the column", grip.point == "TOP" and grip.w == 30 and grip.h == 12
+    and grip.y == -66 and grip.tipBody:find("up or down"))
+cursorY = 100
+grip.scripts.OnMouseDown(grip, "LeftButton")
+cursorY = 90
+grip.scripts.OnUpdate(grip)
+check("vertical: dragging down widens the gap", S.Get("blessGroupSpacing") == 16)
+grip.scripts.OnMouseUp(grip, "LeftButton")
+cursorY = 0
+check("the card's summary says vertical", cards.bar.summary(S):find(", vertical", 1, true))
+settings.blessLayout, settings.blessGroupSpacing = nil, nil
+studio.paint(preview, "group")
+check("horizontal again: a row with labels under the buttons", first.point == "LEFT" and first.label.point == "TOP"
+    and preview.bar.h == 30 and grip.point == "LEFT")
+
 -- Hovering and the wheel make no garbage.
 studio.paint(preview, "group")
 local aura = preview.aura
@@ -274,6 +301,45 @@ settings.blessBarSize, settings.blessSpacing = nil, nil
 studio.paint(preview, "group")
 check("with room again the full name comes back at its size", warriorCell.label.text == "Warrior"
     and warriorCell.label.size == 10 and mageCell.label.text == "Mage" and mageCell.label.size == 10)
+check("the Name style builds no class icon", warriorCell.classIcon == nil)
+
+-- Class Label Style: Class Icon shows the class's icon under its button instead of its name,
+-- two thirds of the button, between 12 and 24 px.
+settings.blessLabelStyle = "icon"
+studio.paint(preview, "group")
+local classIcon = warriorCell.classIcon
+check("Class Icon shows the class's icon in place of the name", classIcon and classIcon.shown
+    and not warriorCell.label.shown and classIcon.tex.texture == "Interface\\Icons\\ClassIcon_WARRIOR"
+    and mageCell.classIcon.tex.texture == "Interface\\Icons\\ClassIcon_MAGE")
+check("the icon is cropped and edged like the buttons", classIcon.tex.coords[1] == 0.08
+    and classIcon.tex.coords[2] == 0.92 and classIcon.bordered)
+check("the icon is two thirds of the button", classIcon.w == 20 and classIcon.h == 20)
+settings.blessBarSize = 70
+studio.paint(preview, "group")
+check("the icon stops at 24 px on big buttons", classIcon.w == 24)
+settings.blessBarSize = 20
+studio.paint(preview, "group")
+check("and keeps two thirds on small ones", classIcon.w == 13)
+settings.blessShowLabels = false
+studio.paint(preview, "group")
+check("Class Labels off hides the icon too", not classIcon.shown and not warriorCell.label.shown)
+settings.blessBarSize, settings.blessShowLabels, settings.blessLabelStyle = nil, nil, nil
+studio.paint(preview, "group")
+check("back on Name the name returns and the icon hides", warriorCell.label.shown and not classIcon.shown
+    and warriorCell.label.text == "Warrior")
+settings.blessLabelStyle, settings.blessLayout = "icon", "vertical"
+studio.paint(preview, "group")
+check("a column's icons sit beside their buttons, not on the one below", classIcon.shown
+    and classIcon.point == "LEFT" and classIcon.anchor == warriorCell)
+settings.blessLabelStyle, settings.blessLayout = nil, nil
+studio.paint(preview, "group")
+check("and back under them in a row", not classIcon.shown and warriorCell.label.point == "TOP")
+settings.blessBarSize, settings.blessSpacing, settings.blessLayout = 16, 0, "vertical"
+studio.paint(preview, "group")
+check("a column's names sit beside it with nothing to run into: never squeezed",
+    warriorCell.label.text == "Warrior" and warriorCell.label.size == 10)
+settings.blessBarSize, settings.blessSpacing, settings.blessLayout = nil, nil, nil
+studio.paint(preview, "group")
 
 -- Off: nothing in the preview edits.
 settings.blessings = false

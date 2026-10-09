@@ -61,6 +61,8 @@ local YELLOW = { r = 1, g = 0.85, b = 0.3 }
 local BLUE = { r = 0.35, g = 0.6, b = 1 }
 local ICON_BORDER = { r = 0, g = 0, b = 0 }
 local MARK_SIZE, LABEL_SIZE, LABEL_MIN = 14, 10, 7
+local CLASS_ICON_PATH = "Interface\\Icons\\ClassIcon_"
+local CLASS_ICON_MIN, CLASS_ICON_MAX = 12, 24
 local HIGHLIGHT = "Interface\\Buttons\\ButtonHilight-Square"
 local AURA_TIP = "Left-click: cast your aura.\nRight-click: choose it."
 local FURY_TIP = "Left-click: cast it on yourself."
@@ -755,10 +757,39 @@ local function FitLabel(label, text, width, font, outline)
     if label:GetUnboundedStringWidth() > width then label:SetWidth(width) end
 end
 
+-- The class's own icon by its button, for Class Label Style: Class Icon, cropped and edged
+-- like the buttons. Made the first time it is asked for, so the default Name style builds
+-- nothing extra.
+local function ClassIcon(frame)
+    local icon = frame.classIcon
+    if icon then return icon end
+    icon = CreateFrame("Frame", nil, frame)
+    icon.tex = icon:CreateTexture(nil, "ARTWORK")
+    icon.tex:SetAllPoints()
+    icon.tex:SetTexture(CLASS_ICON_PATH .. frame.class)
+    icon.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    ns.Border(icon, ICON_BORDER)
+    frame.classIcon = icon
+    return icon
+end
+
+-- A class's name or icon: under its button in a row; beside it in a column, clear of the
+-- button below.
+local function Hang(region, frame)
+    region:ClearAllPoints()
+    if Look.vertical then
+        region:SetPoint("LEFT", frame, "RIGHT", 3, 0)
+    else
+        region:SetPoint("TOP", frame, "BOTTOM", 0, -2)
+    end
+end
+
 function Look.Read()
     Look.size, Look.gap, Look.groupGap = S.Get("blessBarSize"), S.Get("blessSpacing"), S.Get("blessGroupSpacing")
     Look.timerSize, Look.labels = S.Get("blessTimerSize"), S.Get("blessShowLabels")
+    Look.icons = S.Get("blessLabelStyle") == "icon"
     Look.font, Look.outline = S.Get("blessFont"), S.Get("blessOutline")
+    Look.vertical = S.Get("blessLayout") == "vertical"
     if S.Get("blessThemeColors") then
         deepAccent = deepAccent or { r = T.accent.r * 0.6, g = T.accent.g * 0.6, b = T.accent.b * 0.6 }
         tints[RED], tints[YELLOW], tints[BLUE] = T.accent, T.accentSoft, deepAccent
@@ -767,6 +798,7 @@ function Look.Read()
     end
 end
 
+-- x is how far along the bar the button goes: rightwards in a row, downwards in a column.
 function Look.Place(frame, row, x)
     local size = Look.size
     frame:SetSize(size, size)
@@ -776,13 +808,36 @@ function Look.Place(frame, row, x)
     Parts.HudFont(frame.mark, font, MARK_SIZE, outline)
     frame.mark:SetTextColor(missing.r, missing.g, missing.b)
     if frame.label then
-        frame.label:SetShown(Look.labels)
-        FitLabel(frame.label, frame.labelText, size + Look.gap, font, outline)
+        local name, icon = Look.labels and not Look.icons, Look.labels and Look.icons
+        frame.label:SetShown(name)
+        if name then
+            Hang(frame.label, frame)
+            -- Nothing sits beside a column's names, so only a row's are fitted to their button.
+            FitLabel(frame.label, frame.labelText, Look.vertical and math.huge or size + Look.gap, font, outline)
+        end
+        if icon then
+            local classIcon, side = ClassIcon(frame), Look.IconSize()
+            classIcon:SetSize(side, side)
+            Hang(classIcon, frame)
+            classIcon:Show()
+        elseif frame.classIcon then
+            frame.classIcon:Hide()
+        end
     end
     frame:ClearAllPoints()
-    frame:SetPoint("LEFT", row, "LEFT", x, 0)
+    if Look.vertical then
+        frame:SetPoint("TOP", row, "TOP", 0, 0 - x)
+    else
+        frame:SetPoint("LEFT", row, "LEFT", x, 0)
+    end
     frame:Show()
     return x + size + Look.gap
+end
+
+-- The class icon: two thirds of the button, kept between CLASS_ICON_MIN and CLASS_ICON_MAX so
+-- it stays readable and always fits under its button.
+function Look.IconSize()
+    return math.max(CLASS_ICON_MIN, math.min(CLASS_ICON_MAX, math.floor(Look.size * 2 / 3 + 0.5)))
 end
 
 function Look.Gap(x)
@@ -792,6 +847,15 @@ end
 
 function Look.Width(x)
     return math.max(x - Look.gap, Look.size)
+end
+
+-- Sizes the bar to its buttons: a row Width wide, or a column Width tall.
+function Look.Fit(frame, x)
+    if Look.vertical then
+        frame:SetSize(Look.size, Look.Width(x))
+    else
+        frame:SetSize(Look.Width(x), Look.size)
+    end
 end
 
 function Look.Minutes(seconds)
@@ -1187,7 +1251,7 @@ function Refresh()
     ArrangeFlyout(roster)
     FillKeys(byClass)
     EndAuraMemo()
-    bar:SetSize(Look.Width(x), size)
+    Look.Fit(bar, x)
     bar:SetShown(x > 0 or bar.mover:IsShown())
 end
 
