@@ -15,7 +15,8 @@ Shared/
   Style.lua    the house look: colors (BiS stars, worn green, looks, red and warning orange), icons, sizes
   Items.lua    item and gear helpers: an ID from a link or URL, your loot lines, quality colour, In Bag,
                gear slots, what fits where, what you wear, weapons in short ("1h Sword"),
-               waiting on item data, the items the server would not send
+               waiting on item data, the items the server would not send, the healthstones and
+               healing potions
   Bags.lua     the item buttons in your bags, the game's and EllesmereUI's, for the marks
                painted on them (Bag Marks, Scrap Marker)
   Roster.lua   our part of a player's tooltip in the Guild & Communities and Friends lists (Badges, Naowh Score)
@@ -29,7 +30,8 @@ Shared/
                down by itself (Parts.TimerLine, and Parts.StopTimer to stop any timer bar), a row of labels spread evenly (Parts.LabelRow), a HUD
                card's background: the card, a soft fade or none (Parts.HudBackdrop), a HUD line's
                font, size and outline (Parts.HudFont), and a window's soft drop shadow (Parts.Shadow)
-  Window.lua   a window: the frame, title bar, icons, opacity slider, switch, search, footer,
+  Window.lua   a window: the frame (and its Classic+ trim and title plate: Parts.ClassicTrim,
+               Parts.TitlePlate), title bar, icons, opacity slider, switch, search, footer,
                and a module's card on its settings page
   Tracker.lua  a tracker's small window (Parts.TrackerPanel), and a list row's bands
                (Parts.RowBands: stripe, hover, the line under it)
@@ -57,7 +59,12 @@ Shared/
   row with `field` (and its own `get`/`set`) is one entry of a table setting `key`, with its own dot
   and reset (AuraBuffs' raid buff switches). A row or
   group with `hidden` is left off the page: `true` for one set on the preview instead, or a
-  function, so rows for one choice only (the Campfire's Round and Simple rows) show with it. The page
+  function, so rows for one choice only (the Campfire's Round and Simple rows) show with it. A
+  row's `cog = { title, tip }` puts a cog left of its control, opening a small panel of the rows
+  declared `under` that row's label: hidden rows, still searched, counted and reset with the
+  card, and a search hit on one opens the cog. `icons = { { texture, tip, open, enabled }, ... }`
+  adds other icons beside it. A card's `watch = { store, ... }` draws it again when another
+  module's settings change too. The page
   in the options window, its search entries, the dot on what you changed and each card's reset
   all come from that one declaration. Settings pages hold settings only: a module's lists and
   editors live in its own window, opened from the page's `page:Window{ ... }` card (first on
