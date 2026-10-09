@@ -12,10 +12,17 @@ local function Slice(source, a, b)
 end
 
 local tracker = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTracker.lua")
-local code = Slice(tracker, "local function CopyFresh(stored, now, hour)", "\n-- end copy memory")
-    .. "\nreturn { Fresh = CopyFresh, Counts = CountsEntry, Differ = GroupsDiffer, Resume = CanResume }\n"
+local code = Slice(tracker, "local function SamePlace(open, name, mapID, difficulty)", "\n\nlocal function LastRun")
+    .. "\n"
+    .. Slice(tracker, "local function CopyKey(mapID, difficulty, name)", "\n\nlocal function ByAt")
+    .. "\n"
+    .. Slice(tracker, "local function CopyFresh(stored, now, hour)", "\n-- end copy memory")
+    .. "\n"
+    .. Slice(tracker, "local function TakeSameCopy(name, mapID, difficulty)", "\nBeginRun = function")
+    .. "\nreturn { Fresh = CopyFresh, Counts = CountsEntry, Differ = GroupsDiffer, Resume = CanResume, Take = TakeSameCopy }\n"
+local env = setmetatable({ HOUR = 3600 }, { __index = _G })
 local chunk = assert(loadstring(code))
-setfenv(chunk, setmetatable({}, { __index = _G }))
+setfenv(chunk, env)
 local Copy = chunk()
 
 local count = 0
@@ -101,6 +108,59 @@ Case("an hour-old stamp or leave does not resume", function()
     local oldLeave = { name = "Deadmines", at = NOW - (HOUR + 60) }
     assert(not Copy.Resume(oldLeave, NOW - HOUR, NOW, HOUR))
     assert(Copy.Counts(oldLeave, NOW, HOUR, true))
+end)
+
+local function Visit(group, left)
+    return {
+        instance = "Deadmines", mapID = 36, difficulty = "",
+        entered = left - 600, left = left, group = group,
+    }
+end
+
+local function World(runs, lives, current, grouped)
+    env.Mine = function()
+        return { runs = runs, live = lives }
+    end
+    env.time = function() return NOW end
+    env.IsInGroup = function() return grouped end
+    env.Secret = function() return false end
+    env.CurrentGroup = function() return current end
+end
+
+Case("a different group drops the stamp and counts the new copy", function()
+    local stamp = { name = "Deadmines", at = NOW - 1800 }
+    assert(not Copy.Counts(stamp, NOW, HOUR, true))
+    local lives = { ["36:"] = stamp }
+    local runs = { Visit(groupA, NOW - 1800) }
+    World(runs, lives, groupB, true)
+    assert(Copy.Take("Deadmines", 36, "") == nil)
+    assert(lives["36:"] == nil)
+    assert(#runs == 1)
+    assert(runs[1].group == groupA)
+    assert(Copy.Counts(lives["36:"], NOW, HOUR, true))
+end)
+
+Case("the same group keeps the stamp and resumes the visit", function()
+    local stamp = { name = "Deadmines", at = NOW - 1800 }
+    local lives = { ["36:"] = stamp }
+    local runs = { Visit(groupA, NOW - 1800) }
+    local prior = runs[1]
+    World(runs, lives, { Member("Bob"), Member("Eve") }, true)
+    assert(Copy.Take("Deadmines", 36, "") == prior)
+    assert(#runs == 0)
+    assert(lives["36:"] == stamp)
+    assert(not Copy.Counts(lives["36:"], NOW, HOUR, true))
+end)
+
+Case("an empty roster while grouped does not drop the stamp", function()
+    local stamp = { name = "Deadmines", at = NOW - 60 }
+    local lives = { ["36:"] = stamp }
+    local runs = { Visit(groupA, NOW - 60) }
+    local prior = runs[1]
+    World(runs, lives, {}, true)
+    assert(Copy.Take("Deadmines", 36, "") == prior)
+    assert(lives["36:"] == stamp)
+    assert(not Copy.Counts(stamp, NOW, HOUR, true))
 end)
 
 print(count .. " instance tracker copy regressions passed")

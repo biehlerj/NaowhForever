@@ -747,10 +747,10 @@ end
 --  Hourly instance entries. A new dungeon or raid instance counts. Walking back into
 --  one this character has not reset does not, for the hour after that entry. A later
 --  zone-in counts again.
---  The client's own reset line clears that memory, and so does a reset a Nova
---  Instance Tracker group leader announces. The same group continues the visit
---  within that hour. A later return or a different group is a new one, so the
---  earlier loot and group stay on that record.
+--  The client's own reset line, a reset a Nova Instance Tracker group leader
+--  announces, and a zone-in with a different group clear that memory. The same
+--  group continues the visit within that hour. A later return or a different
+--  group is a new one, so the earlier loot and group stay on that record.
 --  The cap is 10 new instances in a rolling hour, for this character. Another
 --  character on the account has their own 10.
 -------------------------------------------------------------------------------
@@ -1324,8 +1324,12 @@ local function TakeSameCopy(name, mapID, difficulty)
         local run = runs[i]
         if type(run) == "table" and SamePlace(run, name, mapID, difficulty) then
             if not CanResume(stored, run.left, now, HOUR) then return end
-            -- A different group is a new copy. The old visit stays in the history.
-            if GroupsDiffer(run.group, current, grouped) then return end
+            -- A different group is a new copy. Drop the stamp so this zone-in counts,
+            -- and leave the old visit in the history.
+            if GroupsDiffer(run.group, current, grouped) then
+                mine[CopyKey(mapID, difficulty, name)] = nil
+                return
+            end
             table.remove(runs, i)
             return run
         end
