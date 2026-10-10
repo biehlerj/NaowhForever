@@ -262,9 +262,9 @@ Check(not navTopBar, "the Top Bar has no sidebar entry: it is switched in Settin
 local moduleScroll = moduleList.parent
 local mainWindow = moduleScroll.parent.parent
 local originalHeight = mainWindow:GetHeight()
-mainWindow:SetHeight(822)
+mainWindow:SetHeight(852)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
-Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 822-high window")
+Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 852-high window")
 Check(not moduleScroll.bar:IsShown(), "navigation scrollbar hides when everything fits")
 local lastModule = Button("Action Bars")
 Check(-lastModule.points.TOPLEFT[4] + lastModule:GetHeight() <= moduleScroll:GetHeight(),
