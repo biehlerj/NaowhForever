@@ -1,8 +1,4 @@
--------------------------------------------------------------------------------
---  NaowhForever_InstanceTrackerPage.lua -- this hour and the history list, and the
---  settings cards. The lists are drawn in the module's own window. Opening one only
---  reads what the tracker has already stored.
--------------------------------------------------------------------------------
+-- InstanceTrackerPage.lua: this hour, the visit history, and the settings cards.
 local ns = _G.NaowhForever
 local UI = ns.UI
 local T = ns.THEME
@@ -247,9 +243,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
     return y
 end
 
--------------------------------------------------------------------------------
---  Settings. One page in the options window. The lists live in the module window.
--------------------------------------------------------------------------------
+-- Settings. One page in the options window. The lists live in the module window.
 local Settings = ns.Shared and ns.Shared.Settings
 if not Settings then return end
 

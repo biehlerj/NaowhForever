@@ -1,22 +1,4 @@
--------------------------------------------------------------------------------
---  NaowhForever_InstanceTracker.lua -- a record of each dungeon or raid visit, and
---  how many new instances this account has entered in the last hour. A real leave
---  closes the visit. The next zone-in counts, unless a plain zone id in a GUID
---  matches the copy this character entered inside that hour. A ghost, or a death
---  the client kept secret, stays on the open visit. A different group is a new
---  copy. A reload while still inside does not count. The names on a visit are
---  only for that check. The Journal already lists who was there on a kill.
---  Other characters' visits, and the rest and durability sheet, stay saved, and
---  show only when Track Alts is on. The hour is one cap for the whole account. Saved instances
---  stay on the Top Bar.
---
---  Off until the module is enabled. The run timer is a shared tracker panel, built the
---  first time it is allowed on screen. Coin amounts come from loot messages (the client's own
---  GOLD_AMOUNT phrases), not from a combat log, which Forever does not give to addons.
---  Visits are account data, so a profile switch does not wipe them.
---  A character is stored under its UnitGUID (Shared.CharacterData). Names are not
---  unique on Forever. The name kept on the record is only what the pages show.
--------------------------------------------------------------------------------
+-- InstanceTracker.lua: each dungeon or raid visit, and how many new instances this account entered this hour.
 local ns = _G.NaowhForever
 local UI = ns.UI
 local T = ns.THEME
@@ -69,9 +51,6 @@ local BODY_H = TIME_LINE + TIME_GAP + BODY_LINE + LINE_GAP + BODY_LINE
 local SETTINGS_PAGE = "Instance Tracker/Settings"
 local TIMER_CARD = "timer"
 
--- At the hourly cap the line is red; inside the warn distance it is amber.
--- The house colors for no room left and running low. This Hour reads the same
--- tables from ns.InstanceTracker.
 local CAP_RGB = ns.Shared.Style.RED_RGB
 local WARN_RGB = ns.Shared.Style.WARN_RGB
 
@@ -208,7 +187,6 @@ local function SnapshotChar(row)
     if durability ~= nil then row.durability = durability end
 end
 
--- The character record visits and the sheet hang off.
 local function TouchChar()
     local row = Mine(true)
     if not row then return end
@@ -341,8 +319,11 @@ local RUN_EVENTS = {
 
 local function SetRunEvents(active)
     for i = 1, #RUN_EVENTS do
-        if active then events:RegisterEvent(RUN_EVENTS[i])
-        else events:UnregisterEvent(RUN_EVENTS[i]) end
+        if active then
+            events:RegisterEvent(RUN_EVENTS[i])
+        else
+            events:UnregisterEvent(RUN_EVENTS[i])
+        end
     end
 end
 
@@ -537,10 +518,9 @@ local function Sentence(place, facts)
     return place .. " " .. table.concat(facts, ", ") .. "."
 end
 
-local function ChatWent(ok, result)
+local function SendAccepted(ok, result, success)
     if not ok then return false end
     if result == nil or result == true then return true end
-    local success = Enum and Enum.SendChatMessageResult and Enum.SendChatMessageResult.Success
     return result == success
 end
 
@@ -554,7 +534,9 @@ end
 
 local function SendLine(text, channel)
     if type(text) ~= "string" or text == "" or #text > CHAT_LIMIT then return false end
-    return ChatWent(pcall(C_ChatInfo.SendChatMessage, text, channel))
+    local ok, result = pcall(C_ChatInfo.SendChatMessage, text, channel)
+    local success = Enum and Enum.SendChatMessageResult and Enum.SendChatMessageResult.Success
+    return SendAccepted(ok, result, success)
 end
 
 -- Complete facts, joined by commas, with a period on each message.
@@ -609,6 +591,10 @@ local function AnnounceLeave(open, span)
     local place = ns.L("Left %s.", Where(open))
     local shown = Sentence(place, LeaveFacts(open, span, false))
     if not shown then return end
+    if S.Get("leaveWhere") ~= "group" then
+        ns.Print(shown)
+        return
+    end
     Deliver(shown, place, LeaveFacts(open, span, true))
 end
 
@@ -696,7 +682,7 @@ local function NoteGroup(open)
     return changed
 end
 
--- Newest visits sit at the front. This character keeps MAX_RUNS of their own.
+-- This character keeps MAX_RUNS of their own.
 local function TrimRuns(runs)
     for i = #runs, MAX_RUNS + 1, -1 do runs[i] = nil end
 end
@@ -746,19 +732,10 @@ CloseRun = function(announce, at, quiet)
     UI:RefreshPage(true)
 end
 
--------------------------------------------------------------------------------
---  Hourly instance entries. A new dungeon or raid instance counts. A real leave
---  closes the visit, and the next zone-in counts again, unless a plain zone id
---  matches the copy still inside the hour. A ghost, or a death the client kept
---  secret, does not close it. A reload while still inside does not count.
---  The client's own reset line, a reset a Nova Instance Tracker group leader
---  announces, and a zone-in with a different group clear that memory. When the
---  zone id cannot be read, the zone-in counts, and a matching id later in that
---  visit takes the count back. The earlier loot and group stay on the old record
---  when the visits merge.
---  The cap is 10 new instances in a rolling hour for the whole account. Each
---  entry stays on the character who zoned in. The count is the sum.
--------------------------------------------------------------------------------
+-- A new dungeon or raid counts toward one account cap of 10 in a rolling hour.
+-- A ghost, or a death the client kept secret, does not close the visit. A reload
+-- while still inside does not count. A different group does. A later matching
+-- zone id can take that count back.
 local expiryGen = 0
 local hourSnap
 
@@ -770,7 +747,7 @@ local function CopyKey(mapID, difficulty, name)
 end
 
 -- Copies this character has not reset, on their own record.
-local function CharLives(create)
+local function LiveCopies(create)
     local row = Mine(create)
     if not row then return end
     if type(row.live) ~= "table" then
@@ -794,19 +771,19 @@ local function PruneHour(row)
         return row.hour
     end
     local now = time()
-    local n, w, ordered, prev, removed = #list, 1, true, nil, false
-    for i = 1, n do
+    local count, write, ordered, prev, removed = #list, 1, true, nil, false
+    for i = 1, count do
         local entry = list[i]
         if type(entry) == "table" and type(entry.at) == "number" and now - entry.at < HOUR then
             if prev and prev.at > entry.at then ordered = false end
             prev = entry
-            if w ~= i then list[w] = entry end
-            w = w + 1
+            if write ~= i then list[write] = entry end
+            write = write + 1
         else
             removed = true
         end
     end
-    for i = n, w, -1 do list[i] = nil end
+    for i = count, write, -1 do list[i] = nil end
     if removed then hourSnap = nil end
     if not ordered then table.sort(list, ByAt) end
     return list
@@ -1004,6 +981,7 @@ local function CopyParts(guid)
     if not instanceID or instanceID == 0 or not zoneUID or zoneUID == 0 then return end
     return zoneUID
 end
+-- end copy memory
 
 -- countIt is false for a login or reload: that copy already existed. An existing
 -- stamp stays put on that path, so a resume does not push the hour forward.
@@ -1029,19 +1007,13 @@ local function NoteInstanceEntry(name, mapID, difficulty, countIt)
     ScheduleExpiry()
 end
 
--------------------------------------------------------------------------------
---  Nova Instance Tracker, prefix "NIT". A reset is the text
---  "<command> <version> <instance>" (the name keeps its spaces), then LibSerialize,
---  LibDeflate at level 9, and the addon-channel encoding. Version 1 is the oldest
---  Nova still reads, and it is not newer than a current copy, so Nova does not tell
---  that player to update.
---
---  instanceReset rides with a "[NIT] " line in party or raid chat. Nova's handler for
---  that command does nothing, because the chat line is what the group sees.
---  instanceResetNoMsg is the same reset with the chat line left out, and Nova prints
---  it. instanceResetOther is that print from Nova World Buffs, on this same prefix.
---  Nova reset wire format. The block through ClearNamedCopy is loaded by the regression.
--------------------------------------------------------------------------------
+-- Nova Instance Tracker, prefix "NIT". A reset is "<command> <version> <instance>"
+-- (the name keeps its spaces), then LibSerialize, LibDeflate at level 9, and the
+-- addon-channel encoding. Version 1 is the oldest Nova still reads.
+-- instanceReset rides with a "[NIT] " chat line, which is what the group sees.
+-- instanceResetNoMsg leaves that line out, and Nova prints it. instanceResetOther
+-- is that print from Nova World Buffs. The block through ClearNamedCopy is loaded
+-- by the regression.
 local NIT_PREFIX = "NIT"
 local NIT_VERSION = "1"
 local NIT_STILL_INSIDE = "has been reset (Players still inside old instance can zone out and enter new)."
@@ -1205,7 +1177,7 @@ end
 -- end Nova reset wire format
 
 local function ForgetCopy(name)
-    local mine = CharLives(false)
+    local mine = LiveCopies(false)
     if not mine then return end
     if name then
         ClearNamedCopy(mine, name)
@@ -1252,17 +1224,12 @@ local function WeAreLeader()
     return true
 end
 
-local function AddonWent(ok, result)
-    if not ok then return false end
-    if result == nil or result == true then return true end
-    local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
-    return result == success
-end
-
 local function SendResetAddon(plain, channel)
     local encoded = NitWire(plain)
     if not encoded then return false end
-    return AddonWent(pcall(C_ChatInfo.SendAddonMessage, NIT_PREFIX, encoded, channel))
+    local ok, result = pcall(C_ChatInfo.SendAddonMessage, NIT_PREFIX, encoded, channel)
+    local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
+    return SendAccepted(ok, result, success)
 end
 
 -- Nova posts the same reset line. A secret answer is treated as loaded, so this
@@ -1440,7 +1407,7 @@ local function TakeSameCopy(name, mapID, difficulty, seen)
     local runs = row and row.runs
     if type(runs) ~= "table" then return end
     row.reentry = nil
-    local mine = CharLives(false)
+    local mine = LiveCopies(false)
     local key = CopyKey(mapID, difficulty, name)
     local stored = mine and mine[key]
     if not stored then return end
@@ -1495,7 +1462,7 @@ local function NoteZone(zone)
         return
     end
     if type(back) == "table" then open.reentry = nil end
-    local lives = CharLives(true)
+    local lives = LiveCopies(true)
     local place = CopyKey(open.mapID or 0, open.difficulty, open.instance)
     local stored = type(lives) == "table" and lives[place] or nil
     if type(stored) == "table" then stored.copy = zone end
@@ -1623,10 +1590,7 @@ ReadZone = function()
     end
 end
 
--------------------------------------------------------------------------------
---  Run timer. A shared tracker panel, built the first time it is allowed on screen,
---  and ticked only while a visit is actually in progress.
--------------------------------------------------------------------------------
+-- Run timer. A shared tracker panel, shown while a visit is in progress.
 local function FrameWanted()
     if not On() or not S.Get("showFrame") then return false end
     if unlocked then return true end
@@ -1652,7 +1616,7 @@ end
 
 local function Mover(panel, onMoved)
     return UI.AttachMover(panel, "Instance Tracker", onMoved,
-        "Instance Tracker/Settings", "Instance Tracker/Settings:timer")
+        SETTINGS_PAGE, SETTINGS_PAGE .. ":" .. TIMER_CARD)
 end
 
 local function OpenWindow()
@@ -1765,9 +1729,7 @@ UpdateFrame = function()
 end
 
 ns.InstanceTracker = {
-    MAX_RUNS = MAX_RUNS,
     PAGE_RUNS = 40,
-    HOURLY_CAP = HOURLY_CAP,
     Enabled = On,
     Open = OpenRun,
     Duration = FormatDuration,
@@ -1865,11 +1827,8 @@ function ns.InstanceTracker.EntryLeft(row)
     return left
 end
 
--------------------------------------------------------------------------------
---  Events. Registered only while the module is on. Loot, reputation and deaths only
---  while a visit is open. Rest and durability update the whole time, so an alt's
---  sheet is current the next time you log over.
--------------------------------------------------------------------------------
+-- Events stay registered while the module is on. Loot, reputation, and deaths only
+-- while a visit is open. Rest and durability update the whole time.
 -- The sheet is written immediately. The open page follows a moment later, so a bag
 -- update does not rebuild it on every slot.
 local sheetQueued

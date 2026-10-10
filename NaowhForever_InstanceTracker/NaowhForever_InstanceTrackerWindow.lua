@@ -1,9 +1,4 @@
--------------------------------------------------------------------------------
---  NaowhForever_InstanceTrackerWindow.lua -- Instance Tracker's own window
---  (/nfinstance, its minimap and top bar button, the run timer's title, Open Instance
---  Tracker on its settings page): this hour and the visit history, drawn by the
---  list builders.
--------------------------------------------------------------------------------
+-- InstanceTrackerWindow.lua: this hour and the visit history, in Instance Tracker's own window.
 local ns = _G.NaowhForever
 local S = ns.InstanceTrackerSettings
 local Shared = ns.Shared
@@ -20,11 +15,11 @@ local TOP_Y = -6
 
 local TABS = {
     { key = "hour", label = "This Hour", tip = "How many new instances this account has entered this hour." },
-    { key = "history", label = "History", tip = "Each visit, with its time, coins and experience." },
+    { key = "history", label = "History", tip = "Each visit, with its time, coins, and experience." },
 }
 local BUILD = {
-    hour = function(parent, y) return ns.BuildInstanceHourPage(parent, y) end,
-    history = function(parent, y) return ns.BuildInstanceHistoryPage(parent, y) end,
+    hour = ns.BuildInstanceHourPage,
+    history = ns.BuildInstanceHistoryPage,
 }
 
 local window, scroll
