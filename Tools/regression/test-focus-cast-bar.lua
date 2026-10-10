@@ -1,10 +1,10 @@
--- Loads NaowhForever_FocusCastBar.lua against stubbed frames and cast APIs and checks the bar's
+-- Loads FocusCastBar.lua against stubbed frames and cast APIs and checks the bar's
 -- colour while a focus cast runs (interrupt ready, on cooldown, uninterruptible), and what one
 -- throttled update of a running cast costs: it must not build colour objects every tick. Also its
 -- look: the defaults draw today's flat, outlined bar, and font, outline, bar texture, background
 -- opacity and Apply Theme each apply on change.
 -- Run from the repo root: lua Tools/regression/test-focus-cast-bar.lua
-local f = assert(io.open(arg[1] or "QoL/NaowhForever_FocusCastBar.lua", "rb"))
+local f = assert(io.open(arg[1] or "NaowhForever_QoL/Combat/FocusCastBar.lua", "rb"))
 local source = f:read("*a"); f:close()
 
 local checks = 0
@@ -92,15 +92,16 @@ local kick = { IsZero = function() return state.kickReady end, GetRemainingDurat
 
 local frames = {}
 local ns = {
+    QoLConstants = dofile("Tools/regression/qol_constants.lua"),
     QoLSettings = S, THEME = { muted = {}, accent = ACCENT, bg = THEME_BG },
     UI = { FontPath = function() return "font" end, AttachMover = function() return Widget("Mover") end,
         TexturePath = function(name, own) if name == "" then return own end return "lsm:" .. name end },
-    Shared = { Settings = { Group = function() return {} end, Look = function() return {} end,
+    Shared = { Style = dofile("Tools/regression/shared_style.lua"), Settings = { Group = function() return {} end, Look = function() return {} end,
         Page = function() return { Card = Noop } end },
         Parts = { HudFont = function(fs, font, size, outline) fs.font = { font, size, outline } end } },
     Font = function(parent) return Widget("FontString", parent) end,
     Border = Noop,
-    Apply = Noop, ShowRaidReminderAnchorConfig = Noop, HideRaidReminderAnchorConfig = Noop,
+    Apply = Noop, ShowUnlockMode = Noop, HideUnlockMode = Noop,
 }
 local env = setmetatable({
     _G = { NaowhForever = ns },
@@ -157,19 +158,19 @@ local function Is(c) local r, g, b = Fill() return r == c.r and g == c.g and b =
 
 events.scripts.OnEvent(events, "UNIT_SPELLCAST_START", "focus")
 check("a cast shows the bar", cast.shown)
-check("interrupt ready colour", Is(READY))
+check("interrupt ready color", Is(READY))
 
 local tick = cast.scripts.OnUpdate
 state.kickReady = false
 tick(cast, 0.05)
-check("interrupt on cooldown colour on the next update", Is(COOLDOWN))
+check("interrupt on cooldown color on the next update", Is(COOLDOWN))
 state.notInt = true
 tick(cast, 0.05)
-check("uninterruptible colour wins", Is(NONINT))
+check("uninterruptible color wins", Is(NONINT))
 values.focusCooldownColor = { r = 0.2, g = 0.3, b = 0.4 }
 state.notInt = false
 tick(cast, 0.05)
-check("a changed colour setting shows on the next update", Is(values.focusCooldownColor))
+check("a changed color setting shows on the next update", Is(values.focusCooldownColor))
 state.kickReady = true
 tick(cast, 0.05)
 check("ready again", Is(READY))
@@ -177,7 +178,7 @@ check("ready again", Is(READY))
 made = 0
 state.notInt = true
 Measure("an update of a running focus cast", 0.05, function() tick(cast, 0.05) end)
-check("no colour objects made per update", made == 0)
+check("no color objects made per update", made == 0)
 
 local main
 for _, w in ipairs(frames) do
@@ -204,6 +205,6 @@ check("Apply Theme: the theme's background", main.bg.r == THEME_BG.r and main.bg
 check("Apply Theme: the Accent for a ready interrupt", Is(ACCENT))
 env.RAID_CLASS_COLORS.ROGUE = { r = 1, g = 0.96, b = 0.41 }
 S.Set("focusReadyClassColor", true)
-check("Class Colour Ready still wins over the theme", Is(env.RAID_CLASS_COLORS.ROGUE))
+check("Class Color Ready still wins over the theme", Is(env.RAID_CLASS_COLORS.ROGUE))
 
 print(("PASS focus cast bar: %d checks"):format(checks))

@@ -3,7 +3,8 @@
 -- slots, an item not loaded yet); player tooltips (off until turned on, one inspect at a time,
 -- kept by GUID, filled in when the gear comes, never in combat or while the game's Inspect
 -- window, or the talents opened from it, holds the inspect); your group scanned in the
--- background; your score shared with your group and guild, always, and theirs kept; and what
+-- background; your score shared with your group and guild while Share My Score and the score are on,
+-- theirs kept either way; and what
 -- the hot paths cost and keep.
 local Load = dofile("Tools/regression/load_files.lua")
 
@@ -20,7 +21,8 @@ local function Fixture()
         frames = {}, timers = {}, sent = {}, members = 0, guild = false,
         fullNames = { player = "Me", party1 = "One", party2 = "Two", party3 = "Three" },
         guildRoster = { { "Guildie", "Player-7-00AB" }, { "Ninth", "Player-9-00AB" } },
-        values = { enabled = true, naowhScore = false, naowhScoreTooltip = true, naowhScoreScan = true } }
+        values = { enabled = true, naowhScore = false, naowhScoreShare = true, naowhScoreTooltip = true,
+            naowhScoreScan = true } }
     local listeners = {}
     local S = {
         Get = function(key) return state.values[key] end,
@@ -31,7 +33,7 @@ local function Fixture()
         OnChange = function(fn) listeners[#listeners + 1] = fn end,
     }
     state.roster, state.account, state.clock = {}, {}, 2000000000
-    local ns = { QoLSettings = S, Apply = NOTHING, Shared = { Style = { LOGO_SMALL = "logo" },
+    local ns = { QoLSettings = S, Apply = NOTHING, Shared = { ItemFacts = {}, Style = { LOGO_SMALL = "logo" },
         Roster = { AddTooltip = function(fn) state.roster[#state.roster + 1] = fn end },
         Ago = function(when) return (state.clock - when) .. "s ago" end },
         AccountSettings = function() return state.account end,
@@ -136,7 +138,7 @@ local function Fixture()
         end,
     }, { __index = _G })
     state.UnitGUID, state.units, state.SECRET = env.UnitGUID, units, {}
-    Load({ "Core/NaowhForever_Senders.lua", "NaowhForever_BiS/NaowhScore/Data/Formula.lua", "NaowhForever_BiS/NaowhScore/Score.lua", "NaowhForever_BiS/NaowhScore/Inspect.lua", "NaowhForever_BiS/NaowhScore/Share.lua" },
+    Load({ "Core/Senders.lua", "NaowhForever_BiS/NaowhScore/Data/Formula.lua", "NaowhForever_BiS/NaowhScore/NaowhScore.lua", "NaowhForever_BiS/NaowhScore/Inspect.lua", "NaowhForever_BiS/NaowhScore/Share.lua" },
         env)
     -- An event, to every frame listening for it (Share always; Inspect while on).
     function state.Fire(event, ...)
@@ -484,13 +486,14 @@ do
 end
 
 -------------------------------------------------------------------------------
---  Sharing: always on, to your group and guild; theirs kept
+--  Sharing: to your group and guild while it is on; theirs kept
 -------------------------------------------------------------------------------
 do
     local ns, state = Fixture()
     local Score = ns.NaowhScore
-    check("sharing listens with the feature off: running Naowh means sharing",
+    check("others' scores are listened for with the feature off",
         state.frames[2].events.CHAT_MSG_ADDON and state.values.naowhScore == false)
+    state.values.naowhScore = true
     state.gear.player, state.guild = Set(20, 4), true
     state.Fire("PLAYER_ENTERING_WORLD")
     check("logging in: the guild is asked for theirs and given yours",
@@ -563,6 +566,47 @@ do
 end
 
 -------------------------------------------------------------------------------
+--  Share My Score off, or the score off: yours never goes out, theirs still kept
+-------------------------------------------------------------------------------
+do
+    local ns, state = Fixture()
+    local Score = ns.NaowhScore
+    local S = ns.QoLSettings
+    state.values.naowhScore, state.values.naowhScoreShare = true, false
+    state.gear.player, state.guild, state.members = Set(20, 4), true, 1
+    state.Fire("PLAYER_ENTERING_WORLD")
+    state.RunTimers()
+    check("Share My Score off: logging in only asks for theirs",
+        #state.sent == 2 and state.sent[1][1] == "R" and state.sent[2][1] == "R")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "R", "PARTY", "Someone")
+    state.gear.player = Set(22, 4)
+    state.Fire("PLAYER_EQUIPMENT_CHANGED", 1)
+    state.RunTimers()
+    check("nor answers a request or sends a gear swap", #state.sent == 2)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 264 31", "GUILD", "Guildie")
+    check("a guildmate's is still kept", Score.Known("Player-7-00AB").score == 26.4)
+    S.Set("naowhScoreShare", true)
+    state.RunTimers()
+    check("turned on: yours goes to the group and guild", #state.sent == 4
+        and state.sent[3][1] == "S Player-1-1 220 60" and state.sent[3][2] == "PARTY" and state.sent[4][2] == "GUILD")
+    S.Set("naowhScore", false)
+    state.RunTimers()
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "R", "GUILD", "Guildie")
+    state.gear.player = Set(24, 4)
+    state.Fire("PLAYER_EQUIPMENT_CHANGED", 1)
+    state.RunTimers()
+    check("the Naowh Score off: nothing more goes", #state.sent == 4)
+    S.Set("naowhScore", true)
+    S.Set("enabled", false)
+    state.RunTimers()
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "R", "PARTY", "Someone")
+    state.gear.player = Set(26, 4)
+    state.Fire("PLAYER_EQUIPMENT_CHANGED", 1)
+    state.RunTimers()
+    check("the QoL module off: nothing goes either", #state.sent == 4)
+end
+
+-------------------------------------------------------------------------------
 --  Claims for someone else: a score is kept only from the guild member its GUID names
 -------------------------------------------------------------------------------
 do
@@ -598,8 +642,9 @@ do
         [5] = { 60, 0, 4, "INVTYPE_CHEST" },   -- a faction reward: no required level
         [6] = { 60, 55, 4, "INVTYPE_2HWEAPON" }, [7] = { 60, 55, 4, "INVTYPE_WEAPON" },
     }
-    ns.Journal = { Items = {}, NotYet = { [8] = { 4, 0, 90, 60, 5, 134400, "Not Yet" } } }
-    for id, g in pairs(GEAR) do ns.Journal.Items[id] = { 4, 0, g[1], g[2], g[3] } end
+    ns.Journal = { NotYet = { [8] = { 4, 0, 90, 60, 5, 134400, "Not Yet" } } }
+    ns.Shared.ItemFacts = {}
+    for id, g in pairs(GEAR) do ns.Shared.ItemFacts[id] = { 4, 0, g[1], g[2], g[3] } end
     state.instant = {}
     for id, g in pairs(GEAR) do state.instant[id] = g[4] end
     state.instant[8] = "INVTYPE_HEAD"
@@ -625,18 +670,18 @@ do
     state.values.naowhScoreCompare = "level"
     share, quality = Score.Grade(at30, 30)
     check("against the best for their level: the best for 30 is orange at 30", share == 1 and quality == 5)
-    check("and coloured as the top of the ramp", Score.Colored(at30, 30):find("^|cffff8000") ~= nil)
+    check("and colored as the top of the ramp", Score.Colored(at30, 30):find("^|cffff8000") ~= nil)
     state.values.naowhScoreCompare = "max"
     -- The ramp: grey at nothing, white, greens, blues, purples, orange at the best.
     check("the ramp: grey, white, green at 45%, blue at 65%, purple at 80%, orange at the best",
         Score.Code(0) == "|cff9e9e9e" and Score.Code(0.15) == "|cffffffff" and Score.Code(0.45) == "|cff1fff00"
         and Score.Code(0.65) == "|cff0070de" and Score.Code(0.8) == "|cffa336ed" and Score.Code(1) == "|cffff8000")
-    check("between two stops, a colour between them", Score.Code(0.3) ~= Score.Code(0.25)
+    check("between two stops, a color between them", Score.Code(0.3) ~= Score.Code(0.25)
         and Score.Code(0.3) ~= Score.Code(0.35))
     check("made once per percent", Score.Code(0.301) == Score.Code(0.3))
     -- The tooltip: the number, then its share in the same colour; no bar.
     local tip = Score.Tooltip(Score.Best() * 0.5, 30)
-    check("the tooltip: the number and its percent, in one colour",
+    check("the tooltip: the number and its percent, in one color",
         tip == Score.Colored(Score.Best() * 0.5, 30) .. "  " .. Score.Code(0.5) .. "50%|r")
     check("no bar", not tip:find("|T", 1, true))
     check("made once per percent", Score.Tooltip(Score.Best() * 0.5, 30) == tip)

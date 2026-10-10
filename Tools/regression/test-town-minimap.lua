@@ -15,6 +15,7 @@ local function Check(ok, label) assert(ok, label); checks = checks + 1 end
 local settings = { enabled = true, townMap = true, townMinimap = false, townMail = false, townSpiritHealers = false }
 local S = { Get = function(key) return settings[key] end, Set = function() end }
 local ns = {
+    QoLConstants = dofile("Tools/regression/qol_constants.lua"),
     QoLSettings = S, Apply = function() end, ThemeTint = function() end,
     TownCapitals = {}, TownNPCs = {},
     TownMailboxes = { [1] = { { 55, 50, "mail", "Mailbox", "", nil, "AH" }, { 50, 30, "mail", "Mailbox", "", nil, "AH" } } },
@@ -32,7 +33,10 @@ local function NewFrame()
     function f:SetPoint(_, _, _, x, y) self.x, self.y = x, y end
     function f:SetShown(shown) self.shown = shown end
     function f:Hide() self.shown = false end
-    f.Icon = { SetTexCoord = function() end, SetTexture = function() end }
+    f.Icon = { SetTexCoord = function() end, SetTexture = function() return true end,
+        AddMaskTexture = function() end, RemoveMaskTexture = function() end }
+    f.Border = { Show = function() end, Hide = function() end }
+    function f:CreateMaskTexture() return { SetTexture = function() end, SetAllPoints = function() end } end
     frames[#frames + 1] = f
     return f
 end
@@ -58,6 +62,7 @@ local env = setmetatable({
         GetPlayerMapPosition = function() error("makes a table on every tick") end,
     },
     CreateVector2D = Vector,
+    C_Texture = { GetAtlasInfo = function() return nil end },
     UnitPosition = function()
         local wx, wy = World(player[1], player[2])
         return wx, wy, 0, continent
@@ -68,7 +73,7 @@ local env = setmetatable({
     GetPlayerFacing = function() return facing end,
     wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
 }, { __index = _G })
-local chunk = assert(loadstring(Read("QoL/NaowhForever_TownMap.lua")))
+local chunk = assert(loadstring(Read("NaowhForever_QoL/Interface/TownMap.lua")))
 setfenv(chunk, env)
 chunk()
 
@@ -145,7 +150,7 @@ Check(mini.scripts.OnUpdate == nil, "back on while standing still, nothing runs"
 settings.townMinimap = false
 boot.scripts.OnEvent()
 
-Check(Read("QoL/NaowhForever_QoL.lua"):find("townMinimap = true", 1, true), "Minimap mailboxes start on")
-Check(Read("QoL/NaowhForever_QoL.lua"):find("townMinimapSpirit = true", 1, true), "Minimap spirit healers start on")
+Check(Read("Core/Settings.lua"):find("townMinimap = true", 1, true), "Minimap mailboxes start on")
+Check(Read("Core/Settings.lua"):find("townMinimapSpirit = true", 1, true), "Minimap spirit healers start on")
 
 print(("test-town-minimap: %d checks passed"):format(checks))

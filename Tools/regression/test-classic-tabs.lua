@@ -63,8 +63,10 @@ local function Load(account)
         UIParent = New("Frame"),
     }, { __index = _G })
     env._G = env
-    for _, path in ipairs({ "Core/NaowhForever_Core.lua", "Shared/Shared.lua", "Shared/Style.lua",
-        "Core/NaowhForever_Widgets.lua", "Shared/Parts.lua", "Shared/Window.lua" }) do
+    for _, path in ipairs({ "Core/Core.lua", "Shared/Shared.lua", "Shared/Style.lua",
+        "Core/Options/Widgets.lua", "Shared/UI/Parts.lua", "Shared/UI/Marks.lua", "Shared/UI/Text.lua", "Shared/UI/Hud.lua",
+        "Shared/UI/Timer.lua", "Shared/UI/Share.lua", "Shared/UI/Panels.lua", "Shared/UI/Window.lua", "Shared/UI/Tabs.lua",
+        "Shared/UI/SettingsCard.lua" }) do
         local chunk = assert(loadstring(Read(path), path))
         setfenv(chunk, env)
         chunk("NaowhForever", env.NaowhForever)
@@ -86,7 +88,7 @@ end
 local ns = Load({})
 local bar = Tabs(ns)
 check("default: the picked tab's line along the bottom", bar.buttons[1].line.points[1][1] == "BOTTOMLEFT")
-check("default: the others in the muted colour", bar.buttons[2].text.color[1] == ns.THEME.muted.r)
+check("default: the others in the muted color", bar.buttons[2].text.color[1] == ns.THEME.muted.r)
 
 -- Classic+.
 ns = Load({ skin = "classic" })
@@ -97,7 +99,7 @@ check("the picked tab lit bronze from the top", picked.fill.gradient and picked.
     and picked.fill.gradient[1].r == St.CLASSIC_TAB_RGB[2].r and picked.fill.shown)
 check("under a gold line along its top", picked.line.points[1][1] == "TOPLEFT" and picked.line.color[1] == St.CLASSIC_GOLD_RGB.r)
 check("the others in gold, unlit", other.text.color[1] == ns.THEME.accent.r and not other.fill.shown)
-check("the picked one in the text colour", picked.text.color[1] == ns.THEME.fg.r)
+check("the picked one in the text color", picked.text.color[1] == ns.THEME.fg.r)
 
 local function Holds(frame, rgb)
     for _, c in ipairs(frame.children) do

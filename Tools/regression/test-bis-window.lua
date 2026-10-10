@@ -284,12 +284,16 @@ local function Fixture()
             return { IsAnyMenuOpen = function() return state.menuOpen == true end, OpenMenu = NOTHING }
         end },
     }, { __index = _G })
-    local files = TocFiles("^Shared/.*%.lua$")
+    local files = { "Core/Features.lua" }
+    for _, path in ipairs(TocFiles("^Shared/.*%.lua$")) do
+        if not path:find("^Shared/Data/%a*Items?%a*%.lua$") then files[#files + 1] = path end
+    end
     files[#files + 1] = "NaowhForever_BiS/NaowhScore/Data/Formula.lua"   -- the paperdoll's score; not its tooltips
-    files[#files + 1] = "NaowhForever_BiS/NaowhScore/Score.lua"
+    files[#files + 1] = "NaowhForever_BiS/NaowhScore/NaowhScore.lua"
     for _, path in ipairs(TocFiles("^NaowhForever_BiS/StatWeights/.*%.lua$")) do files[#files + 1] = path end
     for _, path in ipairs(TocFiles("^NaowhForever_BiS/BiS/.*%.lua$")) do files[#files + 1] = path end
     Load(files, env)
+    ns.Shared.ItemFacts = {}
     for _, spec in ipairs(ns.BiSData.specs) do
         for slot, ids in pairs(spec.slots) do
             for _, id in ipairs(ids) do equip[id] = equip[id] or INVTYPE[slot] end
@@ -314,7 +318,7 @@ local Measure = dofile("Tools/regression/measure.lua")(check)
 -------------------------------------------------------------------------------
 local ns, state, S = Fixture()
 local B = ns.BiS
-check("BiS.xml loads its files", #TocFiles("^NaowhForever_BiS/BiS/.*%.lua$") == 26)
+check("BiS.xml loads its files", #TocFiles("^NaowhForever_BiS/BiS/.*%.lua$") == 36)
 
 ns.OpenBisWindow()
 local view = Views(state, B)[1]
@@ -375,7 +379,7 @@ check("a BiS you wear has the green line under its icon", head.worn.shown == tru
 check("and the marks every slot has: its item level in the corner, no star (each is your BiS)",
     head.marks.level.text ~= nil and head.marks.level.text ~= "" and head.marks.rank.text == ""
     and head.marks.forever == head.iconFrame.forever)
-check("one you do not wear has no line, and keeps its colour", head.iconFrame.badge == nil
+check("one you do not wear has no line, and keeps its color", head.iconFrame.badge == nil
     and neck.worn.shown == false
     and neck.icon.desaturated == false)
 check("a slot's row marks what you wear with the green bar, not the check",
@@ -578,9 +582,24 @@ Measure("the list redrawn, with enchants", 2, function() view:Redraw() end)
 -------------------------------------------------------------------------------
 --  A slot's picker, and its backups opened under its row
 -------------------------------------------------------------------------------
+local function SectionIn(v, title)
+    for i = 1, v.pools.section.used do
+        local row = v.pools.section[i]
+        if row.text.text and row.text.text:upper():find(title:upper(), 1, true) then return row end
+    end
+end
+local function NoteIn(v, part)
+    for i = 1, v.pools.note.used do
+        local row = v.pools.note[i]
+        if row.text.text and row.text.text:find(part, 1, true) then return row end
+    end
+end
+
 B.OpenPicker(1, head)
 local picker = Views(state, B)[2]
 check("the picker is its own view", picker and picker.page == "picker")
+check("without the Dungeon Journal, the picker's dungeon drops ask to turn it on",
+    SectionIn(picker, "Dungeon drops") and NoteIn(picker, "what drops in dungeons for this slot"))
 local own, add, numbered = 0, 0, false
 for i = 1, picker.pools.pick.used do
     local row = picker.pools.pick[i]
@@ -717,7 +736,7 @@ S.Set("bisDropSound", "game:raidwarning")
 -- How it looks.
 local toast = B.Toast.New(Frame())
 paint(toast, bisHead, 1, "dropped")
-check("by default: the star, a border and a glow in your rank's colour", toast.star:IsShown()
+check("by default: the star, a border and a glow in your rank's color", toast.star:IsShown()
     and toast.edge.opacity == 1 and toast.glow:IsShown() and toast.bg.alpha == 0.95)
 S.Set("bisToastStar", "none")
 S.Set("bisToastBorder", "none")
@@ -786,11 +805,13 @@ for _, item in ipairs(page.items) do
 end
 check("one page: the window's card, then its cards in order", page.items[1].window
     and page.items[1].text == "Open BiS List" and table.concat(cards, ",")
-    == "marks,dropAlert,lists,statWeights,window")
+    == "marks,dropAlert,lists,statWeights,keys,window")
+check("the tooltip and bag marks card is named for them", page.cards.marks.name == "Marks on Items")
 check("Drop Alert: its switch and its preview", page.cards.dropAlert.switch == "bisLootAlert"
     and page.cards.dropAlert.studio == studio)
 check("no list management on it: that is the window's", rows["Manage Lists"] == nil and rows["Your List"]
-    and rows["Rankings For"] and rows["Key Binding"].binding == "NAOWHFOREVER_BIS")
+    and rows["Rankings For"] and rows["Key Binding"] == nil and page.cards.keys.rows[1].label == "Open BiS List"
+    and page.cards.keys.rows[1].binding == "NAOWHFOREVER_BIS")
 check("how it looks needs On-Screen Alert", rows["Size"].needs[2] == "bisToast" and rows["Star"].needs[2] == "bisToast")
 check("a size in percent is saved as a scale", rows["Size"].get() == 100)
 rows["Size"].set(120)
@@ -815,6 +836,19 @@ for _, frame in ipairs(state.frames) do
     if rawget(frame, "positionKey") == "bisWindow" then window = frame end
 end
 check("the window is open", window and window:IsShown())
+ns.TurnOnModule = function(addon) state.turnedOn = addon end
+check("without the Dungeon Journal, the Quests tab is still there", window.pages:IsShown())
+window.pages.onPick("quests")
+local questsOff = SectionIn(view, "Quests for your BiS")
+check("its page says the quests come from the Dungeon Journal, with a link to turn it on",
+    questsOff and NoteIn(view, "Turn on the Dungeon Journal to see the quests"))
+questsOff.onLink(questsOff.linkArg)
+check("the link turns the Dungeon Journal on", state.turnedOn == "NaowhForever_DungeonJournal")
+view:Redraw()
+check("and a redraw keeps that page", SectionIn(view, "Quests for your BiS") ~= nil)
+window.pages.onPick("list")
+check("Run next asks for it for each dungeon's levels and quests", SectionIn(view, "Run next")
+    and NoteIn(view, "each dungeon's levels and quests"))
 place = view.pools.place[1]
 place.dungeon, place.map, place.spot = nil, 1413, nil
 place.scripts.OnClick(place)

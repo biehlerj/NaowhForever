@@ -167,6 +167,7 @@ end
 local searchBox
 
 local ns = {
+    QoLConstants = dofile("Tools/regression/qol_constants.lua"),
     THEME = setmetatable({}, { __index = function() return WHITE end }),
     Color = function(_, text) return text and tostring(text) or "" end,
     Font = function(parent) return Frame(parent) end,
@@ -297,11 +298,15 @@ env.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 env.GameTooltip.GetOwner = function() return nil end
 
 local files = TocFiles("^Shared/.*%.lua$")
-check("the Shared bag helper loads with Shared", #TocFiles("^Shared/Bags%.lua$") == 1)
-check("the TOC loads the Scrap Marker and its list", #TocFiles("^QoL/NaowhForever_ScrapMarker%.lua$") == 1
-    and #TocFiles("^QoL/NaowhForever_ScrapList%.lua$") == 1)
-files[#files + 1] = "QoL/NaowhForever_ScrapMarker.lua"
-files[#files + 1] = "QoL/NaowhForever_ScrapList.lua"
+check("the Shared bag helper loads with Shared", #TocFiles("^Shared/Game/Bags%.lua$") == 1)
+check("the TOC loads the Scrap Marker and its list", #TocFiles("^NaowhForever_QoL/Loot/ScrapMarker%.lua$") == 1
+    and #TocFiles("^NaowhForever_QoL/Loot/ScrapList%.lua$") == 1)
+-- The copy cards are stubbed, so their Shared file is left out.
+for i = #files, 1, -1 do
+    if files[i] == "Shared/UI/CopyCard.lua" then table.remove(files, i) end
+end
+files[#files + 1] = "NaowhForever_QoL/Loot/ScrapMarker.lua"
+files[#files + 1] = "NaowhForever_QoL/Loot/ScrapList.lua"
 local before = made
 Load(files, env)
 check("nothing made at load", made == before and #loose == 0)
@@ -730,7 +735,7 @@ check("a mark's row: what you carry and its value, Account, an X", rows[2].meta.
 check("a rule's row: the Rule tag (not a link) and why", rows[1].tag.text.text == "Rule" and rows[1].onTag == nil
     and rows[1].meta.text:find("Can't wear", 1, true))
 check("one not in your bags says so, with no value", rows[4].meta.text == "Not in your bags" and rows[4].value.text == "")
-check("its name in its quality colour", rows[3].name.text == "Wolf Fang")
+check("its name in its quality color", rows[3].name.text == "Wolf Fang")
 
 rows[2].onTag(201)
 RunTimers()

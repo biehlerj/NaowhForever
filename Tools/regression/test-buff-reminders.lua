@@ -1,4 +1,4 @@
--- Loads NaowhForever_BuffReminders.lua and its data against stubbed aura, bag and group APIs
+-- Loads the AuraBuffs Buffs & Consumables files and their data against stubbed aura, bag and group APIs
 -- and checks which reminder icons show. Run from the repo root:
 -- lua Tools/regression/test-buff-reminders.lua
 -- Stands in for a secret value: any field or method use raises, as the client does.
@@ -8,8 +8,14 @@ local function Read(path)
     local source = f:read("*a"); f:close()
     return source
 end
-local DATA = Read("NaowhForever_AuraBuffs/NaowhForever_BuffReminderData.lua")
-local MODULE = Read("NaowhForever_AuraBuffs/NaowhForever_BuffReminders.lua")
+local MODULE = {}
+for i, path in ipairs({ "Core/Features.lua", "NaowhForever_AuraBuffs/AuraBuffs.lua",
+    "NaowhForever_AuraBuffs/Constants.lua", "NaowhForever_AuraBuffs/Data/BuffReminders.lua", "NaowhForever_AuraBuffs/BuffReminders.lua",
+    "NaowhForever_AuraBuffs/View/Style.lua", "NaowhForever_AuraBuffs/View/BuffCell.lua",
+    "NaowhForever_AuraBuffs/UI/BuffMenu.lua", "NaowhForever_AuraBuffs/UI/BuffReminders.lua" }) do
+    MODULE[i] = Read(path)
+end
+local CARD = Read("NaowhForever_AuraBuffs/UI/BuffsCard.lua")
 local SETTINGS = Read("Shared/Settings/Settings.lua")
 
 -- itemID -> use spell, for the food scan.
@@ -71,10 +77,9 @@ local function Fixture(opts)
     end
 
     local defaults = {
-        enabled = true, food = true, elixirs = true, flasks = true,
+        enabled = true,
         consumablesWhere = "instance", consumablesMinutes = 2,
         onlyIfCarried = true, hideResting = true,
-        scrolls = true, scrollsSkipActive = true,
         raidBuffs = false, raidBuffsOwn = true, iconSize = 36,
         buffsFont = "", buffsFontSize = 14, buffsOutline = "OUTLINE",
         raidBuffPicks = { intellect = true, stamina = true, spirit = true, wild = true, blessing = false },
@@ -88,11 +93,11 @@ local function Fixture(opts)
     function S.Raw(k) return settings[k] end
     function S.Default(k) return defaults[k] end
 
-    local ns = {
+    local ns = { MEDIA = dofile("Tools/regression/core_media.lua"),
         AuraBuffSettings = S,
         Apply = function() end,
-        ShowRaidReminderAnchorConfig = function() end,
-        HideRaidReminderAnchorConfig = function() end,
+        ShowUnlockMode = function() end,
+        HideUnlockMode = function() end,
         Border = function() end, THEME = { bg = {} },
         Solid = function() return Recorder() end,
         Font = function()
@@ -100,8 +105,8 @@ local function Fixture(opts)
             function fs:SetText(v) fs.text = v end
             return fs
         end,
-        UI = { AttachMover = function() return NewFrame() end },
-        Shared = { Parts = { HUD_OUTLINES = { { NONE = "None", [""] = "Shadow", OUTLINE = "Outline" }, { "NONE", "", "OUTLINE" } },
+        UI = { AttachMover = function() return NewFrame() end, ModuleSettings = function() return S end },
+        Shared = { Style = dofile("Tools/regression/shared_style.lua"), Parts = { HUD_OUTLINES = { { NONE = "None", [""] = "Shadow", OUTLINE = "Outline" }, { "NONE", "", "OUTLINE" } },
             HudFont = function(fs, font, size, outline) fs.font, fs.size, fs.outline = font, size, outline end } },
     }
 
@@ -178,7 +183,11 @@ local function Fixture(opts)
     }
     env._G = { NaowhForever = ns }
     setmetatable(env, { __index = _G })
-    for _, source in ipairs(opts.page and { SETTINGS, DATA, MODULE } or { DATA, MODULE }) do
+    local sources = {}
+    if opts.page then sources[1] = SETTINGS end
+    for _, source in ipairs(MODULE) do sources[#sources + 1] = source end
+    if opts.page then sources[#sources + 1] = CARD end
+    for _, source in ipairs(sources) do
         local chunk
         if setfenv then
             chunk = assert(loadstring(source)); setfenv(chunk, env)
@@ -350,7 +359,7 @@ end
 -- Warn With Minutes Left: a buff under the time shows with its timer; one over it is
 -- woken up when it crosses.
 do
-    local t = Fixture({ instance = "raid", settings = { flasks = false, elixirs = false },
+    local t = Fixture({ instance = "raid", settings = {},
         bags = { 13931 }, auras = { player = { { 1249520, 60, 900 } } } })
     t.Login()
     Check("under two minutes", t.Shown(), "item:13931(t)")
@@ -366,7 +375,7 @@ end
 
 -- Aura bursts keep one wake timer, not one per refresh; in combat they queue nothing.
 do
-    local t = Fixture({ instance = "raid", settings = { flasks = false, elixirs = false },
+    local t = Fixture({ instance = "raid", settings = {},
         bags = { 13931 }, auras = { player = { { 1249520, 300, 900 } } } })
     t.Login()
     for _ = 1, 50 do
@@ -389,7 +398,7 @@ end
 
 -- Frozen while auras are secret or in combat: no read, the icons keep what they showed.
 do
-    local t = Fixture({ instance = "raid", settings = { flasks = false, elixirs = false },
+    local t = Fixture({ instance = "raid", settings = {},
         bags = { 13931 } })
     t.Login()
     Check("before the pull", t.Shown(), "item:13931")
@@ -431,7 +440,7 @@ end
 
 -- Raid buffs: how many are missing each buff you can cast, or any class in the group can.
 do
-    local t = Fixture({ settings = { raidBuffs = true, scrolls = false },
+    local t = Fixture({ settings = { raidBuffs = true },
         group = "party", units = { player = "MAGE", party1 = "WARRIOR", party2 = "PRIEST" },
         known = { [1460] = true },
         auras = { player = {}, party1 = {}, party2 = { { 10938, 3000, 3600 } } } })
@@ -449,7 +458,7 @@ end
 
 -- Picked raid buffs: paladin blessings start off, the rest on; a buff switched off never reminds.
 do
-    local t = Fixture({ settings = { raidBuffs = true, raidBuffsOwn = false, scrolls = false },
+    local t = Fixture({ settings = { raidBuffs = true, raidBuffsOwn = false },
         group = "party", units = { player = "MAGE", party1 = "PALADIN", party2 = "PRIEST", party3 = "DRUID" },
         auras = { player = {}, party1 = {}, party2 = {}, party3 = {} } })
     t.Login()

@@ -15,7 +15,7 @@ end
 
 local toc = Read("NaowhForever.toc")
 local moduleToc = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTracker.toc")
-local window = Read("Core/NaowhForever_Window.lua")
+local window = Read("Core/Options/Modules.lua")
 local tracker = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTracker.lua")
 local page = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTrackerPage.lua")
 local lists = Read("NaowhForever_InstanceTracker/NaowhForever_InstanceTrackerWindow.lua")

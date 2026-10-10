@@ -22,7 +22,10 @@ local TABS = {
     { key = "hour", label = "This Hour", tip = "How many new instances this account has entered this hour." },
     { key = "history", label = "History", tip = "Each visit, with its time, coins and experience." },
 }
-local BUILD = { hour = "BuildInstanceHourPage", history = "BuildInstanceHistoryPage" }
+local BUILD = {
+    hour = function(parent, y) return ns.BuildInstanceHourPage(parent, y) end,
+    history = function(parent, y) return ns.BuildInstanceHistoryPage(parent, y) end,
+}
 
 local window, scroll
 local contents = {}
@@ -59,7 +62,7 @@ local function Redraw()
     local content = contents[shown]
     scroll:SetScrollChild(content)
     ns.UI.BeginReusableRows(content)
-    local y = ns[BUILD[shown]](content, TOP_Y)
+    local y = BUILD[shown](content, TOP_Y)
     content:SetHeight(math.abs(y) + PAD)
     Paint()
 end

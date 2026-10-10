@@ -143,7 +143,7 @@ check("an ID from a number, a link, a Wowhead URL or its digits",
     and Items.IDFrom(" 19019 ") == 19019)
 check("nothing from what names no item", Items.IDFrom("Thunderfury") == nil)
 check("a name, or what it is while it loads", Items.Name(19019) == "Thunderfury" and Items.Name(1) == "item 1")
-check("its quality's colour, white while unknown", Items.QualityHex(19019) == "|cffff8000"
+check("its quality's color, white while unknown", Items.QualityHex(19019) == "|cffff8000"
     and Items.QualityHex(1) == "|cffffffff")
 check("a two-hander is one; a one-hander is not", Items.IsTwoHand(18348) and not Items.IsTwoHand(19019))
 
@@ -155,7 +155,7 @@ local newItem = next(Shared.ForeverNew.items)
 check("an item new in Forever has the mark; one from the original game not", Parts.IsForever("items", newItem)
     and not Parts.IsForever("items", 19019))
 
-local partsSource = assert(io.open("Shared/Parts.lua", "rb")):read("*a")
+local partsSource = assert(io.open("Shared/UI/Text.lua", "rb")):read("*a")
 local COINS_KEPT = tonumber(partsSource:match("local COINS_KEPT = (%d+)"))
 check("a price in coins, asked for again, is made once", Parts.Coins(12345) == "<12345>"
     and Parts.Coins(12345) == "<12345>" and coinCalls == 1)
@@ -213,13 +213,16 @@ local forbidden = setmetatable({}, { __index = function(_, key)
     if key == "IsForbidden" then return function() return true end end
     error("touched a forbidden frame: " .. key)
 end })
+---@diagnostic disable-next-line: duplicate-set-field
 tooltip.GetOwner = function() return forbidden end
 tooltip.shown = true
 check("a redraw leaves a tooltip on a forbidden frame (a nameplate aura in combat) alone",
     pcall(view.Redraw, view) and tooltip.shown == true)
+---@diagnostic disable-next-line: duplicate-set-field
 tooltip.GetOwner = function() return view.pools.line[1] end
 view:Redraw()
 check("and still closes its own row's tooltip", tooltip.shown == false)
+---@diagnostic disable-next-line: duplicate-set-field
 tooltip.GetOwner = function() return nil end
 view.waitOn = 3
 view:Redraw()
@@ -397,7 +400,7 @@ check("a line under each but the last", rows[1].divider:IsShown() and not rows[3
 check("as tall as its rows", height == (6 + 12 + 8) * 3 + 3 + 12 and tracker.body.h == height)
 rows[1].pin.scripts.OnClick(rows[1].pin)
 check("a pin's click is the row's waypoint, handed its entry", pinned == 1 and pinnedEntry == ENTRIES[1])
-check("a row's text in its colour, else the theme's text", rows[3].text.r == 0.5 and rows[1].text.r == 1)
+check("a row's text in its color, else the theme's text", rows[3].text.r == 0.5 and rows[1].text.r == 1)
 local madeBefore = made
 tracker:SetRows({ ENTRIES[1], ENTRIES[2] })
 check("fewer rows: reused, none made, the rest hidden", made == madeBefore and #rows == 3 and rows[3].shown == false)
@@ -419,9 +422,15 @@ check("and a tracker's width", plain.w == Shared.Style.TRACKER_W)
 --  The look standard: Settings.Look's rows, a card holding them, the texture and outline
 --  choices, and Parts.HudFont.
 -------------------------------------------------------------------------------
-local widgets = assert(io.open("Core/NaowhForever_Widgets.lua", "rb")):read("*a"):gsub("\r\n", "\n")
-local helpers = assert(widgets:match("\n(function UI%.FontPath%(name%).-\nfunction UI%.TexturePath%(name, fallback%).-\nend)\n"),
+local widgets = assert(io.open("Core/Options/Widgets.lua", "rb")):read("*a"):gsub("\r\n", "\n")
+-- The media helpers, from the LibSharedMedia lookup (when Widgets has one) to TexturePath, with
+-- the file's text constants before them, since the helpers read those.
+local helpers = assert(widgets:match("\n(local function SharedMedia%(%).-\nfunction UI%.TexturePath%(name, fallback%).-\nend)\n")
+    or widgets:match("\n(function UI%.FontPath%(name%).-\nfunction UI%.TexturePath%(name, fallback%).-\nend)\n"),
     "Widgets: FontPath to TexturePath")
+local texts = {}
+for line in widgets:gmatch("\n(local TEXT_[%w_, ]+ = \"[^\n]*\")\n") do texts[#texts + 1] = line end
+helpers = table.concat(texts, "\n") .. "\n" .. helpers
 local MEDIA = { font = { Naowh = "naowh.ttf" },
     statusbar = { Blizzard = "bar.blp", Solid = "solid", ["Naowh Gradient"] = "gradient.tga" } }
 local LSM = {
@@ -449,9 +458,11 @@ check("a saved texture that has gone stays listed", textures.Gone == "Gone (unav
 check("texture path: a SharedMedia name", UI.TexturePath("Solid", "own") == "solid")
 check("texture path: the element's own for empty or missing", UI.TexturePath("", "own") == "own"
     and UI.TexturePath("Gone", "own") == "own" and UI.TexturePath(nil, "own") == "own")
-local core = assert(io.open("Core/NaowhForever_Core.lua", "rb")):read("*a")
+local core = assert(io.open("Core/Core.lua", "rb")):read("*a")
 check("the Naowh Gradient is a SharedMedia statusbar",
-    core:find('LSM:Register("statusbar", "Naowh Gradient", "Interface\\\\AddOns\\\\NaowhForever\\\\Media\\\\NaowhGradient.tga")', 1, true))
+    core:find('LSM:Register("statusbar", "Naowh Gradient", NAOWH_GRADIENT)', 1, true)
+    and core:find('local MEDIA = "Interface\\\\AddOns\\\\NaowhForever\\\\Core\\\\Media\\\\"', 1, true)
+    and core:find('local NAOWH_GRADIENT = MEDIA .. "NaowhGradient.tga"', 1, true))
 
 local function Keys(entries)
     local out = {}
@@ -478,6 +489,7 @@ look = Settings.Look("bag", { background = "alpha" })
 check("opacity without a bar has its own group", Keys(look) == "[Background] bagBgAlpha")
 
 local picked
+---@diagnostic disable-next-line: duplicate-set-field
 ns.UI.BuildDropdownControl = function(parent)
     local control = Control(parent)
     control._refreshLabel = function() picked = control._values end

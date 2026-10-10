@@ -175,8 +175,12 @@ local function Client(me, others, opts)
         UnitArmor = function() return mine[10], Number(mine[10]) end,
     }, { __index = _G })
     state.SECRET = {}
-    Load({ "Core/NaowhForever_Senders.lua", "NaowhForever_BiS/StatWeights/Data/Defaults.lua",
-        "NaowhForever_BiS/StatWeights/StatWeights.lua", "NaowhForever_GroupInspect/Share.lua" }, env)
+    Load({ "Core/Senders.lua", "Core/Features.lua",
+        "NaowhForever_BiS/StatWeights/Data/Defaults.lua",
+        "NaowhForever_BiS/StatWeights/StatWeights.lua", "NaowhForever_BiS/StatWeights/Worth.lua",
+        "NaowhForever_GroupInspect/Constants.lua", "NaowhForever_GroupInspect/Stats.lua",
+        "NaowhForever_GroupInspect/OwnStats.lua", "NaowhForever_GroupInspect/Message.lua",
+        "NaowhForever_GroupInspect/Share.lua" }, env)
     state.T = GI._ShareTest
     GI.Roster()
 
@@ -477,9 +481,13 @@ do
     check("outside a group nothing but the roster is listened to", not quit.frame.events.CHAT_MSG_ADDON
         and not quit.frame.events.PLAYER_EQUIPMENT_CHANGED)
 
+    local noQol = Client("Alpha", { "Bravo" })
+    noQol.ns.QoLSettings.Set("enabled", false)
+    check("the QoL module off: still shared", noQol.frame.events.CHAT_MSG_ADDON == true)
+
     local disabled = Client("Alpha", { "Bravo" })
-    disabled.ns.QoLSettings.Set("enabled", false)
-    check("Naowh Forever's QoL off: nothing registered", next(disabled.frame.events) == nil)
+    disabled.ns.QoLSettings.Set("groupInspectShare", false)
+    check("Share Your Stats off: nothing registered", next(disabled.frame.events) == nil)
 end
 
 print(("test-group-inspect-share: %d checks passed"):format(checks))

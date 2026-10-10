@@ -1,19 +1,20 @@
 -- Run with Lua 5.1 from the repository root: Buff Thank You Message whispers a player who
 -- gives you a class buff, once per cooldown, in the open world and out of combat only; a
--- caster the game cannot name gets the optional /emote; and nothing is registered while it
--- is off.
+-- caster the game cannot name gets the optional built-in /thank; and nothing is registered
+-- while it is off.
 local settings = {
     enabled = true, buffThanks = false, buffThanksCooldown = 10, buffThanksGroup = false,
     buffThanksEmote = false, buffThanksText = "Thanks for the {buff}, {name}!",
-    buffThanksEmoteText = "thanks a kind stranger for the {buff}.",
     buffThanksPerBuff = false, buffThanksBlessing = "Light be with you, {name}!", buffThanksIntellect = "",
 }
 local S = { Get = function(key) return settings[key] end }
 function S.Set(key, value) settings[key] = value end
 local ns = {
     QoLSettings = S,
+    QoLConstants = dofile("Tools/regression/qol_constants.lua"),
     Apply = function() end,
-    Shared = { Settings = { Page = function() return { Card = function() end } end,
+    Shared = { Style = dofile("Tools/regression/shared_style.lua"),
+        Settings = { Page = function() return { Card = function() end } end,
         Group = function(title) return { group = title } end } },
 }
 
@@ -52,6 +53,7 @@ local env = setmetatable({
     C_ChatInfo = {
         SendChatMessage = function(text, channel, _, to) sent[#sent + 1] = { text = text, channel = channel, to = to } end,
         InChatMessagingLockdown = function() return lockdown end,
+        PerformEmote = function(emote) sent[#sent + 1] = { emote = emote } end,
     },
     GetTime = function() return now end,
     UnitAffectingCombat = function() return combat end,
@@ -68,7 +70,7 @@ local env = setmetatable({
     math = { random = function(n) return n end },
 }, { __index = _G })
 env._G = env
-local chunk = assert(loadfile("QoL/NaowhForever_BuffThanks.lua"))
+local chunk = assert(loadfile("NaowhForever_QoL/Questing/BuffThanks.lua"))
 setfenv(chunk, env)
 chunk()
 
@@ -171,11 +173,13 @@ Case("every class: Arcane Intellect, Fortitude, Mark of the Wild, Unending Breat
     assert(#sent == 4, #sent)
     settings.buffThanksEmote = true
 end)
-Case("an unnamed caster with the emote on: one /emote per buff per cooldown", function()
+Case("unnamed casters with the emote on: one built-in /thank per cooldown", function()
+    Gain(9885, "Mark of the Wild", nil)
+    Gain(467, "Thorns", nil)
+    assert(#sent == 1 and sent[1].emote == "THANK" and sent[1].channel == nil, #sent)
+    now = now + 3600
     Gain(20217, "Blessing of Kings", nil)
-    Gain(20217, "Blessing of Kings", nil)
-    assert(#sent == 1 and sent[1].channel == "EMOTE" and sent[1].to == nil, #sent)
-    assert(sent[1].text == "thanks a kind stranger for the Blessing of Kings.", sent[1].text)
+    assert(#sent == 2 and sent[2].emote == "THANK", #sent)
 end)
 Case("several lines: one is picked, trimmed, placeholders filled in", function()
     now = now + 3600

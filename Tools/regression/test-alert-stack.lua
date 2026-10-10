@@ -41,8 +41,8 @@ end
 
 local function Fixture(qol, aura)
     local env = { pairs = pairs, ipairs = ipairs, type = type, math = math, table = table }
-    local ns = { Apply = function() end, ShowRaidReminderAnchorConfig = function() end,
-        HideRaidReminderAnchorConfig = function() end }
+    local ns = { Apply = function() end, ShowUnlockMode = function() end,
+        HideUnlockMode = function() end }
     ns.QoLSettings = Settings(qol)
     ns.AuraBuffSettings = aura and Settings(aura)
     ns.UI = { AttachMover = function(frame, label, onMoved, page)
@@ -50,7 +50,7 @@ local function Fixture(qol, aura)
         mover.shown = false
         mover.label, mover.onMoved, mover.page, mover.parent = label, onMoved, page, frame
         return mover
-    end }
+    end, SetMoverChoices = function(mover, choices) mover.choices = choices end }
     env.NaowhForever = ns
     env._G = env
     env.UIParent = Frame("UIParent")
@@ -64,7 +64,7 @@ local function Fixture(qol, aura)
         local orig = t[key]
         t[key] = function(...) orig(...); fn(...) end
     end
-    Load({ "QoL/NaowhForever_AlertStack.lua" }, env)
+    Load({ "Core/AlertStack.lua" }, env)
     return ns, env
 end
 
@@ -79,9 +79,9 @@ do
     local qol = {}
     local ns = Fixture(qol, nil)
     local camp, talent, pet = Member(200, 26), Member(300, 32), Member(220, 36)
-    ns.AlertStack(pet, 5)
-    ns.AlertStack(camp, 1)
-    ns.AlertStack(talent, 2)
+    ns.AlertStack(pet, 5, "Pet Tracker", "QoL/Combat", "QoL/Combat:petTracker")
+    ns.AlertStack(camp, 1, "Camp Nearby", "AuraBuffs/Settings", "AuraBuffs/Settings:campNearby")
+    ns.AlertStack(talent, 2, "Talent Points", "QoL/Questing & Group", "QoL/Questing & Group:talentPoints")
     Check(qol.alertsPos.point == "CENTER" and qol.alertsPos.y == 150,
         "no old spot and no AuraBuffs: the group starts at its default and saves it")
     talent:Show()
@@ -95,13 +95,15 @@ do
     local group = pet.point[2]
     local mover = rawget(group, "mover")
     Check(mover.label == "Alerts" and mover.page ~= nil, "one mover, named Alerts, with an options page")
+    Check(#mover.choices == 3 and mover.choices[1].name == "Camp Nearby" and mover.choices[2].name == "Talent Points"
+        and mover.choices[3].feature == "QoL/Combat:petTracker", "its Settings lists every alert in stack order, each with its card")
     Check(mover.shown == false, "the mover stays hidden outside Unlock Mode")
-    ns.ShowRaidReminderAnchorConfig()
+    ns.ShowUnlockMode()
     Check(mover.shown == true, "Unlock Mode shows the mover while a member is up")
     Check(mover.h == 26 * 1.5 + 6 + 32 + 6 + 36 and mover.w == 300, "the mover covers the whole stack")
     camp:Hide(); talent:Hide(); pet:Hide()
     Check(mover.shown == false, "no member up: no mover")
-    ns.HideRaidReminderAnchorConfig()
+    ns.HideUnlockMode()
     mover.onMoved({ point = "CENTER", relPoint = "CENTER", x = 10, y = 20 })
     Check(qol.alertsPos.x == 10 and qol.alertsPos.y == 20, "moving the group saves its spot")
 end

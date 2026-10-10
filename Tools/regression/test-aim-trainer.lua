@@ -1,5 +1,5 @@
--- Offline checks for the QoL Aim Trainer (QoL/NaowhForever_AimTrainer.lua) and its leaderboard
--- (QoL/NaowhForever_AimBoard.lua) against stubs that do not allocate: nothing built or listened to
+-- Offline checks for the QoL Aim Trainer (NaowhForever_QoL/Travel/AimTrainer.lua) and its leaderboard
+-- (NaowhForever_QoL/Travel/AimBoard.lua) against stubs that do not allocate: nothing built or listened to
 -- while off, scoring, hits and misses (a miss costs 50, never below 0, and pops "-50"), Reflex
 -- expiry, the round's end and best records, the enemy faction's faces and the plain-disc fallback,
 -- combat and landing closing it, no OnUpdate while idle, no garbage per click, miss or frame; sharing
@@ -95,7 +95,7 @@ local function fixture(opts)
     function S.Set(k, v) s.settings[k] = v end
     local account = {}
     local card
-    local ns = { QoLSettings = S, THEME = { accent = { r = 0, g = 0.5, b = 1 }, accentSoft = { r = 0.3, g = 0.7, b = 1 },
+    local ns = { MEDIA = dofile("Tools/regression/core_media.lua"), QoLConstants = dofile("Tools/regression/qol_constants.lua"), QoLSettings = S, THEME = { accent = { r = 0, g = 0.5, b = 1 }, accentSoft = { r = 0.3, g = 0.7, b = 1 },
         bg = { r = 0, g = 0, b = 0 }, panel = { r = 0.1, g = 0.1, b = 0.1 }, fg = { r = 1, g = 1, b = 1 },
         muted = { r = 0.6, g = 0.6, b = 0.6 } } }
     ns.UI = { AttachMover = function(f) local m = new("Frame", f); m.shown = false; return m end,
@@ -141,8 +141,8 @@ local function fixture(opts)
     function ns.Print() s.prints = s.prints + 1 end
     function ns.AccountSettings() return account end
     function ns.Apply() end
-    function ns.ShowRaidReminderAnchorConfig() end
-    function ns.HideRaidReminderAnchorConfig() end
+    function ns.ShowUnlockMode() end
+    function ns.HideUnlockMode() end
     function ns.SoundChoices() return {}, {}, {} end
     function ns.Confirm(_, yes) yes() end
 
@@ -211,8 +211,8 @@ local function fixture(opts)
         t[k] = function(...) old(...); fn(...) end
     end
     setmetatable(env, { __index = _G })
-    for _, path in ipairs({ "Core/NaowhForever_Senders.lua", "QoL/NaowhForever_AimTrainer.lua",
-        "QoL/NaowhForever_AimBoard.lua" }) do
+    for _, path in ipairs({ "Core/Senders.lua", "NaowhForever_QoL/Travel/AimTrainer.lua",
+        "NaowhForever_QoL/Travel/AimBoard.lua" }) do
         local chunk = assert(loadfile(path))
         setfenv(chunk, env)
         chunk()
@@ -536,10 +536,10 @@ end
 -- Not in Unlock Mode (Robin, 2026-10-05: it took a lot of room): the window drags itself.
 do
     local s = fixture({ faction = "Alliance", settings = { aimTrainer = true } })
-    s.ns.ShowRaidReminderAnchorConfig()
+    s.ns.ShowUnlockMode()
     local p = s.panel()
     check("Unlock Mode does not open it", not (p and p.shown))
-    s.ns.HideRaidReminderAnchorConfig()
+    s.ns.HideUnlockMode()
     s.ns.AimOffer("flight")
     p = s.panel()
     check("it drags by itself", p and p.scripts.OnDragStart ~= nil and p.scripts.OnDragStop ~= nil)
@@ -1046,7 +1046,10 @@ do
 end
 
 -- No garbage per message received. The parsed fields are strings the test keeps alive, as a
--- game session would after the first message, so only tables or closures would show.
+-- game session would after the first message, so only tables or closures would show. One whole round,
+-- the clock moved on as every measured round moves it, runs after the collector stops: the collect can
+-- shrink the interpreter's stack, and a round with a new rate window reaches deeper than one without,
+-- so a lighter warm-up let the stack regrow inside the measure on some builds (32-bit Windows Lua).
 do
     local s = fixture({ faction = "Alliance", settings = { aimTrainer = true } })
     s.account.aimBest = { hexakill = 100 }
@@ -1060,26 +1063,32 @@ do
     end
     local f = s.comms()
     local handler = f.scripts.OnEvent
-    for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
-    collectgarbage("collect")
-    collectgarbage("stop")
-    local before = collectgarbage("count")
-    for _ = 1, 50 do
+    local function Round()
         s.now = s.now + 61
         for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
         for _ = 1, 20 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[1], "GUILD", senders[1]) end
     end
+    for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
+    collectgarbage("collect")
+    collectgarbage("stop")
+    Round()
+    local before = collectgarbage("count")
+    for _ = 1, 50 do Round() end
     local grown = collectgarbage("count") - before
     collectgarbage("restart")
     check(("no garbage per message received (%.3f KB)"):format(grown), grown < 0.05 and #keep == 24)
 end
 
 do
-    local f = assert(io.open("QoL/NaowhForever_QoL.lua", "rb"))
+    local f = assert(io.open("Core/Settings.lua", "rb"))
     local qol = f:read("*a")
     f:close()
     check("Hexakill is the default mode", qol:find('aimMode = "hexakill"', 1, true) ~= nil)
-    check("the Aim Trainer is on by default", qol:find("aimTrainer = true,", 1, true) ~= nil)
+    local features = assert(io.open("Core/Features.lua", "rb"))
+    local switches = features:read("*a")
+    features:close()
+    check("the Aim Trainer is on by default", qol:find("aimTrainer = F.aimTrainer,", 1, true) ~= nil
+        and switches:find("aimTrainer = true,", 1, true) ~= nil)
     check("no flight toggle of its own", qol:find("aimAutoFlight", 1, true) == nil)
 end
 

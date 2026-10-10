@@ -79,8 +79,13 @@ local function OffText()
     return "Instance Tracker is off, so nothing new is recorded. "
 end
 
+local function ClassName(name, class)
+    if ns.ClassColoredName then return ns.ClassColoredName(name, class) end
+    return name or "?"
+end
+
 local function CharLine(char)
-    local who = ns.ClassColoredName(char.name, char.class)
+    local who = ClassName(char.name, char.class)
     local extra = (char.level or "?") .. "   " .. (char.realm or "")
     if char.mine then
         extra = extra .. "   (you)"
@@ -119,7 +124,7 @@ local function RunLine(run)
     local IT = ns.InstanceTracker
     local span = IT.Duration((run.left or run.entered or 0) - (run.entered or 0))
     local when = date("%m/%d %H:%M", run.entered or time())
-    local who = ns.ClassColoredName(run.name or "?", run.class)
+    local who = ClassName(run.name or "?", run.class)
     local text = string.format("%s   %s   %s   %s   %s   %s XP", when, who,
         IT.PlaceName(run.instance, run.difficulty), span, IT.Coins(run.loot),
         BreakUpLargeNumbers(run.xp or 0))
@@ -218,7 +223,7 @@ function ns.BuildInstanceHistoryPage(parent, y)
     local open = IT.Open()
     if open and open.instance then
         local elapsed = IT.Duration(IT.Elapsed(open))
-        y = Line(parent, y, "In progress   " .. ns.ClassColoredName(open.name or "?", open.class)
+        y = Line(parent, y, "In progress   " .. ClassName(open.name or "?", open.class)
             .. "   " .. IT.PlaceName(open.instance, open.difficulty) .. "   " .. elapsed
             .. "   " .. IT.Coins(open.loot) .. "   " .. BreakUpLargeNumbers(open.xp or 0) .. " XP")
         y = RepLine(parent, y, open.rep)

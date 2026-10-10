@@ -29,6 +29,7 @@ local frame = { RegisterEvent = noop, SetScript = noop }
 local settings = { enabled = true, slashCommands = true }
 local db = {}
 local printed = {}
+local gamepad = false
 local emotes = {}
 local secure = { ["/CAST"] = true, ["/USE"] = true, ["/TARGET"] = true }
 
@@ -44,6 +45,7 @@ local env = {
         },
         UI = {}, THEME = {},
         Print = function(msg) printed[#printed + 1] = msg end,
+        GamepadOwnsPanels = function() return gamepad end,
         Apply = noop,
     },
     SlashCmdList = setmetatable({}, { __index = proxy }),
@@ -70,7 +72,7 @@ local env = {
 }
 env._G = env
 setmetatable(env, { __index = _G })
-local chunk = assert(loadstring(Read("QoL/NaowhForever_SlashCommands.lua"), "SlashCommands"))
+local chunk = assert(loadstring(Read("NaowhForever_QoL/System/SlashCommands.lua"), "SlashCommands"))
 setfenv(chunk, env)
 chunk()
 local ns = env.NaowhForever
@@ -159,11 +161,16 @@ check("/reload is not run, since the game blocks it from addon code", n == 0
 
 Run("kb", "")
 check("a window command still opens its window", kb.shown)
+gamepad = true
+Run("kb", "")
+check("with a gamepad a window command leaves the window alone and says so", kb.shown
+    and printed[#printed]:find("with a gamepad", 1, true))
+gamepad = false
 
 check("the chat box was never touched: " .. table.concat(touched, ", "), #touched == 0)
 
 -- No code in the module reaches for the game's chat box.
-local source = Read("QoL/NaowhForever_SlashCommands.lua")
+local source = Read("NaowhForever_QoL/System/SlashCommands.lua")
 for _, word in ipairs({ "SendText", "ChatFrame1EditBox", "DEFAULT_CHAT_FRAME", "ChatEdit_" }) do
     check("the module does not use " .. word, not source:find(word, 1, true))
 end

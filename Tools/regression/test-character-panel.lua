@@ -57,6 +57,7 @@ local METHODS = {
     GetText = function(f) return rawget(f, "text") end,
     GetWidth = function(f) return rawget(f, "w") or 300 end,
     GetHeight = function(f) return rawget(f, "h") or 37 end,
+    GetBottom = function(f) return rawget(f, "bottom") end,
     SetPoint = function(f, point, relative) f.points = f.points or {}; f.points[point] = relative end,
     ClearAllPoints = function(f) f.points = {} end,
     GetEffectiveScale = function() return 1 end,
@@ -112,7 +113,9 @@ statsList.SetPoint = function(self, point, relative, _, _, y)
     if point == "TOPLEFT" then self.drop = -(y or 0) end
     if point == "BOTTOMRIGHT" then self.lift = y or 0 end
 end
+local stoneArt = Frame(character)
 local paperDoll = Frame(character)
+paperDoll.TopBackgroundStripHost = false
 local gearSets, titles = Frame(paperDoll), Frame(paperDoll)
 gearSets.shown, titles.shown = false, false
 
@@ -188,7 +191,7 @@ local ns = {
     QoLSettings = S,
     Apply = NOTHING,
     IsBisItem = function(id) return RANK[id] end,
-    FEATURE_BADGES = 1,
+    FEATURE_BADGES = 1, BADGES_LIVE = 1,
     BADGE_TIERS = {
         legendary = { title = "Legendary Patron", about = "Supports Naowh.", large = "legendaryArt",
             chat = "legendaryChat", markup = "|TlegendaryChat:0|t",
@@ -217,6 +220,7 @@ local ns = {
         Best = function() return 58.8 end,
         Grade = function(score) return score / 58.8 end,
         RAMP = { { 0, 0.6, 0.6, 0.6 }, { 1, 1, 0.5, 0 } },
+        COMPARE = { LEVEL = "level", BOTH = "both", MAX = "max" },
         Text = tostring,
     },
     ConfirmReload = function() state.reloads = (state.reloads or 0) + 1 end,
@@ -285,7 +289,8 @@ local env = setmetatable({
     CharacterFrameTitleText = title,
     CharacterLevelText = levelText,
     CharacterStatsPaneScrollBox = statsList,
-    CharacterFrameRightPaneHostStoneBg = "stoneArt",
+    CharacterFrameRightPaneHostStoneBg = stoneArt,
+    PaperDollFrame = paperDoll,
     UnitArmor = function()
         if state.statsSecret then return { value = 250 }, { value = 250 } end
         return 250, 250
@@ -324,8 +329,9 @@ env._G = env
 env.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 
 local files = TocFiles("^Shared/.*%.lua$")
+files[#files + 1] = "NaowhForever_BiS/BiS/Constants.lua"
 for _, path in ipairs(TocFiles("^NaowhForever_BiS/CharacterPanel/.*%.lua$")) do files[#files + 1] = path end
-check("the TOC loads the module's files", files[#files] == "NaowhForever_BiS/CharacterPanel/SettingsPage.lua")
+check("the TOC loads the module's files", files[#files] == "NaowhForever_BiS/CharacterPanel/UI/SettingsPage.lua")
 Load(files, env)
 local CP = ns.CharacterPanel
 ns.Shared.ForeverNew.items[101] = true   -- the head's item is new in Forever
@@ -359,7 +365,7 @@ check("your Naowh Score big under your level, shown", badge and badge.parent == 
     and badge.shown ~= false and badge.points.TOP == levelText)
 check("on the game's stats list, its fade for your spec's stats not its own", badge.ignoreParentAlpha == true)
 badge.scripts.OnShow(badge)
-check("painted with your score, in its grade's colour, as the panel opens", badge.value.text == "|cff1eff008.3|r")
+check("painted with your score, in its grade's color, as the panel opens", badge.value.text == "|cff1eff008.3|r")
 check("only the score: its bar's legend the best it is graded against", badge.best.text == "Best 58.8"
     and badge.rest.shown ~= false)
 
@@ -387,7 +393,7 @@ local h, c, w, s = Ours(head), Ours(chest), Ours(weapon), Ours(shirt)
 check("ours over every slot, each knowing its slot", h and h.slot == 1 and c.slot == 5 and s.slot == 4)
 check("an empty ammo slot (the game says item 0) is empty, its level not asked for",
     Ours(buttons[0]).marks.level.text == "" and Ours(buttons[0]).marks.forever.shown == false)
-check("each slot's edge in its item's quality colour; an empty one black", h.edge.r == 0.64 and s.edge.r == 0)
+check("each slot's edge in its item's quality color; an empty one black", h.edge.r == 0.64 and s.edge.r == 0)
 check("its item level in the corner; none for an empty slot or a level 1 item", h.marks.level.text == 30
     and c.marks.level.text == 25 and w.marks.level.text == "" and s.marks.level.text == "")
 check("Forever's mark on an item new in Forever, only there", h.marks.forever.shown == true and c.marks.forever.shown == false)
@@ -437,12 +443,14 @@ check("no badge: nothing in the corner, nothing made", CP.supportBadge == nil)
 state.badges = { ["Player-1-ME"] = { tier = "developer", title = "Lead Developer" } }
 S.Set("characterPanelBadge", true)
 local support = CP.supportBadge
-check("your supporter badge in the left pane's corner", support and support.parent == character.LeftPaneHost
-    and support.shown ~= false)
+check("your supporter badge on the Character tab only, not Reputation or the others",
+    support and support.parent == paperDoll and support.shown ~= false)
 support.scripts.OnShow(support)
-check("yours: in its colour, with your own title", support.title.text == "Lead Developer"
+check("yours: in its color, with your own title", support.title.text == "Lead Developer"
     and support.line.text == "Naowh Forever Team" and support.emblem.desaturated ~= true)
 check("a click on it opens nothing", support.scripts.OnClick == nil and opened == 0)
+check("on the panel, the emblem alone: its title and line wait for the hover card", support.compact == true
+    and support.title.shown == false and support.line.shown == false)
 S.Set("characterPanelBadge", false)
 check("Supporter Badge off: no badge", support.shown == false)
 S.Set("characterPanelBadge", true)
@@ -467,7 +475,7 @@ state.badges = nil
 character.LeftPaneHost.hooks.OnShow(character.LeftPaneHost)
 
 -- No preview setting, grey badge or pitch is left in the panel's files.
-for _, path in ipairs({ "NaowhForever_BiS/CharacterPanel/Badge.lua", "NaowhForever_BiS/CharacterPanel/SettingsPage.lua", "QoL/NaowhForever_QoL.lua" }) do
+for _, path in ipairs({ "NaowhForever_BiS/CharacterPanel/Badge.lua", "NaowhForever_BiS/CharacterPanel/UI/SettingsPage.lua", "Core/Settings.lua" }) do
     local f = assert(io.open(path, "rb"))
     local source = f:read("*a")
     f:close()
@@ -495,7 +503,7 @@ check("the restyle's fade of the right pane's frames leaves ours be", switch.alp
 -- The score is off here: the list starts where the game had it, and ends over the switch at
 -- the pane's bottom (26 + 2 * 6).
 check("the switch at the pane's bottom, the game's list ending over it", switch.points.BOTTOM == character.RightPaneHost
-    and statsList.points.TOPLEFT == "stoneArt" and statsList.drop == 0 and statsList.lift == 38)
+    and statsList.points.TOPLEFT == stoneArt and statsList.drop == 0 and statsList.lift == 38)
 local rows = spec.rows
 check("the stats in order: primary, then the ratings, then Stamina and Armor, each with your total",
     rows[1].name.text == "Agility" and rows[1].total.text == "80"
@@ -555,6 +563,7 @@ statsList.hooks.OnShow(statsList)
 check("many stats: every row fits above the switch", rows[14].shown ~= false and rows[15].shown == false
     and 14 * rows[1].h <= 300 - 52)
 -- A caster: its spell hit, the game's spell hit (rating and talents) as its total.
+---@diagnostic disable-next-line: duplicate-set-field
 ns.StatWeights.For = function() return { spell = 1, int = 0.3, shit = 14, sta = 0.05, armor = 0.005 } end
 statsList.hooks.OnShow(statsList)
 check("a caster's spell hit, its own total, after its power", rows[3].name.text == "Spell Hit %"
@@ -574,6 +583,12 @@ statsList.hooks.OnShow(statsList)
 -- With the score: the list down by what it needs beyond the room the game leaves
 -- (10 under your level, the card 46 + 6 + 4 + 10 + 2, less 20).
 check("score on: the game's list down under your score", statsList.drop == 58)
+local card = CP.badge
+card.bottom, stoneArt.bottom = 300, 340
+statsList.hooks.OnShow(statsList)
+check("laid out: the list starts its gap under where the card really ends, whatever the game's art",
+    statsList.drop == 50)
+card.bottom, stoneArt.bottom = nil, nil
 
 -- A slot's update makes no garbage.
 Measure(check)("every slot updated", 1, function()
@@ -649,6 +664,7 @@ check("EllesmereUI's turned off by you: ours on and off leaves it off, no reload
 -- With both on at login: a newcomer gets ours from the next reload, told in chat; anyone else is
 -- asked, once.
 local asked, printed = 0, {}
+---@diagnostic disable-next-line: duplicate-set-field
 env.InCombatLockdown = function() return false end
 ns.Confirm = function() asked = asked + 1 end
 ns.Print = function(text) printed[#printed + 1] = text end
@@ -689,6 +705,59 @@ q.characterPanelAsked, q.characterPanelTookOver = true, true
 db.themedCharacterSheet = false
 CP._AskForTest(false)
 check("one EllesmereUI's own switch bears out: kept, not asked", asked == 2 and q.characterPanelTookOver == true)
+-- The onboarding's pick of our panel (a plain QoL key the core leaves) is the answer: at the next
+-- login ours takes over as for a newcomer, told in chat, with no question, even over an earlier
+-- answer; the pick is read once, and goes whatever EllesmereUI is or is not there.
+local function Picked(themed)
+    q.characterPanel, q.characterPanelAsked, q.characterPanelTookOver = true, true, false
+    q.characterPanelPicked = true
+    db.themedCharacterSheet = themed
+end
+Picked(true)
+local told = #printed
+reloads = state.reloads
+CP._AskForTest(false)
+check("picked in the onboarding: ours takes over, told in chat, nothing asked, no reload popup",
+    db.themedCharacterSheet == false and asked == 2 and #printed == told + 1 and state.reloads == reloads
+    and q.characterPanelTookOver == true and q.characterPanelAsked == true and q.characterPanelPicked == nil)
+CP._AskForTest(false)
+check("and the pick is read once", #printed == told + 1 and asked == 2)
+Picked(false)
+CP._AskForTest(false)
+check("picked with EllesmereUI's sheet already off: nothing to take, the pick gone",
+    db.themedCharacterSheet == false and #printed == told + 1 and asked == 2 and q.characterPanelPicked == nil)
+Picked(true)
+q.characterPanel = false
+CP._AskForTest(false)
+check("picked, then ours turned off: EllesmereUI's left on, the pick gone",
+    db.themedCharacterSheet == true and #printed == told + 1 and asked == 2 and q.characterPanelPicked == nil)
+Picked(true)
+---@diagnostic disable-next-line: duplicate-set-field
+env.InCombatLockdown = function() return true end
+CP._AskForTest(false)
+---@diagnostic disable-next-line: duplicate-set-field
+env.InCombatLockdown = function() return false end
+check("in combat the pick waits", q.characterPanelPicked == true and db.themedCharacterSheet == true)
+local ellesmere = env.EllesmereUI
+env.EllesmereUIDB = nil
+CP._AskForTest(false)
+check("picked without EllesmereUI's saved settings: no error, nothing taken, the pick gone",
+    q.characterPanelPicked == nil and #printed == told + 1 and asked == 2)
+env.EllesmereUIDB = db
+Picked(true)
+env.EllesmereUI = {}
+CP._AskForTest(false)
+check("picked with an EllesmereUI that has no GetBlizzWindowStyle: no error, nothing taken, the pick gone",
+    q.characterPanelPicked == nil and db.themedCharacterSheet == true and #printed == told + 1)
+Picked(true)
+env.EllesmereUI, env.EllesmereUIDB = nil, nil
+CP._AskForTest(false)
+check("picked without EllesmereUI at all: no error, the pick gone", q.characterPanelPicked == nil and #printed == told + 1)
+env.EllesmereUI, env.EllesmereUIDB = ellesmere, db
+Picked(true)
+CP._AskForTest(true)
+check("a newcomer who picked it: the same take-over, once", db.themedCharacterSheet == false
+    and #printed == told + 2 and asked == 2 and q.characterPanelPicked == nil)
 env.EllesmereUIDB, env.EllesmereUI = nil, nil
 reloads = state.reloads
 S.Set("characterPanel", true)
@@ -707,9 +776,9 @@ local function PanelCard(flag)
         OnChange = function() listeners = listeners + 1 end,
     }
     local flagNs = {
-        FEATURE_BADGES = flag, THEME = ns.THEME, QoLSettings = store,
+        FEATURE_BADGES = flag, BADGES_LIVE = 1, THEME = ns.THEME, QoLSettings = store,
         CharacterPanel = { EllesmereSheet = function() return false end },
-        Shared = { Settings = { Page = function()
+        Shared = { Style = dofile("Tools/regression/shared_style.lua"), Settings = { Page = function()
             return { Card = function(_, def) cards[def.id] = def end }
         end } },
     }
@@ -717,7 +786,8 @@ local function PanelCard(flag)
         hooksecurefunc = function() hooked = hooked + 1 end }, { __index = _G })
     local paths = {}
     for _, path in ipairs(files) do
-        if path:find("CharacterPanel/Badge.lua", 1, true) or path:find("CharacterPanel/SettingsPage.lua", 1, true) then
+        if path:find("CharacterPanel/Constants.lua", 1, true) or path:find("CharacterPanel/Badge.lua", 1, true)
+            or path:find("CharacterPanel/YourBadge.lua", 1, true) or path:find("CharacterPanel/UI/SettingsPage.lua", 1, true) then
             paths[#paths + 1] = path
         end
     end
@@ -729,12 +799,15 @@ local offCard, offCP, offListeners, offHooked, offStore = PanelCard(0)
 check("flag 0: the team's badge still listens and hooks", offHooked == 1 and offListeners == 1
     and offCP.supportBadge == nil)
 check("flag 0: the BiS link keeps its place", offCP.BADGE_MID == CP.BADGE_MID)
-check("flag 0: no badge row at all, the Naowh Score row first", #offCard.rows == 1
+check("flag 0: no badge row at all, the Naowh Score row first", #offCard.rows == 2
     and offCard.rows[1].key == "characterPanelScore")
+check("then Stats Shown, the same Your Spec / All Stats as the panel's switch",
+    offCard.rows[2].key == "characterPanelStats" and offCard.rows[2].choice[2][1] == "spec"
+    and offCard.rows[2].choice[2][2] == "all")
 check("flag 0: the summary leaves the badge out", offCard.summary(offStore) == "With your Naowh Score")
 local onCard, _, onListeners, onHooked, onStore = PanelCard(1)
 check("flag 1: the badge listens and hooks as before", onListeners == 1 and onHooked == 1)
-check("flag 1: the Supporter Badge row first, then Naowh Score", #onCard.rows == 2
+check("flag 1: the Supporter Badge row first, then Naowh Score", #onCard.rows == 3
     and onCard.rows[1].label == "Supporter Badge" and onCard.rows[2].key == "characterPanelScore")
 check("flag 1: the summary names the badge", onCard.summary(onStore) == "With your badge and Naowh Score")
 

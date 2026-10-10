@@ -1,15 +1,17 @@
 -- Run with Lua 5.1 from the repository root: reading a macro's text (ns.MacroText). The
 -- checks find what will not work and say what was meant, Explain says what each line does in
 -- plain words, and Shorten saves bytes without changing what the macro does.
-local ns = {}
+local ns = { Macros = {} }
 local env = setmetatable({
     NaowhForever = ns,
     strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end,
 }, { __index = _G })
 env._G = env
-local chunk = assert(loadfile("NaowhForever_Macros/NaowhForever_MacroText.lua"))
-setfenv(chunk, env)
-chunk()
+for _, path in ipairs({ "NaowhForever_Macros/Constants.lua", "NaowhForever_Macros/Text.lua" }) do
+    local chunk = assert(loadfile(path))
+    setfenv(chunk, env)
+    chunk()
+end
 local Text = ns.MacroText
 
 local KNOWN = {}
@@ -114,18 +116,18 @@ Case("bar and vehicle conditions are known", function()
     assert(said == "", said)
 end)
 
-Case("the editor's colours come off exactly, and a typed | survives", function()
+Case("the editor's colors come off exactly, and a typed | survives", function()
     local body = "#showtooltip Polymorph\n/cast [@focus,harm][] Polymorph\n/run print('a|b')\nnote"
     local coded = Text.Colorize(body)
     assert(coded:find("|cff6cc4ff/cast|r", 1, true), coded)
     assert(coded:find("|cfff2d36b[@focus,harm]|r", 1, true), coded)
-    assert(coded:find("print('a||b')", 1, true), "a script is not coloured, its | doubled")
+    assert(coded:find("print('a||b')", 1, true), "a script is not colored, its | doubled")
     assert(Text.Strip(coded) == body)
-    assert(Text.Colorize(Text.Strip(coded)) == coded, "colouring twice changes nothing")
+    assert(Text.Colorize(Text.Strip(coded)) == coded, "coloring twice changes nothing")
     assert(Text.Strip("/say a|b") == "/say a|b", "a lone | typed before the recolour is kept")
 end)
 
-Case("a cursor keeps its place in the macro through the colours", function()
+Case("a cursor keeps its place in the macro through the colors", function()
     local body = "/cast [harm] Fireball"
     local coded = Text.Colorize(body)
     for plain = 0, #body do

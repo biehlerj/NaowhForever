@@ -230,7 +230,7 @@ local ns = {
         prompt = { title = title, text = text, maxLetters = maxLetters, accept = onAccept }
     end,
     Confirm = function(text, onYes) confirm = { text = text, yes = onYes } end,
-    HideRaidReminderAnchorConfig = function() printed[#printed + 1] = "left HUD Editor" end,
+    HideUnlockMode = function() printed[#printed + 1] = "left HUD Editor" end,
     OpenOptionsWindow = function(page) printed[#printed + 1] = "opened " .. page end,
     Apply = NOOP,
 }
@@ -271,11 +271,14 @@ local env = setmetatable({
     end,
 }, { __index = _G })
 env._G = env
-local f = assert(io.open("Core/NaowhForever_UnlockMode.lua", "rb"))
-local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
-local chunk = assert(loadstring(source, "Core/NaowhForever_UnlockMode.lua"))
-setfenv(chunk, env)
-chunk()
+-- The HUD Editor is several files (Core/Options.xml lists them in load order).
+for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^Core/Unlock/.-%.lua$")) do
+    local f = assert(io.open(path, "rb"))
+    local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
+    local chunk = assert(loadstring(source, path))
+    setfenv(chunk, env)
+    chunk()
+end
 
 local function Display(label, w, h, x, y, ownAnchor)
     local frame = NewFrame("Frame", UIParent)
@@ -607,6 +610,30 @@ Check(Near(select(2, Center(fireMover._placement.frame)), 540), "but not one tha
 settings.anchoredTo = nil
 for _, m in ipairs({ bossMover, addMover, fireMover }) do m:Hide() end
 
+-- A target whose plate grows from its bottom with what it shows, like the Alerts stack: off its
+-- side an element keeps its height, above it the element is pushed up.
+local stack, stackMover = Display("Stack", 100, 20, -500, -300)
+stackMover:ClearAllPoints()
+stackMover:SetPoint("BOTTOM", stack, "BOTTOM")
+stackMover:SetSize(100, 80)
+local beside, besideMover = Display("Beside", 40, 20, -400, -300)
+local above, aboveMover = Display("Above", 40, 20, -500, -200)
+settings.anchoredTo = {
+    ["Beside"] = { target = "Stack", side = "RIGHT", x = 10, y = 0 },
+    ["Above"] = { target = "Stack", side = "TOP", x = 0, y = 10 },
+}
+ns.Apply()
+Flush()
+local besideY = select(2, Center(beside))
+Check(Near(besideY, select(2, Center(stack))) and Near(above:GetBottom(), stackMover:GetTop() + 10),
+    "off the side it lines up with the target's own frame, above it clears the plate")
+stackMover:SetSize(100, 20)
+Flush()
+Check(Near(select(2, Center(beside)), besideY) and Near(above:GetBottom(), stackMover:GetTop() + 10),
+    "when the plate shrinks the one beside it stays, the one above comes down")
+settings.anchoredTo = nil
+for _, m in ipairs({ stackMover, besideMover, aboveMover }) do m:Hide() end
+
 -- Anchors and the snap switch saved before they were dropped: both go at login and on every
 -- profile switch, and nothing moves, since each element's own position already holds where its
 -- anchor put it.
@@ -620,11 +647,30 @@ settings.anchors = { ["Threat Meter"] = { target = "SCREEN_LEFT", side = "RIGHT"
 ns.Apply()
 Check(settings.anchors == nil, "and a switched-to profile's are dropped too")
 
+-- The Loot Feed anchored to Alerts (shipped before 1.1.3, on any side since) is let go once per
+-- profile, in its saved layouts too; one set afterwards stays.
+settings.lootFeedOffAlerts = nil
+settings.anchoredTo = {
+    ["Loot Feed"] = { target = "Alerts", side = "TOP", x = -276.67, y = -968.63 },
+    ["Add Bar"] = { target = "Boss Bar", side = "BOTTOM", x = 0, y = -5 },
+}
+settings.layouts = { Old = { spots = {}, anchors = { ["Loot Feed"] = { target = "Alerts", side = "RIGHT", x = -300, y = 206 } } } }
+ns.Apply()
+Flush()
+Check(settings.anchoredTo["Loot Feed"] == nil and settings.anchoredTo["Add Bar"].target == "Boss Bar",
+    "the Loot Feed lets go of Alerts, other anchors stay")
+Check(settings.layouts.Old.anchors["Loot Feed"] == nil, "and a saved layout lets go too")
+settings.anchoredTo["Loot Feed"] = { target = "Alerts", side = "TOP", x = 0, y = 10 }
+ns.Apply()
+Flush()
+Check(settings.anchoredTo["Loot Feed"] ~= nil, "anchoring it again afterwards sticks")
+settings.anchoredTo, settings.layouts = nil, nil
+
 -- The Elements panel: every element on screen by module, found by name; a row's eye keeps the
 -- element out of the way while editing and its padlock holds it in place.
 local timer, timerMover, timerSaved = Display("Combat Timer", 120, 32, 300, 100)
 timerMover._placement.page = "Threat Meter/Settings"
-ns.ShowRaidReminderAnchorConfig()
+ns.ShowUnlockMode()
 Flush()
 local panel, toolbar
 for _, fr in ipairs(made) do
@@ -721,7 +767,7 @@ Fire(toolbar._elements, "OnClick")
 Check(not panel:IsShown() and settings.elementsPanel == false, "Elements hides the panel, and it stays hidden")
 Fire(toolbar._elements, "OnClick")
 Check(panel:IsShown() and settings.elementsPanel == true, "and shows it again")
-ns.HideRaidReminderAnchorConfig()
+ns.HideUnlockMode()
 Check(not panel:IsShown(), "leaving the HUD Editor hides the panel")
 
 -- Several selected: Shift-click adds and takes away, the tag gives way to a bar over an outline
@@ -730,7 +776,7 @@ for _, m in ipairs({ meterMover, swingMover, timerMover }) do m:Hide() end
 local a1, a1Mover, a1Saved = Display("A1", 100, 20, -300, -300)
 local a2, a2Mover = Display("A2", 60, 20, -200, -260)
 local a3, a3Mover, a3Saved = Display("A3", 80, 20, -50, -320)
-ns.ShowRaidReminderAnchorConfig()
+ns.ShowUnlockMode()
 Flush()
 local function Bar()
     for _, fr in ipairs(made) do
@@ -814,7 +860,7 @@ alt = false
 Check(Near(a1:GetBottom() - a2:GetTop(), gapBefore), "an anchored one in the selection moves once, keeping its gap")
 Fire(keys, "OnKeyDown", "ESCAPE")
 settings.anchoredTo = nil
-ns.HideRaidReminderAnchorConfig()
+ns.HideUnlockMode()
 
 -- Layouts: every spot and anchor kept under a name, loaded back as one change; a locked element
 -- stays where it is.
@@ -841,7 +887,7 @@ local function Texts(entries)
     for _, e in ipairs(entries) do out[#out + 1] = e.text or "-" end
     return table.concat(out, ", ")
 end
-ns.ShowRaidReminderAnchorConfig()
+ns.ShowUnlockMode()
 Flush()
 Check(toolbar._layout.label:GetText() == "Layouts" and Texts(Menu()) == "Layouts, -, Save as New Layout",
     "with none saved the Layouts menu only saves a new one")
@@ -910,11 +956,11 @@ Check(not settings.layouts.Dungeon and settings.layouts.Raid and settings.layout
     and toolbar._layout.label:GetText() == "Layouts", "and deletes it, nothing current")
 UI.ClearMoverSelection()
 settings.anchoredTo = nil
-ns.HideRaidReminderAnchorConfig()
+ns.HideUnlockMode()
 
 -- Even gaps: a drag lands midway between two elements in line with it, a pair's gap past the
 -- pair, or mirrored about the screen's centre, drawn as two equal gaps.
-ns.ShowRaidReminderAnchorConfig()
+ns.ShowUnlockMode()
 for _, fr in ipairs(made) do
     if fr._placement then fr:Hide() end
 end
@@ -965,6 +1011,6 @@ local v3, v3Mover = Display("V3", 100, 20, 500, -200)
 DragTo(v3Mover, v3, v3:GetLeft(), 413)
 Check(Near(v3:GetBottom(), 410) and LabelAt(1460, 450) == "40" and LabelAt(1460, 510) == "40", "and up and down")
 UI.StopMoverDrag(v3Mover)
-ns.HideRaidReminderAnchorConfig()
+ns.HideUnlockMode()
 
 print(("test-unlock-mode: %d checks passed"):format(checks))

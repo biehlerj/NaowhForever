@@ -1776,11 +1776,11 @@ S.OnChange(function(key)
     elseif key == "hourlyWarn" then WarnHour() end
 end)
 hooksecurefunc(ns, "Apply", Apply)
-hooksecurefunc(ns, "ShowRaidReminderAnchorConfig", function()
+hooksecurefunc(ns, "ShowUnlockMode", function()
     unlocked = On() and S.Get("showFrame") and true or false
     UpdateFrame()
 end)
-hooksecurefunc(ns, "HideRaidReminderAnchorConfig", function()
+hooksecurefunc(ns, "HideUnlockMode", function()
     unlocked = false
     UpdateFrame()
 end)

@@ -1,5 +1,219 @@
 # Changelog
 
+## Unreleased
+
+## 1.1.5
+
+### Added
+- Mana Efficiency (QoL > Interface > Tooltips): mana spells show their healing or damage per mana
+  and per second on the tooltip, to compare ranks, with a live preview. Off by default.
+- PvP Flag: a movable button that flags or unflags you for PvP, in PvP > Flag.
+- Zone Levels: hover a zone on the world map to see its level range, in QoL > Interface.
+- UI Clutter: Hide Bag Bar hides the bag buttons beside the menu.
+- Map Window (QoL > Interface): make the windowed world map bigger or smaller with the grip in its
+  corner, and move it by its title bar.
+- Training Planner: rename a saved talent build from the Builds tab.
+
+### Changed
+- Settings say Color instead of Colour everywhere.
+- Minimalist now keeps every module on except Completo, Discovery, Group Inspect, Gear & Trinkets
+  and Swing Timer, which you can still turn on from the onboarding's modules step or the sidebar.
+- Leveling up with the Training Mini Bar shown is a little smoother.
+- Map Pins: the town pins use the game's own map icons instead of square spell icons, with a ferry
+  for boats and a travel globe for zeppelins.
+- Restock Reminder: Ammo to Carry can now go as low as 50.
+
+### Fixed
+- Map Pins: clicking a zone exit or dock on the world map no longer blocks the quest pins the next
+  time the map is opened in combat.
+- Blessings: a class button's menu shows when players in that class have their own blessing, with a
+  button to give them the class blessing again.
+- Guild and Friends list tooltips no longer throw a Lua error when a player's details are hidden in
+  combat or instances.
+- Loot Feed: it no longer jumps to the bottom of the screen at login when it was anchored to Alerts.
+- With gamepad mode on, opening Options from the game menu no longer shows the "blocked from an
+  action" popup. In gamepad mode the Naowh Forever game menu button is hidden (use /nf), and the Top
+  Bar clock and custom window commands say they can't open windows instead of triggering it.
+- Buff Thank You Message: Thank With an Emote now sends the game's /thank instead of a custom emote,
+  which the game blocked with an error. The Emote Lines editor is gone.
+- Profiles > Setups: applying a setup turns on the modules it includes, even ones turned off before.
+- Top Bar Icon Color is disabled under Classic+, where icons are always full color.
+  ![](https://media.giphy.com/media/2yqYbPakQKDFhNZbW9/giphy.gif)
+- The Professions, Swing Timer and Threat Meter settings pages load again instead of erroring at
+  login.
+- Map Pins: the town pins, zone exits and docks are no longer tiny on the small world map.
+- Death Release Protection: the death popup no longer stretches to fill the screen near an instance
+  portal.
+- Pet Tracker: hunters with the Lone Wolf talent no longer get the Pet Missing warning.
+
+## 1.1.4
+
+### Fixed
+- Professions: the settings page no longer throws a Lua error on load.
+
+## 1.1.3
+
+### Added
+- A Share My Score toggle on the Naowh Score card (BiS List > Character), so you can stop sending
+  your score to your group and guild.
+- Every Map Pins toggle is now on the Map Pins card in QoL > Interface, as well as on the world
+  map's Map Pins button.
+- Choose each class's blessing on the Blessing Bar card in Blessings settings.
+- Searching settings finds each PvP crowd control and debuff spell by name, like Polymorph, Sap or
+  Mortal Strike.
+- Show or hide each campfire bonus from the Campfire card in AuraBuffs settings.
+- A Talent Builds card in Training Planner settings shows the build you follow, with Stop Following
+  and Open Builds.
+- The Professions recipe window's logo opens its settings.
+- Open Quest Tracker on the Dungeon Journal's Quest Tracker page, and a Key Binding card in BiS List
+  settings.
+- Stats Shown on the Character Panel card picks Your Spec or All Stats.
+- Reset the Quiz and Trainer Popup positions from their cards.
+
+### Changed
+- The Trainer Popup settings are now in QoL > Questing & Group, so they show without the Training
+  Planner.
+- Keep Cursor In Window During Combat and Cooldown at Cursor are now on the QoL Cursor tab.
+- The BiS List card with tooltip and bag marks is now called Marks on Items.
+- On the Classic+ skin, buttons are the game's own red panel buttons, white with a glow under the
+  mouse.
+- On the Classic+ skin, the Threat Meter's icon is Rallying Cry and Group Inspect's is the Eye of
+  Kilrogg.
+- On the Classic+ skin, text is in Friz Quadrata like the game's own interface, with Arial Narrow
+  for compact numbers.
+- On the Classic+ skin, windows have the game's wood background in place of rock.
+
+### Fixed
+- The game no longer freezes for a moment when you level up or learn spells at a trainer.
+- Loot Feed: it no longer drifts from where you placed it in the HUD Editor after alerts show or
+  hide.
+- Your Naowh Score is no longer sent to your group and guild while the Naowh Score is switched off.
+- Group Inspect now works with the QoL module switched off.
+- Spells you skip in the Training Planner start unticked at the trainer, so Learn All I Can Afford
+  leaves them out.
+- Settings > Modules now shows and sets the same on or off state as each module's own switch.
+- The Sleeping Bag tracker's X now hides it until you enter another zone, like the Library Books
+  tracker, instead of switching it off.
+- In the HUD Editor, the Alerts group's Settings button asks which alert to open (Camp Nearby,
+  Talent Points, Durability, Restock Reminder or Pet Tracker) instead of always opening Durability.
+- RestedXP's arrow in Naowh's themes keeps its colour on its tips when it turns.
+- On the Classic+ skin, a slider's gold gem sits over its groove instead of behind its lines.
+
+## 1.1.2
+
+### Added
+- /nf help lists every Naowh Forever command.
+- /nf move (or /nf hud) and a new key binding open and close the HUD Editor.
+- Each module's settings page shows its own slash command under the title.
+- The settings search finds hidden clicks and commands, such as Alt+Shift-click for BiS, the
+  profession Filter menu and favourites, right-click to skip a spell in the Training Planner,
+  Dungeon Journal keys and the /nf commands.
+- The addon compartment entry shows a tooltip.
+
+### Changed
+- Adding a module's name to a search narrows it to that module, and searching for a module that is
+  turned off points you to Settings to turn it on.
+- The open-window button on a module's sidebar row is always visible, dimmed until you point at it,
+  and every page says when nothing on it matches your search.
+- /nfbars save, restore, test and delete work like /nf bars.
+- The minimap button tooltips for Threat Meter and PvP say they open their settings.
+- The onboarding is now four quick steps: a profile (Minimalist, Recommended or keep yours), a skin
+  with a live preview, your modules, and a summary to apply.
+- Minimalist now turns on only Quality of Life, the BiS List and the Dungeon Journal, from the
+  onboarding and from Profiles > Setups.
+- Profiles > Setups has an Onboarding row to start it again, and Before Onboarding to restore.
+
+### Fixed
+- The settings search now finds everything on the Settings page (modules, minimap buttons, fonts,
+  window scale, skin, theme, RestedXP) and the Profiles page's actions (new, copy, reset, delete,
+  share, import).
+- Searching for a window such as "scrap list" or "forge" now finds its Open button, and searching
+  for "quality" finds Quality of Life.
+
+## 1.1.1
+
+### Added
+- On the Classic+ skin, the sidebar and Top Bar use the game's full-colour icons.
+
+### Fixed
+- The NF Health macro and the low health icon now use Forever's Discolored healing potions and the
+  Combat Healing Potion.
+- NF Health uses your healthstone and then your potions in the same fight, and moves on to your next
+  potion when one kind runs out mid-fight.
+- On the Classic+ skin, the "Naowh Forever" title plate fits its title and is in the Naowh font.
+
+## 1.1.0
+
+### Added
+- PvP > Battlegrounds: move the battleground scores and the start countdown in the HUD Editor's PvP
+  section.
+- Completo: an Overview tab, where the window opens: how far along you are in Quests and Rares,
+  everywhere and in the zone you are in; click one to open it.
+- Completo: a General settings tab with Open Completo, Key Binding and Window.
+- row cogs on hidden rows, row icons and card watch
+- AuraBuffs > Consumables: Import and Export buttons copy a consumables list between profiles;
+  Import also takes the consumables from a profile string.
+- A Classic+ skin in Settings > Colors, which dresses the addon's windows in gold and bronze, like
+  the game's own.
+- On the Classic+ skin, buttons are red with a gold rim, like the game's own.
+- On the Classic+ skin, switches are check boxes with the game's gold tick, and sliders, dropdowns
+  and text boxes look like the game's own.
+- On the Classic+ skin, tabs, the sidebar, section headers and settings cards look like the game's
+  own.
+- On the Classic+ skin, text is in the game's Arial Narrow and headings in its Friz Quadrata, and
+  help cards look like the game's tooltips.
+- On the Classic+ skin, windows have the game's rock background and headings stand out more.
+- Tailor my setup: seven quick questions pick what Naowh Forever turns on, and you review every
+  change before it applies (on your first login, from the Profiles page, or /nf setup).
+- A new character asks whether to use the same settings as your main or set itself up on its own,
+  with its own modules.
+
+### Changed
+- Completo: right-clicking a rare's star on the world map keeps its spots and route shown without
+  opening a panel; hover it for its tooltip.
+- AuraBuffs > Consumables: an item ID is enough to add a consumable; food counts any Well Fed buff
+  and other items their own buff.
+- Map Pins: choose which pins show from the Map Pins button in the world map's top right corner,
+  which opens a drawer beside the map. The options card keeps the on/off switch and Pin Size.
+- Map Pins: Mailboxes on Minimap and Spirit Healers on Minimap are separate switches.
+- Everyone sees the new onboarding once, even with Naowh Forever already installed.
+- The BiS List and the Dungeon Journal can be turned on and off separately; where one needs the
+  other, it says so and offers to turn it on.
+- Quality of Life and the Top Bar are their own modules you can switch off in Settings > Modules.
+- Naowh's setups and Tailor Setup are on the Profiles page, and settings search finds them.
+- Picking the Character Panel or Inspect Panel in the onboarding takes over from EllesmereUI's
+  without asking again.
+- The Bag Space Ignore List's search has a clear button, Escape clears it, and the list uses the
+  slim scroll bar.
+- The sidebar and the copy box use the slim scroll bar.
+- The Reminders part of a profile string is now Consumables and shares only your consumables list;
+  older strings still bring their consumables.
+- Every Library macro is now included when you share your Macro Library.
+- Smart Reminders, Reminder Packs, the Buffs module's Debuff Sounds tab and the /nsr command are
+  gone.
+
+### Fixed
+- Top Bar: battleground scores and the other displays at the top centre of the screen sit below the
+  bar instead of under it.
+- Swing Timer: with Seal Colours on, the melee bars keep the seal's colour after a Judgement instead
+  of going back to the default.
+- Macros: no more Lua error refreshing the NF Health macro while the AuraBuffs module is turned off.
+- Credits: the cards line up, with names and descriptions in the same place on every card.
+- Dungeon Journal: Wailing Caverns' map is the old classic map again, with its bosses placed where
+  they stand on it.
+- Completo: the quest pins on the full screen world map are no longer oversized.
+- Completo: right-clicking a focused rare's star again shows every rare's star again straight away.
+- The waypoint pin for a quest sits where the game's quest marker does instead of floating above it,
+  and goes away once you reach the quest giver.
+- Completo: the search box no longer overlaps the tabs.
+- Map Pins: flight masters, innkeepers and stable masters show on every map again; the capitals
+  switch, now Vendors & Trainers Only in Cities, only hides vendors and trainers outside the cities.
+- Applying a setup no longer wipes your saved quest rewards, lists and notes.
+- Character panel: the level line, Naowh Score and supporter badge fit the latest Forever update,
+  and the badge and BiS List link show only on the Character tab.
+- Supporter badges show again after the latest Forever update.
+- Macros: Open in Editor from the Library switches to My Macros instead of erroring.
+
 ## 1.0.6
 
 ### Added
