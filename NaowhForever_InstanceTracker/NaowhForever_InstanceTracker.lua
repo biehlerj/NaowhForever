@@ -1,12 +1,13 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_InstanceTracker.lua -- a record of each dungeon or raid visit, and
---  how many new instances this account has entered in the last hour. Coming back
---  to the same group within that hour, in a copy this character has not reset,
---  continues that visit, and the time outside is not counted. A later return or a
---  different group starts a new visit. The names on a visit are only for that
---  check. The Journal already lists who was there on a kill. Other characters'
---  visits, and the rest and durability sheet, stay saved, and show only when
---  Track Alts is on. The hour is one cap for the whole account. Saved instances
+--  how many new instances this account has entered in the last hour. A real leave
+--  closes the visit. The next zone-in counts, unless a plain zone id in a GUID
+--  matches the copy this character entered inside that hour. A ghost, or a death
+--  the client kept secret, stays on the open visit. A different group is a new
+--  copy. A reload while still inside does not count. The names on a visit are
+--  only for that check. The Journal already lists who was there on a kill.
+--  Other characters' visits, and the rest and durability sheet, stay saved, and
+--  show only when Track Alts is on. The hour is one cap for the whole account. Saved instances
 --  stay on the Top Bar.
 --
 --  Off until the module is enabled. The run timer is a shared tracker panel, built the
@@ -334,6 +335,8 @@ end
 local RUN_EVENTS = {
     "CHAT_MSG_MONEY", "CHAT_MSG_COMBAT_FACTION_CHANGE", "PLAYER_DEAD",
     "PLAYER_ALIVE", "PLAYER_UNGHOST", "GROUP_ROSTER_UPDATE",
+    "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED",
+    "UNIT_SPELLCAST_SENT", "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_CHANNEL_START",
 }
 
 local function SetRunEvents(active)
@@ -744,13 +747,15 @@ CloseRun = function(announce, at, quiet)
 end
 
 -------------------------------------------------------------------------------
---  Hourly instance entries. A new dungeon or raid instance counts. Walking back into
---  one this character has not reset does not, for the hour after that entry. A later
---  zone-in counts again.
+--  Hourly instance entries. A new dungeon or raid instance counts. A real leave
+--  closes the visit, and the next zone-in counts again, unless a plain zone id
+--  matches the copy still inside the hour. A ghost, or a death the client kept
+--  secret, does not close it. A reload while still inside does not count.
 --  The client's own reset line, a reset a Nova Instance Tracker group leader
---  announces, and a zone-in with a different group clear that memory. The same
---  group continues the visit within that hour. A later return or a different
---  group is a new one, so the earlier loot and group stay on that record.
+--  announces, and a zone-in with a different group clear that memory. When the
+--  zone id cannot be read, the zone-in counts, and a matching id later in that
+--  visit takes the count back. The earlier loot and group stay on the old record
+--  when the visits merge.
 --  The cap is 10 new instances in a rolling hour for the whole account. Each
 --  entry stays on the character who zoned in. The count is the sum.
 -------------------------------------------------------------------------------
@@ -920,7 +925,7 @@ local function ScheduleExpiry()
 end
 
 -- A stamp inside the hour is still this copy. An older stamp is not. A login
--- does not count. The block through CanResume is loaded by the regression.
+-- does not count. The block through CopyParts is loaded by the regression.
 local function CopyFresh(stored, now, hour)
     if type(stored) ~= "table" or type(stored.at) ~= "number" then return false end
     if type(now) ~= "number" or type(hour) ~= "number" then return false end
@@ -969,7 +974,36 @@ local function CanResume(stored, left, now, hour)
     local away = now - left
     return away >= 0 and away < hour
 end
--- end copy memory
+
+-- A ghost, or a death the client kept secret, is still this visit. A plain
+-- false is a living player outside, and that leave can close it.
+local function KeepsVisit(ghost)
+    return ghost ~= false
+end
+
+-- unitType-0-server-instanceID-zoneUID-id-spawn. instanceID is the map and is
+-- 0 outdoors, so it cannot tell one reset from the next. zoneUID is the copy.
+-- A player GUID has neither. A secret value is not split and is not saved.
+local COPY_KINDS = {
+    Creature = true, Pet = true, GameObject = true, Vehicle = true, Cast = true,
+}
+
+local function PlainGuid(guid)
+    if type(guid) ~= "string" or guid == "" then return false end
+    if issecretvalue and issecretvalue(guid) then return false end
+    if canaccessvalue and not canaccessvalue(guid) then return false end
+    return true
+end
+
+local function CopyParts(guid)
+    if not PlainGuid(guid) then return end
+    local kind, _, _, instanceID, zoneUID = strsplit("-", guid)
+    if not COPY_KINDS[kind] then return end
+    instanceID = tonumber(instanceID)
+    zoneUID = tonumber(zoneUID)
+    if not instanceID or instanceID == 0 or not zoneUID or zoneUID == 0 then return end
+    return zoneUID
+end
 
 -- countIt is false for a login or reload: that copy already existed. An existing
 -- stamp stays put on that path, so a resume does not push the hour forward.
@@ -1320,12 +1354,95 @@ local function OnNovaReset(prefix, payload, channel, sender)
     if line then ns.Print(line) end
 end
 
-local function TakeSameCopy(name, mapID, difficulty)
+-- ReadZone is filled in once the unit reads exist. The regression passes the
+-- zone id into TakeSameCopy instead, so this stays unset there.
+local ReadZone
+
+-- seen is the regression's zone id: a number to compare, or false when every
+-- sample was secret, missing, or outdoors. Otherwise read one from the client.
+local function ObservedZone(seen)
+    if seen == false then return nil end
+    if type(seen) == "number" and seen ~= 0 then return seen end
+    if ReadZone then return ReadZone() end
+end
+
+-- The copy this zone-in replaced, so a plain zone id later in the visit can
+-- take the hour entry back. Without a stored id there is nothing to match.
+local function RememberReentry(row, stored, run, key)
+    if type(row) ~= "table" then return end
+    if type(stored) ~= "table" or type(stored.copy) ~= "number" then return end
+    row.reentry = { copy = stored.copy, at = stored.at, key = key, run = run }
+end
+
+local function AddRep(prior, gained)
+    if type(gained) ~= "table" then return end
+    if type(prior.rep) ~= "table" then prior.rep = {} end
+    for faction, amount in pairs(gained) do
+        if type(amount) == "number" and amount > 0 then
+            prior.rep[faction] = (prior.rep[faction] or 0) + amount
+        end
+    end
+end
+
+-- This zone-in was already counted, and the zone id now matches the visit it
+-- replaced. Drop that hour entry and continue the earlier visit.
+local function TakeCountBack(row, open)
+    local back = type(open) == "table" and open.reentry or nil
+    if type(row) ~= "table" or type(back) ~= "table" then return false end
+    if type(back.copy) ~= "number" then return false end
+    local list = row.hour
+    if type(list) == "table" then
+        for i = #list, 1, -1 do
+            local entry = list[i]
+            if type(entry) == "table" and entry.at == open.entered then
+                table.remove(list, i)
+                hourSnap = nil
+                break
+            end
+        end
+    end
+    if type(row.live) ~= "table" then row.live = {} end
+    if type(back.key) == "string" then
+        row.live[back.key] = { name = open.instance or "", at = back.at, copy = back.copy }
+    end
+    local prior = back.run
+    if type(prior) ~= "table" then
+        open.copy = back.copy
+        open.reentry = nil
+        return true
+    end
+    prior.loot = (prior.loot or 0) + (open.loot or 0)
+    prior.xp = (prior.xp or 0) + (open.xp or 0)
+    prior.deaths = (prior.deaths or 0) + (open.deaths or 0)
+    AddRep(prior, open.rep)
+    local gap = (open.entered or 0) - (prior.left or open.entered or 0)
+    if gap > 0 then prior.skipped = (prior.skipped or 0) + gap end
+    prior.left = nil
+    prior.copy = back.copy
+    prior.reentry = nil
+    if open.lastXP ~= nil then prior.lastXP = open.lastXP end
+    if open.lastMax ~= nil then prior.lastMax = open.lastMax end
+    local runs = row.runs
+    if type(runs) == "table" then
+        for i = 1, #runs do
+            if runs[i] == prior then
+                table.remove(runs, i)
+                break
+            end
+        end
+    end
+    row.open = prior
+    return true
+end
+
+local function TakeSameCopy(name, mapID, difficulty, seen)
     local row = Mine(false)
     local runs = row and row.runs
     if type(runs) ~= "table" then return end
+    row.reentry = nil
     local mine = CharLives(false)
-    local stored = mine and mine[CopyKey(mapID, difficulty, name)]
+    local key = CopyKey(mapID, difficulty, name)
+    local stored = mine and mine[key]
     if not stored then return end
     local now = time()
     local grouped = false
@@ -1341,13 +1458,48 @@ local function TakeSameCopy(name, mapID, difficulty)
             -- A different group is a new copy. Drop the stamp so this zone-in counts,
             -- and leave the old visit in the history.
             if GroupsDiffer(run.group, current, grouped) then
-                mine[CopyKey(mapID, difficulty, name)] = nil
+                mine[key] = nil
                 return
             end
-            table.remove(runs, i)
-            return run
+            local zone = ObservedZone(seen)
+            local saved = type(stored.copy) == "number" and stored.copy or nil
+            -- The same zone id is this copy. Resume it, and do not count again.
+            if zone and saved and zone == saved then
+                table.remove(runs, i)
+                return run
+            end
+            -- No readable zone id, or a different one. A real leave already closed
+            -- this visit, so the zone-in counts. A matching id later can undo it.
+            RememberReentry(row, stored, run, key)
+            mine[key] = nil
+            return
         end
     end
+end
+
+-- A plain zone id learned while the visit is open. A match for the copy this
+-- zone-in replaced takes that hour entry back. Anything else is recorded on
+-- the stamp, so the next leave can tell this copy from the one after a reset.
+local function NoteZone(zone)
+    if type(zone) ~= "number" or zone == 0 then return end
+    local row = Mine(false)
+    local open = row and row.open
+    if type(open) ~= "table" then return end
+    local back = open.reentry
+    if type(back) == "table" and back.copy == zone then
+        if TakeCountBack(row, open) then
+            if WarnHour then WarnHour() end
+            if UpdateFrame then UpdateFrame() end
+            if UI and UI.RefreshPage then UI:RefreshPage(true) end
+        end
+        return
+    end
+    if type(back) == "table" then open.reentry = nil end
+    local lives = CharLives(true)
+    local place = CopyKey(open.mapID or 0, open.difficulty, open.instance)
+    local stored = type(lives) == "table" and lives[place] or nil
+    if type(stored) == "table" then stored.copy = zone end
+    open.copy = zone
 end
 
 BeginRun = function(name, kind, difficulty, mapID, announce)
@@ -1367,6 +1519,7 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
         NoteInstanceEntry(name, mapID, difficulty, false)
         NoteGroup(open)
         SetRunEvents(true)
+        if ReadZone then NoteZone(ReadZone()) end
         UpdateFrame()
         return
     end
@@ -1376,6 +1529,7 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
     local prior = TakeSameCopy(name, mapID, difficulty)
     local who = row.name or ""
     if prior then
+        row.reentry = nil
         local now = time()
         local skipped = now - (tonumber(prior.left) or now)
         if skipped < 0 then skipped = 0 end
@@ -1386,26 +1540,40 @@ BeginRun = function(name, kind, difficulty, mapID, announce)
             kind = kind, difficulty = difficulty,
             entered = prior.entered or now, skipped = skipped,
             loot = prior.loot or 0, xp = prior.xp or 0, deaths = prior.deaths or 0,
-            rep = prior.rep, group = prior.group,
+            rep = prior.rep, group = prior.group, copy = prior.copy,
         }
         NoteGroup(row.open)
         NoteInstanceEntry(name, mapID, difficulty, false)
         NoteXP(true)
         SetRunEvents(true)
+        if ReadZone then NoteZone(ReadZone()) end
         if announce then AnnounceResume(row.open) end
         UpdateFrame()
         UI:RefreshPage(true)
         return
     end
+    local back = row.reentry
+    row.reentry = nil
+    local now = time()
     row.open = {
         name = who, class = row.class, level = row.level,
         instance = name, mapID = mapID, kind = kind, difficulty = difficulty,
-        entered = time(), loot = 0, xp = 0, deaths = 0,
+        entered = now, loot = 0, xp = 0, deaths = 0,
     }
+    if type(back) == "table" then row.open.reentry = back end
     NoteGroup(row.open)
-    NoteInstanceEntry(name, mapID, difficulty, announce and true or false)
+    local countIt = announce and true or false
+    NoteInstanceEntry(name, mapID, difficulty, countIt)
+    if countIt then
+        local lives = row.live
+        local stamped = type(lives) == "table" and lives[CopyKey(mapID, difficulty, name)]
+        if type(stamped) == "table" and type(stamped.at) == "number" then
+            row.open.entered = stamped.at
+        end
+    end
     NoteXP(true)
     SetRunEvents(true)
+    if ReadZone then NoteZone(ReadZone()) end
     if announce then AnnounceEnter(row.open) end
     UpdateFrame()
     UI:RefreshPage(true)
@@ -1417,8 +1585,8 @@ local function SyncZone(announce)
     if state == "secret" then return end
     if state ~= "in" then
         local open = OpenRun()
-        -- Releasing spirit lands at the graveyard. That is still this visit.
-        if open and PlayerGhost() ~= false then
+        -- A ghost, or a death the client kept secret, is still this visit.
+        if open and KeepsVisit(PlayerGhost()) then
             if not open.seen then open.seen = time() end
             SetRunEvents(true)
             UpdateFrame()
@@ -1429,6 +1597,30 @@ local function SyncZone(announce)
         return
     end
     BeginRun(name, kind, difficulty, mapID, announce)
+end
+
+-- Target, mouseover, and nameplates. A cast GUID arrives on its own event.
+-- Outdoor GUIDs and secrets return nothing, and this does not poll.
+local function UnitCopy(unit)
+    if type(unit) ~= "string" or unit == "" or not UnitGUID then return end
+    if Secret(unit) then return end
+    return CopyParts(UnitGUID(unit))
+end
+
+ReadZone = function()
+    local zone = UnitCopy("target")
+    if zone then return zone end
+    zone = UnitCopy("mouseover")
+    if zone then return zone end
+    if not (C_NamePlate and C_NamePlate.GetNamePlates) then return end
+    local plates = C_NamePlate.GetNamePlates()
+    if type(plates) ~= "table" or Secret(plates) then return end
+    for i = 1, #plates do
+        local plate = plates[i]
+        local unit = type(plate) == "table" and plate.namePlateUnitToken or nil
+        zone = UnitCopy(unit)
+        if zone then return zone end
+    end
 end
 
 -------------------------------------------------------------------------------
@@ -1724,6 +1916,19 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "GROUP_ROSTER_UPDATE" then
         local open = OpenRun()
         if open then NoteGroup(open) end
+    elseif event == "PLAYER_TARGET_CHANGED" or event == "UPDATE_MOUSEOVER_UNIT" then
+        if ReadZone then NoteZone(ReadZone()) end
+    elseif event == "NAME_PLATE_UNIT_ADDED" then
+        local unit = ...
+        if type(unit) == "string" and not Secret(unit) and UnitGUID then
+            NoteZone(CopyParts(UnitGUID(unit)))
+        end
+    elseif event == "UNIT_SPELLCAST_SENT" then
+        local _, _, castGUID = ...
+        NoteZone(CopyParts(castGUID))
+    elseif event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
+        local _, castGUID = ...
+        NoteZone(CopyParts(castGUID))
     elseif event == "UPDATE_INVENTORY_DURABILITY" then
         QueueSheet()
     elseif event == "PLAYER_XP_UPDATE" or event == "PLAYER_LEVEL_UP" then
