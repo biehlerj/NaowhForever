@@ -25,6 +25,8 @@ Setup.ITEMS = {
         blurb = "Small tweaks that make the game smoother." },
     journal = { addon = "NaowhForever_DungeonJournal", db = "journal", key = "enabled",
         blurb = "What drops in every dungeon and raid." },
+    instanceTracker = { addon = "NaowhForever_InstanceTracker", db = "instanceTracker", key = "enabled",
+        blurb = "Dungeon and raid visits, and this hour." },
     bis = { addon = "NaowhForever_BiS", db = "qol", key = "bis",
         blurb = "Your best gear, called out when it drops." },
     training = { addon = "NaowhForever_Training", db = "training", key = "enabled",

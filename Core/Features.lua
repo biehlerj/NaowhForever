@@ -187,6 +187,9 @@ ns.FEATURES = {
         focus = true,
         flagButton = false,
     },
+    instanceTracker = {
+        enabled = false,
+    },
     swingTimer = {
         enabled = true,
         queueHighlight = true,

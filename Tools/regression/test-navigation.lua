@@ -214,7 +214,7 @@ local UI = ns.UI
 ns.BuildQoLInterfacePage = function(parent, y) return y end
 for _, name in ipairs({ "JournalSettings", "DiscoverySettings", "ProfessionSettings", "MacroSettings", "AuraBuffSettings",
     "ThreatMeterSettings", "SwingTimerSettings", "TopBarSettings", "ActionBarSettings", "TrainingSettings",
-    "CompletoSettings", "PvPSettings" }) do
+    "InstanceTrackerSettings", "CompletoSettings", "PvPSettings" }) do
     ns[name] = UI.ModuleSettings(name, { enabled = false })
 end
 ns.DB = function() return settings end
@@ -246,7 +246,7 @@ Check(Text("ADVENTURE") and Text("COMBAT") and Text("UTILITIES"), "grouped navig
 Check(not Text("Close") and Button("Reload UI") ~= nil, "no footer: Reload UI sits in the header, closing is the X")
 Check(not Text("Custom Reminders"), "unfinished module is absent from navigation")
 Check(Button("Quality of Life").switch == nil, "navigation does not toggle modules")
-for _, name in ipairs({ "Quality of Life", "Dungeon Journal", "Discovery", "BiS List", "Professions",
+for _, name in ipairs({ "Quality of Life", "Dungeon Journal", "Instance Tracker", "Discovery", "BiS List", "Professions",
     "Gear & Trinkets", "Blessings", "AuraBuffs", "Threat Meter", "Swing Timer",
     "Macros", "Action Bars" }) do
     Check(Button(name).icon ~= nil, name .. " is listed with its glyph")
@@ -718,6 +718,13 @@ ns.OpenOptionsWindow("Professions/Settings"); Flush()
 Check(Text("MODULES") ~= nil, "a link to a module that is off lands on Settings, where it is turned back on")
 missingAddOns.NaowhForever_Professions = nil
 
+missingAddOns.NaowhForever_InstanceTracker = true
+for _, page in ipairs(UI.SearchPages()) do
+    Check(not (page.module and page.module.name == "Instance Tracker"),
+        "Instance Tracker is not searched while its addon is not loaded")
+end
+missingAddOns.NaowhForever_InstanceTracker = nil
+
 -- The core owns Unlock Mode.
 ns.ShowUnlockMode(); Flush()
 Check(Text("HUD Editor") and Text("Exit Config") and not Text("Snap Elements"), "the core opens the HUD Editor")
@@ -770,16 +777,20 @@ end
 -- With Gear & Trinkets and Blessings off, AuraBuffs is the first COMBAT module, listed after
 -- Macros; the group still sits above UTILITIES.
 missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = true, true
+missingAddOns.NaowhForever_InstanceTracker = true
 local built = #frames
 LoadWindow()
 ns.OpenOptionsWindow(); Flush()
-local headY = {}
+local headY, trackerNav = {}, false
 for i = built + 1, #frames do
     local f = frames[i]
     if (f.text == "COMBAT" or f.text == "UTILITIES") and f.points.TOPLEFT then headY[f.text] = f.points.TOPLEFT[4] end
+    if f.text == "Instance Tracker" and f:IsShown() then trackerNav = true end
 end
 Check(headY.COMBAT and headY.UTILITIES and headY.COMBAT > headY.UTILITIES, "COMBAT stays above UTILITIES with its first modules off")
+Check(not trackerNav, "Instance Tracker is left out of the sidebar while its addon is not loaded")
 missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = nil, nil
+missingAddOns.NaowhForever_InstanceTracker = nil
 
 -- Quality of Life is its own addon. The Top Bar needs it (its card sits on QoL > Interface), so
 -- switching QoL off takes the Top Bar with it; while QoL is not loaded, the sidebar drops it and

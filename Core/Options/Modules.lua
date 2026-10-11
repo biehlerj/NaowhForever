@@ -47,6 +47,15 @@ local MODULES = {
           { name = "Quest Tracker", reuse = true },
           { name = "Map", reuse = true },
       } },
+    -- This hour and the visit history are a window of their own (open); only the settings live here.
+    { name = "Instance Tracker", group = "ADVENTURE", navIcon = "person", settings = "InstanceTrackerSettings",
+      addon = "NaowhForever_InstanceTracker",
+      open = "ToggleInstanceTrackerWindow",
+      command = "instance", short = "Instance", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
+      subtitle = "Visits, and how many new instances this account has entered this hour.",
+      tabs = {
+          { name = "Settings", reuse = true },
+      } },
     { name = "BiS List", group = "ADVENTURE", navIcon = "trophy", settings = "QoLSettings", enabledKey = "bis",
       addon = "NaowhForever_BiS",
       open = "ToggleBisWindow",
