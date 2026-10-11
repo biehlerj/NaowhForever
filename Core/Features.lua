@@ -149,6 +149,7 @@ ns.FEATURES = {
         craftProfitList = false,
         buyMaterials = false,
         buyVendor = false,
+        disenchant = false,
     },
     macros = {
         enabled = true,
