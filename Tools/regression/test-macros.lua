@@ -8,7 +8,17 @@ local function Read(path)
 end
 local foodSource = Read("NaowhForever_QoL/Loot/FoodBar.lua")
 local MACRO_FILES = { "Macros.lua", "Constants.lua", "Data/Items.lua", "Commands.lua", "Smart.lua", "Profile.lua" }
-local sources = { Read("Core/Features.lua"), Read("Shared/Game/Consumables.lua"), foodSource }
+local sources = { Read("Core/Features.lua"), Read("Shared/Game/Consumables.lua"), Read("Shared/Game/ActionKeys.lua"),
+    Read("Shared/UI/ItemBar.lua"), Read("Shared/UI/Anchor.lua"), foodSource }
+
+-- The Food & Drink Bar's defaults, as Core/Settings.lua declares them.
+local FOOD_DEFAULTS = (function()
+    local settings = Read("Core/Settings.lua"):gsub("\r\n", "\n")
+    local block = settings:match("\n(    foodBar = F%.foodBar.-)\n    consumableBar = ")
+    local chunk = assert(loadstring("return {\n" .. block .. "\n}"))
+    setfenv(chunk, { F = { foodBar = false } })
+    return chunk()
+end)()
 for _, file in ipairs(MACRO_FILES) do sources[#sources + 1] = Read("NaowhForever_Macros/" .. file) end
 
 local FOOD, DRINK = "Food", "Drink"
@@ -31,10 +41,12 @@ local function Fixture(opts)
     local combat, group = false, opts.group
     local consts = { MAX_ACCOUNT_MACROS = opts.max or 30, MAX_CHARACTER_MACROS = opts.maxChar or 30 }
     local frames = {}
+    local globals = {}
+    local bindings, actions, timers = {}, {}, {}
     local function Noop() end
     local frameMeta = { __index = function() return Noop end }
     local function Frame(name)
-        local fr = { name = name, events = {}, attrs = {}, shown = true }
+        local fr = { name = name, events = {}, attrs = {}, shown = true, level = 1 }
         setmetatable(fr, frameMeta)
         function fr:SetScript(k, fn) if k == "OnEvent" then self.handler = fn end end
         function fr:RegisterEvent(event) self.events[event] = true end
@@ -50,12 +62,20 @@ local function Fixture(opts)
         function fr:SetDesaturated(v) self.desaturated = v end
         function fr:SetText(v) self.text = v end
         function fr:CreateTexture() return Frame() end
+        function fr:GetFrameLevel() return self.level end
+        function fr:ClearAllPoints() self.point = nil end
+        function fr:SetPoint(...) self.point = { ... } end
+        function fr:IsVisible() return self.shown end
+        function fr:GetName() return self.name end
+        function fr:GetAttribute(k) return self.attrs[k] end
         frames[#frames + 1] = fr
+        if name then globals[name] = fr end
         return fr
     end
 
     local S = {}
-    local QOL_DEFAULTS = { enabled = true, foodBar = false, foodBarSize = 36 }
+    local QOL_DEFAULTS = setmetatable({ enabled = true }, { __index = FOOD_DEFAULTS })
+    local cards = {}
     local Q = {}
     function Q.Get(k)
         if qol[k] ~= nil then return qol[k] end
@@ -63,10 +83,23 @@ local function Fixture(opts)
     end
     function Q.Set(k, v) qol[k] = v end
     function Q.DB() return qol end
+    function Q.OnChange() end
     local mover
     local ns = {
+        -- The Consumable Bar module, loaded before QoL (its OptionalDeps) when it is on.
+        ConsumableBar = opts.consumableBarLoaded and {} or nil,
         QoLSettings = Q,
-        Shared = { Style = dofile("Tools/regression/shared_style.lua") },
+        Shared = {
+            Style = dofile("Tools/regression/shared_style.lua"),
+            -- The settings kit, keeping the cards each page declares.
+            Settings = {
+                Group = function(title) return { group = title } end,
+                Page = function(key)
+                    return { Card = function(_, spec) cards[key .. ":" .. spec.id] = spec; return spec end }
+                end,
+            },
+        },
+        THEME = { fg = { r = 1, g = 1, b = 1 }, accent = { r = 0, g = 0.6, b = 1 }, muted = { r = 0.5, g = 0.5, b = 0.5 } },
         SettingsRoot = function() return { macros = settings, qol = qol } end,
         Print = function(msg) printed[#printed + 1] = msg end,
         AccountSettings = function() return account end,
@@ -77,8 +110,9 @@ local function Fixture(opts)
         Border = function() end,
         PixelInset = function() end,
         UI = {
-            AttachMover = function(_, label, _, page, feature)
-                mover = { label = label, page = page, feature = feature }
+            FontPath = function(name) return name ~= "" and name or "font.ttf" end,
+            AttachMover = function(_, label, onMoved, page, feature)
+                mover = { label = label, page = page, feature = feature, onMoved = onMoved }
                 return Frame()
             end,
             STATUS = setmetatable({}, { __index = function() return "" end }),
@@ -149,6 +183,12 @@ local function Fixture(opts)
         end,
         DeleteMacro = function(i) deleted = deleted + 1; table.remove(macros, i) end,
         InCombatLockdown = function() return combat end,
+        C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end },
+        GetBindingKey = function(command) return bindings[command] end,
+        GetBindingText = function(key) return "*" .. key end,
+        GetActionInfo = function(slot) local a = actions[slot]; if a then return a[1], a[2] end end,
+        ActionBarButtonEventsFrame = { frames = {} },
+        RANGE_INDICATOR = "RANGE",
         CreateFrame = function(_, name) return Frame(name) end,
         hooksecurefunc = function(tbl, key, fn)
             local orig = tbl[key]
@@ -158,8 +198,11 @@ local function Fixture(opts)
     env.strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
     env._G = { NaowhForever = ns, SLASH_SAY1 = "/say", SLASH_CAST1 = "/cast", SLASH_SCRIPT1 = "/run",
         SLASH_TARGET_MARKER1 = "/tm", EMOTE1_CMD1 = "/wave" }
-    setmetatable(env, { __index = _G })
+    setmetatable(env._G, { __index = globals })
+    setmetatable(env, { __index = function(_, k) if globals[k] ~= nil then return globals[k] end return _G[k] end })
+    local foodFirst
     for _, text in ipairs(sources) do
+        if text == foodSource then foodFirst = #frames + 1 end
         local chunk
         if setfenv then
             chunk = assert(loadstring(text)); setfenv(chunk, env)
@@ -169,7 +212,27 @@ local function Fixture(opts)
         chunk()
     end
 
-    local t = { ns = ns }
+    local t = { ns = ns, cards = cards, bindings = bindings, actions = actions, frame = Frame }
+    -- The Food & Drink Bar's own event frame: the first frame its file makes.
+    function t.FoodEvents() return frames[foodFirst] end
+    -- Timers run when the test lets a frame pass.
+    function t.Tick()
+        local due = {}
+        for i, fn in ipairs(timers) do due[i] = fn end
+        for i = #timers, 1, -1 do timers[i] = nil end
+        for _, fn in ipairs(due) do fn() end
+    end
+    -- An action button on the game's own bars: its slot, and the key text it shows.
+    function t.ActionButton(slot, hotkey)
+        local btn = Frame()
+        btn.action = slot
+        btn.HotKey = Frame()
+        btn.HotKey.text = hotkey
+        function btn.HotKey:GetText() return self.text end
+        local list = env.ActionBarButtonEventsFrame.frames
+        list[#list + 1] = btn
+        return btn
+    end
     function t.Fire(event)
         for _, fr in ipairs(frames) do
             if fr.events[event] then fr.handler(fr, event) end
@@ -549,9 +612,108 @@ do
     Check("Macros off leaves the bar up", bar.shown, true)
     t.SetQoL("foodBar", false)
     Check("food bar hidden when off", bar.shown, false)
+    local heard = 0
+    for _ in pairs(t.FoodEvents().events) do heard = heard + 1 end
+    Check("off, it listens to nothing, not even loading screens", heard, 0)
     t.Bags({ 1179 })
     t.Fire("BAG_UPDATE_DELAYED")
     Check("bag changes ignored while off", food.attrs.item1, "item:4599")
+end
+
+-- Show Count and Show Keybinds, on the same rows as the Consumable Bar's.
+do
+    local t = Fixture({ qol = { foodBar = true }, bags = { 8766, 5349 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    t.Tick()
+    local bar = t.FoodBar()
+    local food, drink = bar.buttons[1], bar.buttons[2]
+    local foodEvents, registers = t.FoodEvents(), 0
+    local register = foodEvents.RegisterEvent
+    function foodEvents:RegisterEvent(event)
+        registers = registers + 1
+        register(self, event)
+    end
+    t.SetQoL("foodBarTextX", 3)
+    t.SetQoL("foodBarKeySize", 14)
+    Check("its look restyles without applying the bar", registers, 0)
+    Check("the count follows at once", food.count.point[4], 3 - t.ns.Shared.ItemBar.TEXT_INSET)
+    Check("the count shows by default, as it always has", food.count.shown, true)
+    Check("keys are off by default", food.key.shown, false)
+    Check("off, nothing listens for binding changes", t.Listening("UPDATE_BINDINGS"), false)
+    t.SetQoL("foodBarShowCount", false)
+    Check("Show Count off hides it", food.count.shown, false)
+    t.bindings["CLICK NaowhForeverFoodBarFood:LeftButton"] = "CTRL-F"
+    t.actions[25] = { "item", 8766 }
+    t.ActionButton(25, "5")
+    t.SetQoL("foodBarKeybinds", true)
+    t.Tick()
+    Check("the key bound to its button", food.key.text, "*CTRL-F")
+    Check("or the key of an action button holding its item", drink.key.text, "5")
+    Check("keys follow binding changes", t.Listening("UPDATE_BINDINGS"), true)
+    t.actions[25] = nil
+    t.Fire("ACTIONBAR_SLOT_CHANGED")
+    Check("it waits a frame for the game to redraw its own keys", drink.key.text, "5")
+    t.Tick()
+    Check("then follows the bars", drink.key.shown, false)
+    local rows, labels = t.cards["QoL/Loot & Items:foodBar"].rows, {}
+    for _, row in ipairs(rows) do
+        if row.label then labels[row.label] = row end
+    end
+    Check("Show Count with its cog", labels["Show Count"].cog.title, "Count Text")
+    Check("its rows behind it", labels["Count Size"].under, "Show Count")
+    Check("Show Keybinds with its cog", labels["Show Keybinds"].cog.title, "Keybind Text")
+    Check("on the Food & Drink Bar's own keys", labels["Count Size"].key, "foodBarFontSize")
+    Check("the same rows as the Consumable Bar's", #t.ns.Shared.ItemBar.TextRows(t.ns.QoLSettings, "x"), 16)
+    Check("an Anchor section", labels["Anchor to a Unit Frame"].buttonText, "Choose")
+    local studio = t.cards["QoL/Loot & Items:foodBar"].studio
+    local preview = studio.new(t.frame())
+    studio.paint(preview, "stocked")
+    Check("the preview shows the key you bound", preview.buttons[1].key.text, "*CTRL-F")
+    Check("and a sample where none is bound", preview.buttons[2].key.text, "F2")
+    Check("with the HUD Editor's anchoring for elements", labels["Anchor to an Element"].buttonText, "HUD Editor")
+    Check("its points wait for a frame", labels["Bar Point"].needs(), false)
+end
+
+-- Anchored to a unit frame; Naowh Forever's own elements are the HUD Editor's to anchor to.
+do
+    local t = Fixture({ qol = { foodBar = true }, bags = { 5349 } })
+    local unit = t.frame("PlayerFrame")
+    function unit:IsProtected() return true end
+    unit.attrs.unit = "player"
+    t.Fire("PLAYER_ENTERING_WORLD")
+    local bar = t.FoodBar()
+    Check("on the screen at first", bar.point[3], "CENTER")
+    t.SetQoL("foodBarAnchor", "PlayerFrame")
+    t.SetQoL("foodBarAnchorPoint", "TOPLEFT")
+    t.SetQoL("foodBarAnchorRelPoint", "BOTTOMLEFT")
+    t.SetQoL("foodBarY", -4)
+    Check("anchored to the unit frame", bar.point[2], unit)
+    Check("at the points and offset chosen", bar.point[1] .. bar.point[3] .. bar.point[5], "TOPLEFTBOTTOMLEFT-4")
+    t.Mover().onMoved({ point = "TOP", relPoint = "TOP", x = 1, y = 2 })
+    Check("dragged in the HUD Editor, it is on the screen again", t.qol.foodBarAnchor, "UIParent")
+    Check("where it was dropped", bar.point[1] .. bar.point[5], "TOP2")
+    local other = t.frame("SomeAddonFrame")
+    t.SetQoL("foodBarAnchor", "SomeAddonFrame")
+    Check("another addon's frame cannot hold it", bar.point[2] ~= other, true)
+    local consumable = t.frame("NaowhForeverConsumableBar")
+    t.SetQoL("foodBarAnchor", "NaowhForeverConsumableBar")
+    Check("nor the Consumable Bar: the HUD Editor anchors elements", bar.point[2] ~= consumable, true)
+end
+
+-- With the Consumable Bar on, its card sits under the Consumable Bar; search still finds it.
+do
+    local fresh = Fixture({ consumableBarLoaded = true, qol = { foodBar = true }, bags = { 5349 } })
+    Check("loaded but switched off, as on a fresh install: the card stays on Loot & Items",
+        fresh.cards["QoL/Loot & Items:foodBar"] ~= nil and fresh.cards["Consumable Bar/Settings:foodBar"] == nil, true)
+    local missing = Fixture({ qol = { foodBar = true, consumableBar = true }, bags = { 5349 } })
+    Check("switched on but not loaded: on Loot & Items too", missing.cards["QoL/Loot & Items:foodBar"] ~= nil, true)
+    local t = Fixture({ consumableBarLoaded = true, qol = { foodBar = true, consumableBar = true }, bags = { 5349 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    local card = t.cards["Consumable Bar/Settings:foodBar"]
+    Check("the card moves under the Consumable Bar", card ~= nil and t.cards["QoL/Loot & Items:foodBar"], nil)
+    Check("its name still says food", card.name:find("Food") ~= nil, true)
+    Check("the same switch", card.switch, "foodBar")
+    Check("the HUD Editor opens it there", t.Mover().feature, "Consumable Bar/Settings:foodBar")
 end
 
 -- No mana (warriors and rogues): the food button alone, and the drink button does nothing.
