@@ -493,6 +493,10 @@ NaowhForever_QoL/
 - A quest a player shared with you is not shared again when you accept it: the group already has it.
 - Sharing makes the same call as Blizzard's Share button (QuestLogPushQuest). It is blocked in combat, so a quest accepted mid-fight is not shared.
 - An NPC with several quests: the first finished one is handed in, else the first on offer is opened. A choice of rewards waits for the player unless the profile has a pick for it.
+- The quest Modifier key keeps its saved key `questSkipModifier`; `questModifierMode` says whether holding it skips the quest steps (the default) or is what triggers them.
+- Auto Gossip picks a lone option only when its icon is one of `GOSSIP_ICON_PATHS` (vendor, taxi, trainer, banker, auctioneer, stable master), resolved with GetFileIDFromPath on first use. The binder (hearthstone), the generic gossip icon and the rest are never picked, so nothing that costs money or moves you. Without GetFileIDFromPath it does nothing.
+- Auto Gossip leaves a flagged `selectOptionWhenOnlyOption` option to Blizzard's gossip frame, which selects it before GOSSIP_SHOW reaches the addon, and leaves any window the game forces open (`ForceGossip`). It never acts with a quest listed (that is the quest automation's), with more than one option, with an option that is not Available, or in combat, and selects once until GOSSIP_CLOSED.
+- Auto Gossip has its own Modifier and Modifier Does, as the quests do. `SelectOptionByIndex` is not hardware-gated in the API documentation (its secret-argument rule only allows untainted callers), and Blizzard's gossip frame makes the same call on show.
 
 ### Pet Tracker
 - Demonic Sacrifice leaves one of `SACRIFICE_BUFFS` on the warlock in place of the demon, so a warlock who sacrificed theirs is left alone.
