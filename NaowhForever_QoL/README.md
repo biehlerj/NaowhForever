@@ -87,6 +87,7 @@ NaowhForever_QoL/
   Travel/
     FlightData.lua      each flight route's flown length (ns.FLIGHT_ROUTES), generated
     Flight.lua          the Flight Timer, Flight Games and flight times on the flight map
+    FlightPoint.lua     the reminder to learn a town's flight point
     AimTrainer.lua      the Aim Trainer (/nfaim, ns.AimRules, ns.AimPlay, ns.AimOffer)
     AimBoard.lua        the Aim Trainer's leaderboard (ns.AimBoard)
     QuizData.lua        the quiz questions (ns.QUIZ_QUESTIONS)
@@ -433,6 +434,17 @@ NaowhForever_QoL/
   layout, so it is faded (SetAlpha) rather than hidden, and only outside combat.
 - The Flight Timer's mover reports offsets in the timer's own scaled units; they are saved in
   screen units so the Scale slider resizes it in place.
+- Flight Point reads `C_TaxiMap.GetTaxiNodesForMap`, which Forever answers without the flight
+  master open, including `isUndiscovered`. It does not read Journeys' `journeyFlights`, which
+  fills in only after the flight map opens.
+- A node is reminded only when it is undiscovered and its faction is neutral or the player's.
+  An Alliance character in Undercity sees nothing, because that flight point is Horde.
+- A capital (`ns.TownCapitals`) counts as the whole city. Anywhere else the player has to be
+  within 400 yards, which covers a town and not the next one: the Crossroads and Ratchet are
+  about 1,200 yards apart.
+- It checks on a zone change, when you stop, when the flight map closes, when a flight takes or
+  returns control, and when combat starts or ends. While the switch is off, none of those events
+  are registered and the frame is not built.
 - The Aim Trainer's leaderboard sends your best in each mode to your group and guild while Share
   My Scores is on, once you have one (nothing is registered before your first best), and keeps
   the bests others send account-wide in `aimBoard[mode][GUID]` (Forever names are not unique) for
