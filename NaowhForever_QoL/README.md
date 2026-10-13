@@ -438,17 +438,19 @@ NaowhForever_QoL/
   the continent when that list is empty. `isUndiscovered` is not set for a classic flight path you
   have not spoken to. Until this character opens a flight master's map, a friendly point in range
   asks you to open one to save the points you know, and only a node the map marks undiscovered is
-  named. The snapshot is this
-  character's GUID in `flightPoints` (`TAXIMAP_OPENED`). A name cannot tell two characters apart.
+  named. Talking to a flight master (a gossip option with the taxi icon) records that town's node
+  as known, so the reminder hides without opening the flight map, and does not mark the snapshot
+  complete. The snapshot is this character's GUID in `flightPoints` (`TAXIMAP_OPENED`), and opening
+  the map still replaces every node from `GetAllTaxiNodes`. A name cannot tell two characters apart.
 - A node is reminded only when it is unlearned and its faction is neutral or the player's.
   An Alliance character in Undercity sees nothing, because that flight point is Horde.
 - A capital (`ns.TownCapitals`) counts as the whole city. Anywhere else the player has to be
   within 400 yards, or standing in the subzone of that flight point, which is how the Auberdine
   inn counts. The Crossroads and Ratchet are about 1,200 yards apart, so one town does not
   light the next. An empty subzone matches nothing.
-- It checks on a zone change, when you stop, when the flight map opens or closes, when a flight takes or
-  returns control, and when combat starts or ends. While the switch is off, none of those events
-  are registered and the frame is not built.
+- It checks on a zone change, when you stop, when you talk to a flight master, when the flight map
+  opens or closes, when a flight takes or returns control, and when combat starts or ends. While the
+  switch is off, none of those events are registered and the frame is not built.
 - The Aim Trainer's leaderboard sends your best in each mode to your group and guild while Share
   My Scores is on, once you have one (nothing is registered before your first best), and keeps
   the bests others send account-wide in `aimBoard[mode][GUID]` (Forever names are not unique) for

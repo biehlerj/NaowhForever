@@ -22,15 +22,16 @@ local STORE = "flightPoints"
 local LEARN, ASK = "learn", "ask"
 local TEXT_ALERT = "Flight Point"
 local SAMPLE_PLACE = "Ratchet"
+local TAXI_ICON = "Interface\\GossipFrame\\TaxiGossipIcon"
 
 local TEXT = ns.L("Learn the %s flight point")
 local OPEN = ns.L("Open a flight master's map to save the points you know")
 
 local EVENTS = { "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD",
-    "PLAYER_STOPPED_MOVING", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED",
-    "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }
+    "PLAYER_STOPPED_MOVING", "GOSSIP_SHOW", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "PLAYER_CONTROL_LOST",
+    "PLAYER_CONTROL_GAINED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }
 
-local frame, unlocked, inCombat
+local frame, unlocked, inCombat, taxiIcon
 local events = CreateFrame("Frame")
 
 local function On()
@@ -68,6 +69,7 @@ end
 
 local function Kind(node, mine)
     if not (Ours(node.faction) and node.name) then return nil end
+    if mine and node.nodeID and mine[node.nodeID] == true then return nil end
     if node.isUndiscovered then return LEARN end
     if mine and mine.seen then
         if mine[node.nodeID] ~= true then return LEARN end
@@ -129,14 +131,19 @@ local function Candidate(node, map, zone, player, subzone, mine)
 end
 
 local function Scan(map, zone, player, subzone, mine)
-    local bestName, bestDist, ask
+    local bestName, bestDist, bestID, ask, askDist, askID
     for _, node in ipairs(C_TaxiMap.GetTaxiNodesForMap(map)) do
         local kind, place, rank = Candidate(node, map, zone, player, subzone, mine)
         if place == true then return nil, true end
-        if kind == LEARN and (not bestName or rank < bestDist) then bestName, bestDist = place, rank end
-        if kind == ASK then ask = true end
+        if kind == LEARN and (not bestName or rank < bestDist) then
+            bestName, bestDist, bestID = place, rank, node.nodeID
+        elseif kind == ASK and (not ask or rank < askDist) then
+            ask, askDist, askID = true, rank, node.nodeID
+        end
     end
-    return bestName, nil, ask
+    local spoken
+    if bestName then spoken = bestID else spoken = askID end
+    return bestName, nil, ask, spoken
 end
 
 local function Nearest()
@@ -148,9 +155,9 @@ local function Nearest()
     if secret then return nil end
     local subzone, mine = Subzone(), Mine()
     local nodes = C_TaxiMap.GetTaxiNodesForMap(zone)
-    local best, blocked, ask
+    local best, blocked, ask, spoken
     if nodes[1] then
-        best, blocked, ask = Scan(zone, zone, player, subzone, mine)
+        best, blocked, ask, spoken = Scan(zone, zone, player, subzone, mine)
     else
         local info = C_Map.GetMapInfo(zone)
         while info and info.parentMapID and info.parentMapID > 0 do
@@ -158,14 +165,15 @@ local function Nearest()
             info = C_Map.GetMapInfo(parent)
             nodes = C_TaxiMap.GetTaxiNodesForMap(parent)
             if nodes[1] then
-                best, blocked, ask = Scan(parent, zone, player, subzone, mine)
+                best, blocked, ask, spoken = Scan(parent, zone, player, subzone, mine)
                 break
             end
             if not info or info.mapType <= CONTINENT then break end
         end
     end
-    if blocked or best then return best end
-    return nil, ask
+    if blocked then return best end
+    if best then return best, nil, spoken end
+    return nil, ask, spoken
 end
 
 local function Show(place)
@@ -183,6 +191,30 @@ local function Update()
     if place or ask then Show(place) else frame:Hide() end
 end
 
+local function TaxiIcon()
+    if taxiIcon ~= nil then return taxiIcon end
+    local id = GetFileIDFromPath and GetFileIDFromPath(TAXI_ICON)
+    taxiIcon = id and id ~= 0 and id or false
+    return taxiIcon
+end
+
+local function TaxiGossip()
+    local icon = TaxiIcon()
+    if not icon then return end
+    for _, option in ipairs(C_GossipInfo.GetOptions()) do
+        if option.icon == icon then return true end
+    end
+end
+
+local function Spoke()
+    if not TaxiGossip() then return end
+    local _, _, nodeID = Nearest()
+    if not nodeID then return end
+    local mine = Mine(true)
+    if not mine then return end
+    mine[nodeID] = true
+end
+
 local function OnEvent(_, event)
     if event == "PLAYER_REGEN_DISABLED" then
         inCombat = true
@@ -190,6 +222,8 @@ local function OnEvent(_, event)
         inCombat = false
     elseif event == "TAXIMAP_OPENED" then
         Learn()
+    elseif event == "GOSSIP_SHOW" then
+        Spoke()
     end
     Update()
 end

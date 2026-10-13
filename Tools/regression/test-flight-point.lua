@@ -2,8 +2,9 @@
 -- own-faction node in range names the place. Before this character's flight map has been opened,
 -- a friendly node in range asks you to open a flight master's map, unless the map already marks it undiscovered.
 -- A learned node, an enemy node, and a friendly node past 400 yards stay quiet. A capital shows
--- with no distance check. Combat and a taxi hide it. The switch off registers nothing. The
--- snapshot is this character's GUID.
+-- with no distance check. Combat and a taxi hide it. Talking to a flight master records that
+-- town's point without opening the flight map. The switch off registers nothing. The snapshot
+-- is this character's GUID.
 
 local Load = dofile("Tools/regression/load_files.lua")
 
@@ -17,9 +18,11 @@ local AUBERDINE, RATCHET = 26, 80
 local UNREACHABLE, CURRENT = 2, 0
 local SECRET = "secret"
 local GUID = "Player-1-GLYADIN"
+local TAXI, VENDOR = 102, 101
 
 local state = { map = BARRENS, pos = { x = 0, y = 0 }, faction = "Alliance", taxi = false,
-    combat = false, secret = false, guid = GUID, nodes = {}, asked = nil, subzone = "", openNodes = {} }
+    combat = false, secret = false, guid = GUID, nodes = {}, asked = nil, subzone = "", openNodes = {},
+    options = {} }
 local frames, named = {}, {}
 
 local function NewFrame(name)
@@ -143,6 +146,10 @@ local env = {
     UnitOnTaxi = function() return state.taxi end,
     UnitAffectingCombat = function() return state.combat end,
     issecretvalue = function(v) return state.secret and v == SECRET end,
+    GetFileIDFromPath = function(path)
+        if path == "Interface\\GossipFrame\\TaxiGossipIcon" then return TAXI end
+    end,
+    C_GossipInfo = { GetOptions = function() return state.options end },
     C_Map = {
         GetBestMapForUnit = function() return state.map end,
         GetMapInfo = function(id)
@@ -168,16 +175,27 @@ Load({ "NaowhForever_QoL/Travel/FlightPoint.lua" }, env)
 
 Fire("PLAYER_LOGIN")
 check("the switch off registers nothing", not Listening("ZONE_CHANGED") and not Listening("PLAYER_STOPPED_MOVING")
-    and not Listening("TAXIMAP_OPENED") and not Listening("TAXIMAP_CLOSED") and not Listening("PLAYER_REGEN_DISABLED")
-    and not Listening("PLAYER_CONTROL_LOST") and state.asked == nil and named.NaowhForeverFlightPoint == nil)
+    and not Listening("GOSSIP_SHOW") and not Listening("TAXIMAP_OPENED") and not Listening("TAXIMAP_CLOSED")
+    and not Listening("PLAYER_REGEN_DISABLED") and not Listening("PLAYER_CONTROL_LOST")
+    and state.asked == nil and named.NaowhForeverFlightPoint == nil)
 
 S.Set("flightPoint", true)
-check("turning it on listens for a zone change", Listening("ZONE_CHANGED") and Listening("TAXIMAP_OPENED")
-    and Listening("TAXIMAP_CLOSED") and Listening("PLAYER_STOPPED_MOVING") and Listening("PLAYER_CONTROL_LOST"))
+check("turning it on listens for a zone change", Listening("ZONE_CHANGED") and Listening("GOSSIP_SHOW")
+    and Listening("TAXIMAP_OPENED") and Listening("TAXIMAP_CLOSED") and Listening("PLAYER_STOPPED_MOVING")
+    and Listening("PLAYER_CONTROL_LOST"))
 
 state.subzone, state.pos = "Auberdine", nil
 check("a path the map marks undiscovered still says to learn it before any flight map",
     At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 0, false, AUBERDINE) }) == "Learn the Auberdine flight point")
+state.options = { { icon = VENDOR } }
+Fire("GOSSIP_SHOW")
+check("a vendor's gossip leaves that reminder", Text() == "Learn the Auberdine flight point" and account.flightPoints == nil)
+state.options = { { icon = VENDOR }, { icon = TAXI } }
+Fire("GOSSIP_SHOW")
+check("talking to the flight master hides an undiscovered point before any snapshot", Text() == nil
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == nil)
+account.flightPoints = nil
+Fire("ZONE_CHANGED")
 state.pos = { x = 0, y = 0 }
 check("a confirmed gap wins over a nearer point we have not checked",
     At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 50, false, AUBERDINE),
@@ -186,6 +204,11 @@ state.pos = nil
 check("Auberdine's inn asks you to open the flight map before any snapshot",
     At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }) == "Open a flight master's map to save the points you know")
 check("a missing indoor position still counts the subzone as the town", Text() == "Open a flight master's map to save the points you know")
+state.options = { { icon = TAXI } }
+Fire("GOSSIP_SHOW")
+check("talking to the flight master saves the point behind the open-map line", Text() == nil
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == nil)
+account.flightPoints = nil
 state.nodes = { [KALIMDOR] = { Node("Auberdine, Darkshore", ALLIANCE, 8000, true, AUBERDINE) } }
 Fire("ZONE_CHANGED")
 check("an empty zone map uses the continent's flight points",
@@ -200,6 +223,10 @@ state.guid, state.secret = SECRET, true
 state.openNodes = { { nodeID = AUBERDINE, state = CURRENT } }
 Fire("TAXIMAP_OPENED")
 check("a secret GUID leaves the snapshot unwritten", account.flightPoints == nil and Text() == "Open a flight master's map to save the points you know")
+state.options = { { icon = TAXI } }
+Fire("GOSSIP_SHOW")
+check("a secret GUID leaves the spoken point unwritten", account.flightPoints == nil
+    and Text() == "Open a flight master's map to save the points you know")
 state.guid, state.secret = GUID, false
 Fire("TAXIMAP_OPENED")
 check("a snapshot that marks the flight point known hides it", Text() == nil
@@ -208,6 +235,10 @@ check("a snapshot that marks the flight point known hides it", Text() == nil
 state.openNodes = { { nodeID = AUBERDINE, state = UNREACHABLE } }
 Fire("TAXIMAP_OPENED")
 check("an unreachable snapshot keeps the reminder", Text() == "Learn the Auberdine flight point")
+state.options = { { icon = TAXI } }
+Fire("GOSSIP_SHOW")
+check("talking to the flight master hides it without opening the map again", Text() == nil
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == true)
 state.subzone, state.pos = "", { x = 0, y = 0 }
 
 check("an undiscovered neutral node in range names the place",
@@ -276,6 +307,6 @@ check("leaving Unlock Mode hides it when no flight point is nearby", Text() == n
 
 S.Set("flightPoint", false)
 check("turning it off drops the events and hides the line", not Listening("ZONE_CHANGED")
-    and not Listening("PLAYER_CONTROL_LOST") and Text() == nil)
+    and not Listening("GOSSIP_SHOW") and not Listening("PLAYER_CONTROL_LOST") and Text() == nil)
 
 print(checks .. " flight point checks passed")
