@@ -7,9 +7,7 @@ local S = ns.QoLSettings
 local T = ns.THEME
 local Parts, St = ns.Shared.Parts, ns.Shared.Style
 
-local GOLD = { r = 1, g = 0.82, b = 0 }
 local WIDTH, ROOM = 300, 10
-local FONT_SIZE = 22
 local STACK_ORDER = 6
 local TOWN_RANGE = 400
 local ZONE = Enum.UIMapType.Zone
@@ -24,7 +22,6 @@ local STORE = "flightPoints"
 local LEARN, ASK = "learn", "ask"
 local TEXT_ALERT = "Flight Point"
 local SAMPLE_PLACE = "Ratchet"
-local TEXT_RANGE = { 10, 48, 1 }
 
 local TEXT = ns.L("Learn the %s flight point")
 local OPEN = ns.L("Open a flight master's map to save the points you know")
@@ -201,7 +198,7 @@ local function Build()
     frame = CreateFrame("Frame", "NaowhForeverFlightPoint", UIParent)
     frame:SetMovable(true)
     frame:SetClampedToScreen(true)
-    frame.text = ns.Font(frame, FONT_SIZE, "OUTLINE")
+    frame.text = ns.Font(frame, St.TEXT_SIZE, "OUTLINE")
     frame.text:SetPoint("CENTER")
     frame.backdrop = Parts.HudBackdrop(frame, { mode = "none" })
     ns.AlertStack(frame, STACK_ORDER, TEXT_ALERT, PAGE, PAGE .. ":flightPoint")
@@ -211,7 +208,7 @@ local function Restyle()
     local size = S.Get("flightPointFontSize")
     frame.mode = frame.backdrop:SetMode(S.Get("flightPointBackground"))
     Parts.HudFont(frame.text, S.Get("flightPointFont"), size, S.Get("flightPointOutline"), frame.mode)
-    local c = S.Get("flightPointTheme") and T.accent or GOLD
+    local c = S.Get("flightPointCustom") and S.Get("flightPointColor") or T.accent
     frame.text:SetTextColor(c.r, c.g, c.b, 1)
     frame:SetSize(WIDTH, size + ROOM)
 end
@@ -256,9 +253,10 @@ Settings.Page(PAGE, S):Card({
         .. "or your faction's. Until this character opens a flight master's map, it asks you to "
         .. "open one to save the points you know. Hidden in combat. Move it in the HUD Editor.",
     rows = {
-        Settings.Look("flightPoint", { text = true, size = TEXT_RANGE, background = "card" }),
+        Settings.Look("flightPoint", { text = true, size = St.HUD_TEXT_RANGE, background = "card" }),
         Settings.Group("Colors"),
-        { key = "flightPointTheme", label = "Apply Theme to Text Color", toggle = true,
-          help = "The text in the theme's accent color instead of gold." },
+        { key = "flightPointCustom", label = "Custom Color", toggle = true,
+          help = "Your own text color instead of the theme's accent." },
+        { key = "flightPointColor", label = "Text Color", colour = true, needs = "flightPointCustom" },
     },
 })

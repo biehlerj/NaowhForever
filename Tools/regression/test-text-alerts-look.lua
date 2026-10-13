@@ -221,7 +221,7 @@ local ELEMENTS = {
       "QoL/Loot & Items", "durability" },
     { "Pet Tracker", "pet", function(s) return s.named.NaowhForeverPetTracker end, 20, 220, 16,
       "QoL/Combat", "petTracker" },
-    { "Flight Point", "flightPoint", function(s) return s.named.NaowhForeverFlightPoint end, 22, 300, 10,
+    { "Flight Point", "flightPoint", function(s) return s.named.NaowhForeverFlightPoint end, 12, 300, 10,
       "QoL/Travel", "flightPoint" },
 }
 
@@ -272,7 +272,7 @@ do
     local dura = s.named.NaowhForeverDurability
     check("Durability: the card fits its text", dura.w == Width("Low Durability: 20%", 22) + 2 * pad)
     local flight = s.named.NaowhForeverFlightPoint
-    check("Flight Point: the card fits its text", flight.w == Width("Learn the Ratchet flight point", 22) + 2 * pad)
+    check("Flight Point: the card fits its text", flight.w == Width("Learn the Ratchet flight point", 12) + 2 * pad)
 end
 
 do
@@ -330,11 +330,18 @@ do
         and talent.text.g == s.T.accent.g and talent.text.b == s.T.accent.b)
 
     local flight = s.named.NaowhForeverFlightPoint
-    check("Flight Point: gold by default", flight.text.r == 1 and flight.text.g == 0.82 and flight.text.b == 0)
-    s.S.Set("flightPointTheme", true)
-    s.ns.ShowUnlockMode()
-    check("Flight Point: Apply Theme shows it in the accent", flight.text.r == s.T.accent.r
+    check("Flight Point: the accent by default", flight.text.r == s.T.accent.r
         and flight.text.g == s.T.accent.g and flight.text.b == s.T.accent.b)
+    local flightRows = s.rows("QoL/Travel", "flightPoint")
+    local swatch = s.S.Default("flightPointColor")
+    check("Flight Point: Custom Color off hides Text Color, and the swatch starts on the shipped accent",
+        flightRows.flightPointCustom and s.ns.Shared.Settings.Off(flightRows.flightPointColor)
+        and swatch.r == 0 and swatch.g == 0x91 / 255 and swatch.b == 0xed / 255)
+    s.S.Set("flightPointColor", { r = 0.2, g = 0.4, b = 0.6 })
+    s.S.Set("flightPointCustom", true)
+    check("Flight Point: Custom Color paints the saved color", flight.text.r == 0.2
+        and flight.text.g == 0.4 and flight.text.b == 0.6
+        and not s.ns.Shared.Settings.Off(flightRows.flightPointColor))
 
     -- 20% with Warn Below 25 sits halfway from red to the top colour.
     local dura = s.named.NaowhForeverDurability

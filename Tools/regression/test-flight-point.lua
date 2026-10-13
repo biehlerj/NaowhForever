@@ -74,8 +74,9 @@ local function At(map, list)
 end
 
 local values, defaults = {}, {
-    enabled = true, flightPoint = false, flightPointFont = "", flightPointFontSize = 22,
-    flightPointOutline = "OUTLINE", flightPointBackground = "none", flightPointTheme = false,
+    enabled = true, flightPoint = false, flightPointFont = "", flightPointFontSize = 12,
+    flightPointOutline = "OUTLINE", flightPointBackground = "none", flightPointCustom = false,
+    flightPointColor = { r = 0, g = 0x91 / 255, b = 0xed / 255 },
 }
 local S = { Get = function(k)
     local v = values[k]
