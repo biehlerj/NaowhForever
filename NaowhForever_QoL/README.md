@@ -451,6 +451,7 @@ NaowhForever_QoL/
 - It checks on a zone change, when you stop, when you talk to a flight master, when the flight map
   opens or closes, when a flight takes or returns control, and when combat starts or ends. While the
   switch is off, none of those events are registered and the frame is not built.
+- A stop reuses the zone's flight points until the zone changes or the flight map opens or closes.
 - The Aim Trainer's leaderboard sends your best in each mode to your group and guild while Share
   My Scores is on, once you have one (nothing is registered before your first best), and keeps
   the bests others send account-wide in `aimBoard[mode][GUID]` (Forever names are not unique) for

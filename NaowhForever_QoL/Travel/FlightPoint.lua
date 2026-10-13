@@ -20,7 +20,7 @@ local PAGE = "QoL/Travel"
 local PLAYER = "player"
 local STORE = "flightPoints"
 local LEARN, ASK = "learn", "ask"
-local TEXT_ALERT = "Flight Point"
+local TEXT_ALERT = "Flight Point Reminder"
 local SAMPLE_PLACE = "Ratchet"
 local TAXI_ICON = "Interface\\GossipFrame\\TaxiGossipIcon"
 
@@ -31,7 +31,11 @@ local EVENTS = { "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA"
     "PLAYER_STOPPED_MOVING", "GOSSIP_SHOW", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "PLAYER_CONTROL_LOST",
     "PLAYER_CONTROL_GAINED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }
 
+local REFRESH = { ZONE_CHANGED = true, ZONE_CHANGED_INDOORS = true, ZONE_CHANGED_NEW_AREA = true,
+    PLAYER_ENTERING_WORLD = true, TAXIMAP_OPENED = true, TAXIMAP_CLOSED = true }
+
 local frame, unlocked, inCombat, taxiIcon
+local cachedZone, cachedMap, cachedNodes
 local events = CreateFrame("Frame")
 
 local function On()
@@ -117,12 +121,53 @@ local function Yards(a, b)
     return math.sqrt(dx * dx + dy * dy)
 end
 
-local function Candidate(node, map, zone, player, subzone, mine)
+local function ForgetNodes()
+    cachedZone, cachedMap, cachedNodes = nil, nil, nil
+end
+
+local function Prepare(map, nodes)
+    local ready = {}
+    for i, node in ipairs(nodes) do
+        local world, blocked = WorldOf(map, node.position)
+        if blocked then return nil, true end
+        ready[i] = { node = node, world = world }
+    end
+    return ready
+end
+
+local function NodesFor(zone)
+    if cachedZone == zone and cachedNodes then return cachedMap, cachedNodes end
+    local nodes = C_TaxiMap.GetTaxiNodesForMap(zone)
+    local map = zone
+    if not nodes[1] then
+        local info = C_Map.GetMapInfo(zone)
+        map, nodes = nil, nil
+        while info and info.parentMapID and info.parentMapID > 0 do
+            local parent = info.parentMapID
+            info = C_Map.GetMapInfo(parent)
+            local list = C_TaxiMap.GetTaxiNodesForMap(parent)
+            if list[1] then
+                map, nodes = parent, list
+                break
+            end
+            if not info or info.mapType <= CONTINENT then break end
+        end
+    end
+    if not nodes then
+        cachedZone, cachedMap, cachedNodes = zone, nil, {}
+        return nil, cachedNodes
+    end
+    local ready, blocked = Prepare(map, nodes)
+    if blocked then return nil, nil, true end
+    cachedZone, cachedMap, cachedNodes = zone, map, ready
+    return map, ready
+end
+
+local function Candidate(entry, map, zone, player, subzone, mine)
+    local node = entry.node
     local kind = Kind(node, mine)
     if not kind then return nil end
-    local world, blocked = WorldOf(map, node.position)
-    if blocked then return nil, true end
-    local dist = player and world and Yards(player, world)
+    local dist = player and entry.world and Yards(player, entry.world)
     local place = PlaceName(node.name)
     local capital = ns.TownCapitals[zone] and map == zone
     local named = subzone ~= "" and subzone == place
@@ -130,11 +175,11 @@ local function Candidate(node, map, zone, player, subzone, mine)
     return kind, place, dist or math.huge
 end
 
-local function Scan(map, zone, player, subzone, mine)
+local function Scan(entries, map, zone, player, subzone, mine)
     local bestName, bestDist, bestID, ask, askDist, askID
-    for _, node in ipairs(C_TaxiMap.GetTaxiNodesForMap(map)) do
-        local kind, place, rank = Candidate(node, map, zone, player, subzone, mine)
-        if place == true then return nil, true end
+    for _, entry in ipairs(entries) do
+        local kind, place, rank = Candidate(entry, map, zone, player, subzone, mine)
+        local node = entry.node
         if kind == LEARN and (not bestName or rank < bestDist) then
             bestName, bestDist, bestID = place, rank, node.nodeID
         elseif kind == ASK and (not ask or rank < askDist) then
@@ -154,24 +199,9 @@ local function Nearest()
     local player, secret = WorldOf(here, here and C_Map.GetPlayerMapPosition(here, PLAYER))
     if secret then return nil end
     local subzone, mine = Subzone(), Mine()
-    local nodes = C_TaxiMap.GetTaxiNodesForMap(zone)
-    local best, blocked, ask, spoken
-    if nodes[1] then
-        best, blocked, ask, spoken = Scan(zone, zone, player, subzone, mine)
-    else
-        local info = C_Map.GetMapInfo(zone)
-        while info and info.parentMapID and info.parentMapID > 0 do
-            local parent = info.parentMapID
-            info = C_Map.GetMapInfo(parent)
-            nodes = C_TaxiMap.GetTaxiNodesForMap(parent)
-            if nodes[1] then
-                best, blocked, ask, spoken = Scan(parent, zone, player, subzone, mine)
-                break
-            end
-            if not info or info.mapType <= CONTINENT then break end
-        end
-    end
-    if blocked then return best end
+    local map, entries, blocked = NodesFor(zone)
+    if blocked or not map then return nil end
+    local best, _, ask, spoken = Scan(entries, map, zone, player, subzone, mine)
     if best then return best, nil, spoken end
     return nil, ask, spoken
 end
@@ -216,6 +246,7 @@ local function Spoke()
 end
 
 local function OnEvent(_, event)
+    if REFRESH[event] then ForgetNodes() end
     if event == "PLAYER_REGEN_DISABLED" then
         inCombat = true
     elseif event == "PLAYER_REGEN_ENABLED" then
@@ -249,6 +280,7 @@ end
 
 local function Apply()
     events:UnregisterAllEvents()
+    ForgetNodes()
     if not On() then
         if frame then frame:Hide() end
         return
@@ -282,10 +314,8 @@ boot:SetScript("OnEvent", Apply)
 local Settings = ns.Shared.Settings
 
 Settings.Page(PAGE, S):Card({
-    id = "flightPoint", name = "Flight Point", order = 12, switch = "flightPoint",
-    help = "Text on screen in a town whose flight point you have not learned, when it is neutral "
-        .. "or your faction's. Until this character opens a flight master's map, it asks you to "
-        .. "open one to save the points you know. Hidden in combat. Move it in the HUD Editor.",
+    id = "flightPoint", name = "Flight Point Reminder", order = 12, switch = "flightPoint",
+    help = "Text on screen in a town whose flight point you have not learned.",
     rows = {
         Settings.Look("flightPoint", { text = true, size = St.HUD_TEXT_RANGE, background = "card" }),
         Settings.Group("Colors"),

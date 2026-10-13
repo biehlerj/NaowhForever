@@ -1,5 +1,5 @@
 -- Run with Lua 5.1 from the repository root: the QoL text alerts' look settings (Combat Alert,
--- Combat Timer, Stealth Reminder, Talent Points, Durability, Restock, Pet Tracker, Flight Point), loaded from
+-- Combat Timer, Stealth Reminder, Talent Points, Durability, Restock, Pet Tracker, Flight Point Reminder), loaded from
 -- the real Shared files against stubs and shown through the HUD Editor. Each draws today's look
 -- until a setting is touched: its font and size, outlined text, no background. Font, Font Size,
 -- Outline and Background then apply at once; a background fits the frame to its words. Combat
@@ -221,7 +221,7 @@ local ELEMENTS = {
       "QoL/Loot & Items", "durability" },
     { "Pet Tracker", "pet", function(s) return s.named.NaowhForeverPetTracker end, 20, 220, 16,
       "QoL/Combat", "petTracker" },
-    { "Flight Point", "flightPoint", function(s) return s.named.NaowhForeverFlightPoint end, 12, 300, 10,
+    { "Flight Point Reminder", "flightPoint", function(s) return s.named.NaowhForeverFlightPoint end, 12, 300, 10,
       "QoL/Travel", "flightPoint" },
 }
 
@@ -272,7 +272,7 @@ do
     local dura = s.named.NaowhForeverDurability
     check("Durability: the card fits its text", dura.w == Width("Low Durability: 20%", 22) + 2 * pad)
     local flight = s.named.NaowhForeverFlightPoint
-    check("Flight Point: the card fits its text", flight.w == Width("Learn the Ratchet flight point", 12) + 2 * pad)
+    check("Flight Point Reminder: the card fits its text", flight.w == Width("Learn the Ratchet flight point", 12) + 2 * pad)
 end
 
 do
@@ -330,16 +330,16 @@ do
         and talent.text.g == s.T.accent.g and talent.text.b == s.T.accent.b)
 
     local flight = s.named.NaowhForeverFlightPoint
-    check("Flight Point: the accent by default", flight.text.r == s.T.accent.r
+    check("Flight Point Reminder: the accent by default", flight.text.r == s.T.accent.r
         and flight.text.g == s.T.accent.g and flight.text.b == s.T.accent.b)
     local flightRows = s.rows("QoL/Travel", "flightPoint")
     local swatch = s.S.Default("flightPointColor")
-    check("Flight Point: Custom Color off hides Text Color, and the swatch starts on the shipped accent",
+    check("Flight Point Reminder: Custom Color off hides Text Color, and the swatch starts on the shipped accent",
         flightRows.flightPointCustom and s.ns.Shared.Settings.Off(flightRows.flightPointColor)
         and swatch.r == 0 and swatch.g == 0x91 / 255 and swatch.b == 0xed / 255)
     s.S.Set("flightPointColor", { r = 0.2, g = 0.4, b = 0.6 })
     s.S.Set("flightPointCustom", true)
-    check("Flight Point: Custom Color paints the saved color", flight.text.r == 0.2
+    check("Flight Point Reminder: Custom Color paints the saved color", flight.text.r == 0.2
         and flight.text.g == 0.4 and flight.text.b == 0.6
         and not s.ns.Shared.Settings.Off(flightRows.flightPointColor))
 
@@ -366,7 +366,7 @@ do
         listed[#listed + 1] = choice.page == page and s.ns.Shared.Settings.pages[page].cards[id] ~= nil and choice.name
     end
     check("its Settings lists each loaded alert, each opening a card that exists",
-        table.concat(listed, ",") == "Talent Points,Durability,Restock Reminder,Pet Tracker,Flight Point")
+        table.concat(listed, ",") == "Talent Points,Durability,Restock Reminder,Pet Tracker,Flight Point Reminder")
 end
 
 print(checks .. " text alert look checks passed")

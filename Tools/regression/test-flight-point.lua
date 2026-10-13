@@ -21,7 +21,7 @@ local GUID = "Player-1-GLYADIN"
 local TAXI, VENDOR = 102, 101
 
 local state = { map = BARRENS, pos = { x = 0, y = 0 }, faction = "Alliance", taxi = false,
-    combat = false, secret = false, guid = GUID, nodes = {}, asked = nil, subzone = "", openNodes = {},
+    combat = false, secret = false, guid = GUID, nodes = {}, asked = nil, asks = 0, subzone = "", openNodes = {},
     options = {} }
 local frames, named = {}, {}
 
@@ -164,6 +164,7 @@ local env = {
     C_TaxiMap = {
         GetTaxiNodesForMap = function(map)
             state.asked = map
+            state.asks = state.asks + 1
             return state.nodes[map] or state.nodes
         end,
         GetAllTaxiNodes = function() return state.openNodes end,
@@ -298,6 +299,17 @@ check("a taxi hides it", Text() == nil)
 state.taxi = false
 Fire("PLAYER_CONTROL_GAINED")
 check("landing shows it again", Text() == "Learn the Ratchet flight point")
+
+state.asks = 0
+Fire("PLAYER_STOPPED_MOVING")
+check("a stop reuses the zone's flight points", state.asks == 0
+    and Text() == "Learn the Ratchet flight point")
+Fire("ZONE_CHANGED")
+check("a zone change reads the flight points again", state.asks > 0
+    and Text() == "Learn the Ratchet flight point")
+state.asks = 0
+Fire("TAXIMAP_OPENED")
+check("opening the flight map reads the flight points again", state.asks > 0)
 
 state.nodes = {}
 ns.ShowUnlockMode()
