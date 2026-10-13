@@ -1,8 +1,9 @@
 -- Run with Lua 5.1 from the repository root: the flight point reminder. An undiscovered neutral or
 -- own-faction node in range names the place. Before this character's flight map has been opened,
 -- a friendly node in range asks you to open a flight master's map, unless the map already marks it undiscovered.
--- A learned node, an enemy node, and a friendly node past 400 yards stay quiet. A capital shows
--- with no distance check. Combat and a taxi hide it. Talking to a flight master records that
+-- A learned node, an enemy node, and a friendly node past 400 yards stay quiet. A capital names
+-- its own flight point with no distance check, and stays quiet once that point is known.
+-- Combat and a taxi hide it. Talking to a flight master records that
 -- town's point without opening the flight map. The switch off registers nothing. The snapshot
 -- is this character's GUID.
 
@@ -14,7 +15,7 @@ local function check(label, value) assert(value, label); checks = checks + 1 end
 local NEUTRAL, HORDE, ALLIANCE = 0, 1, 2
 local BARRENS, STORMWIND, UNDERCITY, CAVES = 1413, 1453, 1458, 9001
 local DARKSHORE, KALIMDOR = 1439, 1414
-local AUBERDINE, RATCHET = 26, 80
+local AUBERDINE, RATCHET, STORMWIND_FP, DARKSHIRE, THORIUM = 26, 80, 2, 12, 74
 local UNREACHABLE, CURRENT = 2, 0
 local SECRET = "secret"
 local GUID = "Player-1-GLYADIN"
@@ -156,6 +157,7 @@ local env = {
             if id == CAVES then return { mapID = CAVES, mapType = 4, parentMapID = UNDERCITY } end
             if id == DARKSHORE then return { mapID = DARKSHORE, mapType = 3, parentMapID = KALIMDOR } end
             if id == KALIMDOR then return { mapID = KALIMDOR, mapType = 2, parentMapID = 0 } end
+            if id == STORMWIND then return { mapID = id, mapType = 3, parentMapID = 0, name = "Stormwind City" } end
             return { mapID = id, mapType = 3, parentMapID = 0 }
         end,
         GetPlayerMapPosition = function() return state.pos end,
@@ -278,10 +280,17 @@ check("Alliance in a cave under Undercity still sees nothing",
     At(CAVES, { [UNDERCITY] = { Node("Undercity, Tirisfal", HORDE, 0) } }) == nil and state.asked == UNDERCITY)
 
 check("a capital shows the flight point with no distance check",
-    At(STORMWIND, { Node("Stormwind, Elwynn", ALLIANCE, 2000) }) == "Learn the Stormwind flight point")
-check("on a capital the nearer flight point still wins",
-    At(STORMWIND, { Node("Far Gate, Elwynn", ALLIANCE, 3000), Node("Trade District, Elwynn", ALLIANCE, 2000) })
-    == "Learn the Trade District flight point")
+    At(STORMWIND, { Node("Stormwind, Elwynn", ALLIANCE, 2000, false, STORMWIND_FP) }) == "Learn the Stormwind flight point")
+check("a nearer town does not replace the capital's own flight point",
+    At(STORMWIND, { Node("Darkshire, Duskwood", ALLIANCE, 0, false, DARKSHIRE),
+        Node("Thorium Point, Searing Gorge", ALLIANCE, 10, false, THORIUM),
+        Node("Stormwind, Elwynn", ALLIANCE, 2000, false, STORMWIND_FP) })
+    == "Learn the Stormwind flight point")
+account.flightPoints[GUID][STORMWIND_FP] = true
+check("a known capital flight point hides Darkshire and Thorium Point",
+    At(STORMWIND, { Node("Darkshire, Duskwood", ALLIANCE, 0, false, DARKSHIRE),
+        Node("Thorium Point, Searing Gorge", ALLIANCE, 0, false, THORIUM),
+        Node("Stormwind, Elwynn", ALLIANCE, 0, false, STORMWIND_FP) }) == nil)
 
 state.secret, state.pos = true, { x = SECRET, y = 0 }
 check("a secret coordinate hides the reminder", At(STORMWIND, { Node("Stormwind, Elwynn", ALLIANCE, 10) }) == nil)

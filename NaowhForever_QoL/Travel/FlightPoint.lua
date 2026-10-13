@@ -52,6 +52,26 @@ local function PlaceName(name)
     return name:sub(1, comma - 1)
 end
 
+local function Edge(text, at)
+    return at < 1 or at > #text or not text:sub(at, at):match("%a")
+end
+
+local function HasWord(hay, needle)
+    if needle == "" then return false end
+    local from = 1
+    while true do
+        local at = hay:find(needle, from, true)
+        if not at then return false end
+        if Edge(hay, at - 1) and Edge(hay, at + #needle) then return true end
+        from = at + 1
+    end
+end
+
+local function OwnCity(place, zoneName)
+    if zoneName == "" then return false end
+    return place == zoneName or HasWord(zoneName, place) or HasWord(place, zoneName)
+end
+
 local function Ours(faction)
     if faction == NEUTRAL then return true end
     local side = UnitFactionGroup(PLAYER)
@@ -163,22 +183,25 @@ local function NodesFor(zone)
     return map, ready
 end
 
-local function Candidate(entry, map, zone, player, subzone, mine)
+local function Candidate(entry, map, zone, zoneName, player, subzone, mine)
     local node = entry.node
     local kind = Kind(node, mine)
     if not kind then return nil end
     local dist = player and entry.world and Yards(player, entry.world)
     local place = PlaceName(node.name)
-    local capital = ns.TownCapitals[zone] and map == zone
-    local named = subzone ~= "" and subzone == place
-    if not (capital or named or (dist and dist <= TOWN_RANGE)) then return nil end
+    if ns.TownCapitals[zone] and map == zone then
+        if not OwnCity(place, zoneName) then return nil end
+    else
+        local named = subzone ~= "" and subzone == place
+        if not (named or (dist and dist <= TOWN_RANGE)) then return nil end
+    end
     return kind, place, dist or math.huge
 end
 
-local function Scan(entries, map, zone, player, subzone, mine)
+local function Scan(entries, map, zone, zoneName, player, subzone, mine)
     local bestName, bestDist, bestID, ask, askDist, askID
     for _, entry in ipairs(entries) do
-        local kind, place, rank = Candidate(entry, map, zone, player, subzone, mine)
+        local kind, place, rank = Candidate(entry, map, zone, zoneName, player, subzone, mine)
         local node = entry.node
         if kind == LEARN and (not bestName or rank < bestDist) then
             bestName, bestDist, bestID = place, rank, node.nodeID
@@ -198,10 +221,11 @@ local function Nearest()
     local here = C_Map.GetBestMapForUnit(PLAYER)
     local player, secret = WorldOf(here, here and C_Map.GetPlayerMapPosition(here, PLAYER))
     if secret then return nil end
+    local info = C_Map.GetMapInfo(zone)
     local subzone, mine = Subzone(), Mine()
     local map, entries, blocked = NodesFor(zone)
     if blocked or not map then return nil end
-    local best, _, ask, spoken = Scan(entries, map, zone, player, subzone, mine)
+    local best, _, ask, spoken = Scan(entries, map, zone, info and info.name or "", player, subzone, mine)
     if best then return best, nil, spoken end
     return nil, ask, spoken
 end

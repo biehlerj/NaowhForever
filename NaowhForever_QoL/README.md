@@ -444,8 +444,11 @@ NaowhForever_QoL/
   the map still replaces every node from `GetAllTaxiNodes`. A name cannot tell two characters apart.
 - A node is reminded only when it is unlearned and its faction is neutral or the player's.
   An Alliance character in Undercity sees nothing, because that flight point is Horde.
-- A capital (`ns.TownCapitals`) counts as the whole city. Anywhere else the player has to be
-  within 400 yards, or standing in the subzone of that flight point, which is how the Auberdine
+- A capital (`ns.TownCapitals`) reminds you only of that city's own flight point, and only while
+  it is still unlearned, anywhere in the city. The place name is the city's when the two are equal,
+  or one contains the other as a whole word: Stormwind matches Stormwind City, and Darkshire does
+  not. Once that point is known, another town does not take its place. Anywhere else the player has to
+  be within 400 yards, or standing in the subzone of that flight point, which is how the Auberdine
   inn counts. The Crossroads and Ratchet are about 1,200 yards apart, so one town does not
   light the next. An empty subzone matches nothing.
 - It checks on a zone change, when you stop, when you talk to a flight master, when the flight map
