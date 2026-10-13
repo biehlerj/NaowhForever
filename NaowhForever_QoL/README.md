@@ -434,15 +434,19 @@ NaowhForever_QoL/
   layout, so it is faded (SetAlpha) rather than hidden, and only outside combat.
 - The Flight Timer's mover reports offsets in the timer's own scaled units; they are saved in
   screen units so the Scale slider resizes it in place.
-- Flight Point reads `C_TaxiMap.GetTaxiNodesForMap`, which Forever answers without the flight
-  master open, including `isUndiscovered`. It does not read Journeys' `journeyFlights`, which
-  fills in only after the flight map opens.
-- A node is reminded only when it is undiscovered and its faction is neutral or the player's.
+- Flight Point reads `C_TaxiMap.GetTaxiNodesForMap` for the zone, and the parent maps up through
+  the continent when that list is empty. `isUndiscovered` is not set for a classic flight path you
+  have not spoken to. Until this character opens a flight master's map, a friendly point in range
+  asks you to open one to save the points you know, and only a node the map marks undiscovered is
+  named. The snapshot is this
+  character's GUID in `flightPoints` (`TAXIMAP_OPENED`). A name cannot tell two characters apart.
+- A node is reminded only when it is unlearned and its faction is neutral or the player's.
   An Alliance character in Undercity sees nothing, because that flight point is Horde.
 - A capital (`ns.TownCapitals`) counts as the whole city. Anywhere else the player has to be
-  within 400 yards, which covers a town and not the next one: the Crossroads and Ratchet are
-  about 1,200 yards apart.
-- It checks on a zone change, when you stop, when the flight map closes, when a flight takes or
+  within 400 yards, or standing in the subzone of that flight point, which is how the Auberdine
+  inn counts. The Crossroads and Ratchet are about 1,200 yards apart, so one town does not
+  light the next. An empty subzone matches nothing.
+- It checks on a zone change, when you stop, when the flight map opens or closes, when a flight takes or
   returns control, and when combat starts or ends. While the switch is off, none of those events
   are registered and the frame is not built.
 - The Aim Trainer's leaderboard sends your best in each mode to your group and guild while Share

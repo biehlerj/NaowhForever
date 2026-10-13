@@ -1,7 +1,9 @@
 -- Run with Lua 5.1 from the repository root: the flight point reminder. An undiscovered neutral or
--- own-faction node in range names the place; a learned node, an enemy node, and a friendly node
--- past 400 yards stay quiet. A capital shows with no distance check. Combat and a taxi hide it.
--- The switch off registers nothing.
+-- own-faction node in range names the place. Before this character's flight map has been opened,
+-- a friendly node in range asks you to open a flight master's map, unless the map already marks it undiscovered.
+-- A learned node, an enemy node, and a friendly node past 400 yards stay quiet. A capital shows
+-- with no distance check. Combat and a taxi hide it. The switch off registers nothing. The
+-- snapshot is this character's GUID.
 
 local Load = dofile("Tools/regression/load_files.lua")
 
@@ -10,10 +12,14 @@ local function check(label, value) assert(value, label); checks = checks + 1 end
 
 local NEUTRAL, HORDE, ALLIANCE = 0, 1, 2
 local BARRENS, STORMWIND, UNDERCITY, CAVES = 1413, 1453, 1458, 9001
+local DARKSHORE, KALIMDOR = 1439, 1414
+local AUBERDINE, RATCHET = 26, 80
+local UNREACHABLE, CURRENT = 2, 0
 local SECRET = "secret"
+local GUID = "Player-1-GLYADIN"
 
 local state = { map = BARRENS, pos = { x = 0, y = 0 }, faction = "Alliance", taxi = false,
-    combat = false, secret = false, nodes = {}, asked = nil }
+    combat = false, secret = false, guid = GUID, nodes = {}, asked = nil, subzone = "", openNodes = {} }
 local frames, named = {}, {}
 
 local function NewFrame(name)
@@ -57,8 +63,8 @@ local function Text()
     return f.text.value
 end
 
-local function Node(name, faction, x, learned)
-    return { name = name, faction = faction, isUndiscovered = not learned, position = { x = x, y = 0 } }
+local function Node(name, faction, x, learned, id)
+    return { name = name, faction = faction, isUndiscovered = not learned, position = { x = x, y = 0 }, nodeID = id }
 end
 
 local function At(map, list)
@@ -78,8 +84,10 @@ local S = { Get = function(k)
 end }
 function S.Set(k, v) values[k] = v end
 
+local account = {}
 local ns = { L = dofile("Tools/regression/locale_stub.lua").L, QoLSettings = S,
     TownCapitals = { [STORMWIND] = true, [UNDERCITY] = true },
+    AccountSettings = function() return account end,
     THEME = { accent = { r = 0, g = 0.5, b = 0.9 } },
     Font = function(parent)
         parent.text = NewFrame()
@@ -94,12 +102,31 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, QoLSettings = S,
         Style = { CARD_PAD = 12 },
         Settings = { Page = function() return { Card = function() end } end,
             Look = function() return {} end, Group = function() return {} end },
+        CharacterData = function(key, create)
+            local guid = state.guid
+            if not guid then return end
+            local all = account[key]
+            if type(all) ~= "table" then
+                if not create then return end
+                all = {}
+                account[key] = all
+            end
+            local mine = all[guid]
+            if type(mine) ~= "table" then
+                if not create then return end
+                mine = {}
+                all[guid] = mine
+            end
+            return mine
+        end,
     },
 }
 
 local env = {
     NaowhForever = ns,
-    Enum = { UIMapType = { Zone = 3 }, FlightPathFaction = { Neutral = NEUTRAL, Horde = HORDE, Alliance = ALLIANCE } },
+    Enum = { UIMapType = { Zone = 3, Continent = 2 },
+        FlightPathFaction = { Neutral = NEUTRAL, Horde = HORDE, Alliance = ALLIANCE },
+        FlightPathState = { Unreachable = UNREACHABLE } },
     CreateFrame = function(_, name) return NewFrame(name) end,
     hooksecurefunc = function(t, key, callback)
         local orig = t[key]
@@ -107,6 +134,11 @@ local env = {
     end,
     UIParent = {},
     UnitFactionGroup = function() return state.faction end,
+    UnitName = function() return "Glyadin" end,
+    GetRealmName = function() return "Forever" end,
+    UnitGUID = function() return state.guid end,
+    GetSubZoneText = function() return state.subzone end,
+    GetTaxiMapID = function() return DARKSHORE end,
     UnitOnTaxi = function() return state.taxi end,
     UnitAffectingCombat = function() return state.combat end,
     issecretvalue = function(v) return state.secret and v == SECRET end,
@@ -114,15 +146,20 @@ local env = {
         GetBestMapForUnit = function() return state.map end,
         GetMapInfo = function(id)
             if id == CAVES then return { mapID = CAVES, mapType = 4, parentMapID = UNDERCITY } end
+            if id == DARKSHORE then return { mapID = DARKSHORE, mapType = 3, parentMapID = KALIMDOR } end
+            if id == KALIMDOR then return { mapID = KALIMDOR, mapType = 2, parentMapID = 0 } end
             return { mapID = id, mapType = 3, parentMapID = 0 }
         end,
         GetPlayerMapPosition = function() return state.pos end,
         GetWorldPosFromMapPos = function(_, pos) return 0, pos end,
     },
-    C_TaxiMap = { GetTaxiNodesForMap = function(map)
-        state.asked = map
-        return state.nodes[map] or state.nodes
-    end },
+    C_TaxiMap = {
+        GetTaxiNodesForMap = function(map)
+            state.asked = map
+            return state.nodes[map] or state.nodes
+        end,
+        GetAllTaxiNodes = function() return state.openNodes end,
+    },
 }
 env._G = env
 setmetatable(env, { __index = _G })
@@ -130,12 +167,47 @@ Load({ "NaowhForever_QoL/Travel/FlightPoint.lua" }, env)
 
 Fire("PLAYER_LOGIN")
 check("the switch off registers nothing", not Listening("ZONE_CHANGED") and not Listening("PLAYER_STOPPED_MOVING")
-    and not Listening("TAXIMAP_CLOSED") and not Listening("PLAYER_REGEN_DISABLED")
+    and not Listening("TAXIMAP_OPENED") and not Listening("TAXIMAP_CLOSED") and not Listening("PLAYER_REGEN_DISABLED")
     and not Listening("PLAYER_CONTROL_LOST") and state.asked == nil and named.NaowhForeverFlightPoint == nil)
 
 S.Set("flightPoint", true)
-check("turning it on listens for a zone change", Listening("ZONE_CHANGED") and Listening("TAXIMAP_CLOSED")
-    and Listening("PLAYER_STOPPED_MOVING") and Listening("PLAYER_CONTROL_LOST"))
+check("turning it on listens for a zone change", Listening("ZONE_CHANGED") and Listening("TAXIMAP_OPENED")
+    and Listening("TAXIMAP_CLOSED") and Listening("PLAYER_STOPPED_MOVING") and Listening("PLAYER_CONTROL_LOST"))
+
+state.subzone, state.pos = "Auberdine", nil
+check("a path the map marks undiscovered still says to learn it before any flight map",
+    At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 0, false, AUBERDINE) }) == "Learn the Auberdine flight point")
+state.pos = { x = 0, y = 0 }
+check("a confirmed gap wins over a nearer point we have not checked",
+    At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 50, false, AUBERDINE),
+        Node("Lor'danel, Darkshore", ALLIANCE, 10, true, 99) }) == "Learn the Auberdine flight point")
+state.pos = nil
+check("Auberdine's inn asks you to open the flight map before any snapshot",
+    At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }) == "Open a flight master's map to save the points you know")
+check("a missing indoor position still counts the subzone as the town", Text() == "Open a flight master's map to save the points you know")
+state.nodes = { [KALIMDOR] = { Node("Auberdine, Darkshore", ALLIANCE, 8000, true, AUBERDINE) } }
+Fire("ZONE_CHANGED")
+check("an empty zone map uses the continent's flight points",
+    Text() == "Open a flight master's map to save the points you know" and state.asked == KALIMDOR)
+state.subzone = ""
+Fire("ZONE_CHANGED")
+check("an empty subzone is not the town", Text() == nil)
+
+state.subzone = "Auberdine"
+state.nodes = { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }
+state.guid, state.secret = SECRET, true
+state.openNodes = { { nodeID = AUBERDINE, state = CURRENT } }
+Fire("TAXIMAP_OPENED")
+check("a secret GUID leaves the snapshot unwritten", account.flightPoints == nil and Text() == "Open a flight master's map to save the points you know")
+state.guid, state.secret = GUID, false
+Fire("TAXIMAP_OPENED")
+check("a snapshot that marks the flight point known hides it", Text() == nil
+    and account.flightPoints[GUID].seen == true and account.flightPoints[GUID][AUBERDINE] == true
+    and account.flightPoints["Glyadin-Forever"] == nil)
+state.openNodes = { { nodeID = AUBERDINE, state = UNREACHABLE } }
+Fire("TAXIMAP_OPENED")
+check("an unreachable snapshot keeps the reminder", Text() == "Learn the Auberdine flight point")
+state.subzone, state.pos = "", { x = 0, y = 0 }
 
 check("an undiscovered neutral node in range names the place",
     At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 100) }) == "Learn the Ratchet flight point")
@@ -149,13 +221,16 @@ check("the nearer of two unlearned flight points wins",
 check("400 yards is still the town",
     At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 400) }) == "Learn the Ratchet flight point")
 
-check("a learned flight point stays hidden",
-    At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 100, true) }) == nil)
+check("a flight path the map does not call undiscovered still reminds you until a snapshot says it is known",
+    At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 100, true, RATCHET) }) == "Learn the Ratchet flight point")
 check("a friendly flight point past 400 yards stays hidden",
     At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 401) }) == nil)
-check("a learned node nearby does not stand in for one past 400 yards",
-    At(BARRENS, { Node("Ratchet, The Barrens", NEUTRAL, 50, true), Node("Camp Taurajo, The Barrens", NEUTRAL, 500) })
-    == nil)
+state.openNodes = { { nodeID = RATCHET, state = CURRENT } }
+state.nodes = { Node("Ratchet, The Barrens", NEUTRAL, 50, true, RATCHET),
+    Node("Camp Taurajo, The Barrens", NEUTRAL, 500, false, 77) }
+state.map = BARRENS
+Fire("TAXIMAP_OPENED")
+check("a known flight point nearby does not stand in for one past 400 yards", Text() == nil)
 check("the other faction's flight point stays hidden",
     At(BARRENS, { Node("Crossroads, The Barrens", HORDE, 20) }) == nil)
 
