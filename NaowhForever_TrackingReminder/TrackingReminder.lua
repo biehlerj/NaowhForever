@@ -20,7 +20,7 @@ ns.TrackingReminderSettings = S
 
 local TR = {
     Settings = S,
-    PAGE = "TrackingReminder/Settings",
+    PAGE = "Tracking Reminder/Settings",
 }
 ns.TrackingReminder = TR
 

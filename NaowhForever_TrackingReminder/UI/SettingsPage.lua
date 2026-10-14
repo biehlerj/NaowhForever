@@ -14,6 +14,9 @@ local ICON_RANGE = { 20, 64, 1 }
 local TEXT_RANGE = ns.Shared.Style.HUD_TEXT_RANGE
 local ORDER_TRACKING = 10
 local STAGE_H = 120
+local STATES = {
+    { key = "untracked", label = "Not Tracking", tip = "What shows while you know a tracking but have not turned it on." },
+}
 
 local TEXT_OFF = "Tracking Reminder is off"
 local TEXT_NONE = "No tracking selected"
@@ -139,6 +142,6 @@ page:Card({
     id = "tracking", name = "Tracking Reminder", order = ORDER_TRACKING, switch = "enabled",
     help = TEXT_HELP,
     summary = Summary,
-    studio = { height = STAGE_H, new = NewPreview, paint = PaintPreview },
+    studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },
     rows = Rows,
 })

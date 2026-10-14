@@ -5,6 +5,8 @@ local GetNumTrackingTypes = C_Minimap.GetNumTrackingTypes
 local GetTrackingInfo = C_Minimap.GetTrackingInfo
 local IsSpellKnown = C_SpellBook.IsSpellKnown
 local GetSpellTexture = C_Spell.GetSpellTexture
+local GetSpellName = C_Spell.GetSpellName
+local SetTracking = C_Minimap.SetTracking
 
 local T = ns.THEME
 local UI = ns.UI
@@ -24,15 +26,20 @@ local HOME_X, HOME_Y = 260, 170
 local FRAME_NAME = "NaowhForeverTrackingReminder"
 local MOVER_LABEL = "Tracking Reminder"
 local CARD = TR.PAGE .. ":tracking"
-local EVENTS = { "MINIMAP_UPDATE_TRACKING", "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB",
-    "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_DEAD",
-    "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
+local EVENTS = { "MINIMAP_UPDATE_TRACKING", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
+    "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
+    "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
+local TEXT_TRACK = ns.L("Track ")
+local TEXT_NOT_TRACKING = ns.L("Not Tracking")
+local TEXT_LEFT = ns.L("Left-click: %s")
+local TEXT_HIDE = ns.L("Right-click: hide until you change area")
+local RESUME = { PLAYER_ENTERING_WORLD = true, ZONE_CHANGED_NEW_AREA = true }
 local REFRESH = {
     enabled = true, trackRacial = true, trackClass = true, racialPicks = true, classPicks = true,
     inInstances = true, iconSize = true, trackingFont = true, trackingFontSize = true, trackingOutline = true,
 }
 
-local row, unlocked, pending
+local row, unlocked, pending, snoozed
 local buttons = {}
 local shown = {}
 local events = CreateFrame("Frame")
@@ -40,16 +47,23 @@ local events = CreateFrame("Frame")
 local Look = {}
 TR.Look = Look
 
-local function Tracking(spellID)
+local function Slot(spellID)
+    local want = GetSpellName(spellID)
     for i = 1, GetNumTrackingTypes() do
         local info, _, active, _, _, id = GetTrackingInfo(i)
+        local spell, on, name
         if type(info) == "table" then
-            if info.spellID == spellID then return info.active == true end
-        elseif id == spellID then
-            return active == true
+            spell, on, name = info.spellID, info.active == true, info.name
+        else
+            spell, on, name = id, active == true, info
         end
+        if spell == spellID or (want and name == want) then return i, on end
     end
-    return false
+end
+
+local function Tracking(spellID)
+    local _, on = Slot(spellID)
+    return on == true
 end
 
 local function AddKnown(list, picks, token, field, includeActive)
@@ -80,16 +94,34 @@ end
 local function OnEnter(self)
     local spell = self.spell
     if not spell then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetSpellByID(spell)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+    local gold = St.FOREVER_GOLD_RGB
+    GameTooltip:AddLine(TEXT_NOT_TRACKING, gold.r, gold.g, gold.b)
+    GameTooltip:AddLine(TEXT_LEFT:format(GetSpellName(spell) or self.trackName), 1, 1, 1)
+    GameTooltip:AddLine(TEXT_HIDE, 1, 1, 1)
     GameTooltip:Show()
+end
+
+local function OnPostClick(self, mouseButton)
+    if unlocked or InCombatLockdown() then return end
+    if mouseButton == "RightButton" then
+        snoozed = true
+        row:Hide()
+        return
+    end
+    if mouseButton == "LeftButton" and self.trackIndex then SetTracking(self.trackIndex, true) end
 end
 
 function Look.New(frame)
     frame.icon = frame:CreateTexture(nil, "ARTWORK")
     frame.icon:SetAllPoints()
     frame.icon:SetTexCoord(CROP, 1 - CROP, CROP, 1 - CROP)
-    ns.Border(frame, St.BORDER_RGB)
+    local border = ns.Border(frame, St.BORDER_RGB)
+    local cover = border and border._frame
+    if cover then
+        cover:EnableMouse(false)
+        if cover.SetMouseClickEnabled then cover:SetMouseClickEnabled(false) end
+    end
     frame.label = ns.Font(frame, LABEL_SIZE, "OUTLINE", T.accentSoft)
     frame.label:SetPoint("TOP", frame, "BOTTOM", 0, -LABEL_GAP)
 end
@@ -98,7 +130,7 @@ function Look.Fill(frame, size, texture, text)
     frame:SetSize(size, size)
     frame.icon:SetTexture(texture)
     Parts.HudFont(frame.label, S.Get("trackingFont"), S.Get("trackingFontSize"), S.Get("trackingOutline"))
-    frame.label:SetText(text)
+    frame.label:SetText(TEXT_TRACK .. text)
 end
 
 local function GetButton(i)
@@ -112,6 +144,7 @@ local function GetButton(i)
     button.highlight:SetColorTexture(1, 1, 1, HIGHLIGHT_ALPHA)
     button:SetScript("OnEnter", OnEnter)
     button:SetScript("OnLeave", GameTooltip_Hide)
+    button:SetScript("PostClick", OnPostClick)
     buttons[i] = button
     return button
 end
@@ -129,6 +162,7 @@ local function Build()
 end
 
 local function Place()
+    if not row or InCombatLockdown() then return end
     local pos = S.Get("trackingPos")
     row:ClearAllPoints()
     if pos then
@@ -144,9 +178,17 @@ local function ShowRow(list)
     for i = 1, n do
         local t = list[i]
         local button = GetButton(i)
+        local index = Slot(t.spell)
         button.spell = t.spell
-        button:SetAttribute("type1", "spell")
-        button:SetAttribute("spell1", t.spell)
+        button.trackName = t.label
+        button.trackIndex = index and SetTracking and index or nil
+        if button.trackIndex then
+            button:SetAttribute("type1", nil)
+            button:SetAttribute("spell1", nil)
+        else
+            button:SetAttribute("type1", "spell")
+            button:SetAttribute("spell1", GetSpellName(t.spell) or t.spell)
+        end
         Look.Fill(button, size, GetSpellTexture(t.spell), t.label)
         button:ClearAllPoints()
         button:SetPoint("LEFT", row, "LEFT", (i - 1) * (size + ICON_GAP), 0)
@@ -155,6 +197,9 @@ local function ShowRow(list)
     for i = n + 1, #buttons do
         local button = buttons[i]
         button.spell = nil
+        button.trackName = nil
+        button.trackIndex = nil
+        button:SetAttribute("type1", nil)
         button:SetAttribute("spell1", nil)
         button:Hide()
     end
@@ -164,13 +209,14 @@ end
 
 local function Update(event)
     if not row then return end
+    if RESUME[event] then snoozed = false end
     if event == "PLAYER_REGEN_DISABLED" then
         row:Hide()
         return
     end
     if InCombatLockdown() then return end
     local list = Collect(unlocked)
-    if unlocked or (TR.On() and #list > 0 and not Suppressed()) then
+    if unlocked or (TR.On() and #list > 0 and not Suppressed() and not snoozed) then
         ShowRow(list)
     else
         row:Hide()
@@ -225,6 +271,4 @@ hooksecurefunc(ns, "HideUnlockMode", OnLock)
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
-boot:SetScript("OnEvent", Apply)
-
 boot:SetScript("OnEvent", Apply)
