@@ -84,22 +84,34 @@ local function Mine(create)
     return ns.Shared.CharacterData(STORE, create)
 end
 
-local function Kind(node, mine)
+local function Kind(node, mine, seen)
     if not (Ours(node.faction) and node.name) then return nil end
     if mine and node.nodeID and mine[node.nodeID] == true then return nil end
     if node.isUndiscovered then return LEARN end
-    if mine and mine.seen then
+    if seen then
         if mine[node.nodeID] ~= true then return LEARN end
         return nil
     end
     return ASK
 end
 
+local function Up(id, mapType)
+    local info = id and C_Map.GetMapInfo(id)
+    while info and info.mapType > mapType and info.parentMapID and info.parentMapID > 0 do
+        info = C_Map.GetMapInfo(info.parentMapID)
+    end
+    if info and info.mapType == mapType then return info.mapID end
+end
+
 local function Learn()
     local mine = Mine(true)
     local taxi = mine and GetTaxiMapID()
     if not taxi then return end
-    mine.seen = true
+    local continent = Up(taxi, CONTINENT)
+    if continent then
+        mine.seenMaps = mine.seenMaps or {}
+        mine.seenMaps[continent] = true
+    end
     for _, node in ipairs(C_TaxiMap.GetAllTaxiNodes(taxi)) do
         if node.nodeID then mine[node.nodeID] = node.state ~= UNREACHABLE end
     end
@@ -109,15 +121,6 @@ local function Subzone()
     local text = GetSubZoneText()
     if not text or Secret(text) then return "" end
     return text
-end
-
-local function ZoneMap()
-    local id = C_Map.GetBestMapForUnit(PLAYER)
-    local info = id and C_Map.GetMapInfo(id)
-    while info and info.mapType > ZONE and info.parentMapID and info.parentMapID > 0 do
-        info = C_Map.GetMapInfo(info.parentMapID)
-    end
-    if info and info.mapType == ZONE then return info.mapID end
 end
 
 local function WorldOf(map, pos)
@@ -176,9 +179,9 @@ local function NodesFor(zone)
     return map, ready
 end
 
-local function Candidate(entry, map, zone, zoneName, player, subzone, mine)
+local function Candidate(entry, map, zone, zoneName, player, subzone, mine, seen)
     local node = entry.node
-    local kind = Kind(node, mine)
+    local kind = Kind(node, mine, seen)
     if not kind then return nil end
     local dist = player and entry.world and Yards(player, entry.world)
     local place = PlaceName(node.name)
@@ -191,10 +194,10 @@ local function Candidate(entry, map, zone, zoneName, player, subzone, mine)
     return kind, place, dist or math.huge
 end
 
-local function Scan(entries, map, zone, zoneName, player, subzone, mine)
+local function Scan(entries, map, zone, zoneName, player, subzone, mine, seen)
     local bestName, bestDist, bestID, ask, askDist, askID
     for _, entry in ipairs(entries) do
-        local kind, place, rank = Candidate(entry, map, zone, zoneName, player, subzone, mine)
+        local kind, place, rank = Candidate(entry, map, zone, zoneName, player, subzone, mine, seen)
         local node = entry.node
         if kind == LEARN and (not bestName or rank < bestDist) then
             bestName, bestDist, bestID = place, rank, node.nodeID
@@ -209,16 +212,17 @@ end
 
 local function Nearest()
     if inCombat or UnitOnTaxi(PLAYER) then return nil end
-    local zone = ZoneMap()
+    local zone = Up(C_Map.GetBestMapForUnit(PLAYER), ZONE)
     if not zone then return nil end
     local here = C_Map.GetBestMapForUnit(PLAYER)
     local player, secret = WorldOf(here, here and C_Map.GetPlayerMapPosition(here, PLAYER))
     if secret then return nil end
     local info = C_Map.GetMapInfo(zone)
     local subzone, mine = Subzone(), Mine()
+    local seen = mine and mine.seenMaps and mine.seenMaps[Up(zone, CONTINENT)]
     local map, entries, blocked = NodesFor(zone)
     if blocked or not map then return nil end
-    local best, ask, spoken = Scan(entries, map, zone, info and info.name or "", player, subzone, mine)
+    local best, ask, spoken = Scan(entries, map, zone, info and info.name or "", player, subzone, mine, seen)
     if best then return best, nil, spoken end
     return nil, ask, spoken
 end

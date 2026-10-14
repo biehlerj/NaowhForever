@@ -14,7 +14,7 @@ local function check(label, value) assert(value, label); checks = checks + 1 end
 
 local NEUTRAL, HORDE, ALLIANCE = 0, 1, 2
 local BARRENS, STORMWIND, UNDERCITY, CAVES = 1413, 1453, 1458, 9001
-local DARKSHORE, KALIMDOR = 1439, 1414
+local DARKSHORE, KALIMDOR, DUSKWOOD, EASTERN_KINGDOMS = 1439, 1414, 1431, 1415
 local AUBERDINE, RATCHET, STORMWIND_FP, DARKSHIRE, THORIUM = 26, 80, 2, 12, 74
 local UNREACHABLE, CURRENT = 2, 0
 local SECRET = "secret"
@@ -157,6 +157,9 @@ local env = {
             if id == CAVES then return { mapID = CAVES, mapType = 4, parentMapID = UNDERCITY } end
             if id == DARKSHORE then return { mapID = DARKSHORE, mapType = 3, parentMapID = KALIMDOR } end
             if id == KALIMDOR then return { mapID = KALIMDOR, mapType = 2, parentMapID = 0 } end
+            if id == BARRENS then return { mapID = BARRENS, mapType = 3, parentMapID = KALIMDOR } end
+            if id == DUSKWOOD then return { mapID = DUSKWOOD, mapType = 3, parentMapID = EASTERN_KINGDOMS } end
+            if id == EASTERN_KINGDOMS then return { mapID = EASTERN_KINGDOMS, mapType = 2, parentMapID = 0 } end
             if id == STORMWIND then return { mapID = id, mapType = 3, parentMapID = 0, name = "Stormwind City" } end
             return { mapID = id, mapType = 3, parentMapID = 0 }
         end,
@@ -196,7 +199,7 @@ check("a vendor's gossip leaves that reminder", Text() == "Learn the Auberdine f
 state.options = { { icon = VENDOR }, { icon = TAXI } }
 Fire("GOSSIP_SHOW")
 check("talking to the flight master hides an undiscovered point before any snapshot", Text() == nil
-    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == nil)
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seenMaps == nil)
 account.flightPoints = nil
 Fire("ZONE_CHANGED")
 state.pos = { x = 0, y = 0 }
@@ -210,7 +213,7 @@ check("a missing indoor position still counts the subzone as the town", Text() =
 state.options = { { icon = TAXI } }
 Fire("GOSSIP_SHOW")
 check("talking to the flight master saves the point behind the open-map line", Text() == nil
-    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == nil)
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seenMaps == nil)
 account.flightPoints = nil
 state.nodes = { [KALIMDOR] = { Node("Auberdine, Darkshore", ALLIANCE, 8000, true, AUBERDINE) } }
 Fire("ZONE_CHANGED")
@@ -225,7 +228,7 @@ state.nodes = { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }
 state.openNodes = { { nodeID = AUBERDINE, state = CURRENT } }
 Fire("TAXIMAP_OPENED")
 check("a snapshot that marks the flight point known hides it", Text() == nil
-    and account.flightPoints[GUID].seen == true and account.flightPoints[GUID][AUBERDINE] == true
+    and account.flightPoints[GUID].seenMaps[KALIMDOR] == true and account.flightPoints[GUID][AUBERDINE] == true
     and account.flightPoints["Glyadin-Forever"] == nil)
 state.openNodes = { { nodeID = AUBERDINE, state = UNREACHABLE } }
 Fire("TAXIMAP_OPENED")
@@ -233,7 +236,7 @@ check("an unreachable snapshot keeps the reminder", Text() == "Learn the Auberdi
 state.options = { { icon = TAXI } }
 Fire("GOSSIP_SHOW")
 check("talking to the flight master hides it without opening the map again", Text() == nil
-    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seen == true)
+    and account.flightPoints[GUID][AUBERDINE] == true and account.flightPoints[GUID].seenMaps[KALIMDOR] == true)
 state.subzone, state.pos = "", { x = 0, y = 0 }
 
 check("an undiscovered neutral node in range names the place",
@@ -258,6 +261,9 @@ state.nodes = { Node("Ratchet, The Barrens", NEUTRAL, 50, true, RATCHET),
 state.map = BARRENS
 Fire("TAXIMAP_OPENED")
 check("a known flight point nearby does not stand in for one past 400 yards", Text() == nil)
+check("a Kalimdor snapshot does not judge an Eastern Kingdoms point it never saw",
+    At(DUSKWOOD, { Node("Darkshire, Duskwood", ALLIANCE, 50, true, DARKSHIRE) })
+    == "Open a flight master's map to save the points you know")
 check("the other faction's flight point stays hidden",
     At(BARRENS, { Node("Crossroads, The Barrens", HORDE, 20) }) == nil)
 

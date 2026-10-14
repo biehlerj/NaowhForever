@@ -454,7 +454,8 @@ NaowhForever_QoL/
   screen units so the Scale slider resizes it in place.
 - Flight Point reads `C_TaxiMap.GetTaxiNodesForMap` for the zone, and the parent maps up through
   the continent when that list is empty. `isUndiscovered` is not set for a classic flight path you
-  have not spoken to. Until this character opens a flight master's map, a friendly point in range
+  have not spoken to. Until this character opens a flight master's map on that continent
+  (`GetAllTaxiNodes` only lists the open map's continent), a friendly point in range
   asks you to open one to save the points you know, and only a node the map marks undiscovered is
   named. Talking to a flight master (a gossip option with the taxi icon) records that town's node
   as known, so the reminder hides without opening the flight map, and does not mark the snapshot
