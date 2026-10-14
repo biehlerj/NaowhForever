@@ -334,9 +334,9 @@ do
         and flight.text.g == s.T.accent.g and flight.text.b == s.T.accent.b)
     local flightRows = s.rows("QoL/Travel", "flightPoint")
     local swatch = s.S.Default("flightPointColor")
-    check("Flight Point Reminder: Custom Color off hides Text Color, and the swatch starts on the shipped accent",
+    check("Flight Point Reminder: Custom Color off hides Text Color, and the swatch starts on the theme accent",
         flightRows.flightPointCustom and s.ns.Shared.Settings.Off(flightRows.flightPointColor)
-        and swatch.r == 0 and swatch.g == 0x91 / 255 and swatch.b == 0xed / 255)
+        and swatch.r == s.T.accent.r and swatch.g == s.T.accent.g and swatch.b == s.T.accent.b)
     s.S.Set("flightPointColor", { r = 0.2, g = 0.4, b = 0.6 })
     s.S.Set("flightPointCustom", true)
     check("Flight Point Reminder: Custom Color paints the saved color", flight.text.r == 0.2

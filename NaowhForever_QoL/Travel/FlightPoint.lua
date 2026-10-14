@@ -80,14 +80,7 @@ local function Ours(faction)
     return false
 end
 
-local function PlayerGUID()
-    local guid = UnitGUID(PLAYER)
-    if Secret(guid) or type(guid) ~= "string" or guid == "" then return nil end
-    return guid
-end
-
 local function Mine(create)
-    if not PlayerGUID() then return end
     return ns.Shared.CharacterData(STORE, create)
 end
 
@@ -211,7 +204,7 @@ local function Scan(entries, map, zone, zoneName, player, subzone, mine)
     end
     local spoken
     if bestName then spoken = bestID else spoken = askID end
-    return bestName, nil, ask, spoken
+    return bestName, ask, spoken
 end
 
 local function Nearest()
@@ -225,7 +218,7 @@ local function Nearest()
     local subzone, mine = Subzone(), Mine()
     local map, entries, blocked = NodesFor(zone)
     if blocked or not map then return nil end
-    local best, _, ask, spoken = Scan(entries, map, zone, info and info.name or "", player, subzone, mine)
+    local best, ask, spoken = Scan(entries, map, zone, info and info.name or "", player, subzone, mine)
     if best then return best, nil, spoken end
     return nil, ask, spoken
 end

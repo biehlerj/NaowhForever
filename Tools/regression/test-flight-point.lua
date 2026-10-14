@@ -222,15 +222,7 @@ check("an empty subzone is not the town", Text() == nil)
 
 state.subzone = "Auberdine"
 state.nodes = { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }
-state.guid, state.secret = SECRET, true
 state.openNodes = { { nodeID = AUBERDINE, state = CURRENT } }
-Fire("TAXIMAP_OPENED")
-check("a secret GUID leaves the snapshot unwritten", account.flightPoints == nil and Text() == "Open a flight master's map to save the points you know")
-state.options = { { icon = TAXI } }
-Fire("GOSSIP_SHOW")
-check("a secret GUID leaves the spoken point unwritten", account.flightPoints == nil
-    and Text() == "Open a flight master's map to save the points you know")
-state.guid, state.secret = GUID, false
 Fire("TAXIMAP_OPENED")
 check("a snapshot that marks the flight point known hides it", Text() == nil
     and account.flightPoints[GUID].seen == true and account.flightPoints[GUID][AUBERDINE] == true
