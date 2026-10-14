@@ -61,6 +61,8 @@ Setup.ITEMS = {
         blurb = ns.L("Your buttons and a clock along the top.") },
     swingTimer = { addon = "NaowhForever_SwingTimer", db = "swingTimer", key = "enabled",
         blurb = ns.L("Your swings, with marks to time around them.") },
+    trackingReminder = { addon = "NaowhForever_TrackingReminder", db = "trackingReminder", key = "enabled",
+        blurb = ns.L("Reminds you to turn on tracking.") },
 }
 
 local byAddon = {}

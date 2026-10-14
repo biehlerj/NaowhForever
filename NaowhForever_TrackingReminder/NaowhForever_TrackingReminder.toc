@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: |cff0091edNaowh|r Forever: Tracking Reminder
+## Notes: Reminder for racial and class tracking abilities.
+## Author: Naowh
+## Version: 1.1.11
+## Dependencies: NaowhForever
+## Group: NaowhForever
+## IconTexture: Interface\AddOns\NaowhForever\Core\Media\LogoAddon.tga
+
+TrackingReminder.xml
