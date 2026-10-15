@@ -27,7 +27,7 @@ NaowhForever_Professions/
   LinkView.lua         another player's profession opened from a trade link, and when it ends (P.Links)
   Recipes.lua          the open profession, reagents, what a recipe makes, bag counts (P.Recipes, ns.ProfWindowAPI)
   Vendors.lua          vendor reagents and prices learned at merchants, buying there (P.Vendors)
-  Prices.lua           buy prices, a craft's value and profit (P.Prices)
+  Prices.lua           buy prices, a craft's value, profit and return on investment (P.Prices)
   Favorites.lua        favourite recipes (P.Favorites, ns.ProfFavorites)
   RecipeFinder.lua     the unlearned recipes, what they need and where they come from (ns.RecipeFinder)
   RankAlert.lua        a profession ready for its next rank, in the window and once in chat (ns.ProfessionRank)
@@ -58,7 +58,7 @@ NaowhForever_Professions/
     Takeover.lua       showing it over Blizzard's window, docking Blizzard's tabs and cards, dragging, events
     ShoppingAdd.lua    Add to List under a recipe, and the button that opens the shopping list
     ShoppingWindow.lua the Shopping List window: crafts, other items, materials (ns.ToggleShoppingList)
-    ShoppingConsumables.lua the Consumables picker beside the Shopping List
+    ShoppingConsumables.lua the Consumables picker beside the Shopping List: search and favourites
     ShoppingList.lua   the shopping list beside the auction house: check and buy
     TrainFavorites.lua Train Favorites beside the trainer
     FavoritePatterns.lua Search Favorites AH beside the auction house
@@ -92,7 +92,9 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   makes it transparent instead of hiding it. Resizing waits for combat to end for the same reason.
 - Once dragged, Blizzard's window is moved to where ours was put, out of combat only (it holds secure
   buttons); anchoring it to ours instead would make ours protected. The panel manager places it
-  again whenever any panel opens or closes, so its SetPoint is hooked.
+  again whenever any panel opens or closes, so its SetPoint is hooked. EllesmereUI's Shifter puts
+  ProfessionsFrame back at its own saved spot on every SetPoint, so with the Shifter on that saved
+  spot is written too.
 - A trade link reads `trade:<crafter GUID>:<spell>:<skill line>`; only a plain click opens it. Opened
   from a closed window, a link does not always read as linked yet, so the click is remembered. A
   link clicked while Blizzard's window is loaded but closed makes Forever cast every one of your
@@ -115,6 +117,10 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
 - The list is wide enough for a recipe name, its count and a full profit ("-12g 07s 09c"). Counts sit
   in a right-aligned column as wide as the widest on screen, so every icon and name starts in line,
   never left of `ICON_X` (24), which keeps recipes indented under their headers.
+- Recipe Availability Marks are opt-in. Their Shopping List and bag icons are built only when the
+  switch is on; bag totals are read from bag slots so equipped gear is never counted as bag stock.
+  The list redraws on a Shopping List change only while the window is open: `/nf shopping` can
+  change the list before the recipe window was ever built.
 - The rank banner pushes both columns down 46 while it shows. Filter is 76 wide for "Filter (3)".
   The Buy, Add to List and Create rows share one width, so they line up; the reagent rows end 4
   short of Create, hence the Buy row's 4 overhang.
@@ -126,6 +132,9 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   at the last scan; the auction house keeps 5% of a sale. Profit is cached per recipe until the next
   full draw, so scrolling and the filter do not price every recipe again. Reagents unchecked in the
   pane are ones you have, left out of every recipe's cost.
+- ROI is profit divided by the materials' cost. It starts off and shows only under the selected
+  recipe's profit, losses in red: the list rows have no room for it beside a full profit. Grey below
+  10% and green from 30% leave the middle band yellow; both thresholds are player settings.
 - Merchants teach the vendor reagents: trade goods sold for gold without a stock limit are kept
   account-wide, with their price when Crafting Profit is on. Merchant events are registered only
   while the module and one of Crafts with Vendor Buys, Crafting Profit or Buy at Vendor are on.
@@ -155,6 +164,12 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   30 days (how long auction mail keeps) unless it turns up in your bags or bank first. Patterns are
   single listings; their live prices are looked up one at a time, 0.3s apart, so the auction house's
   limit on searches is never hit.
+- Manual Favorite Scans starts off. When enabled, Favorite Patterns sends no searches until Scan is
+  clicked, Pause stops after the current auction reply, and Resume continues the same queue. Completed
+  pages omit patterns with no buyout while the mouse wheel and pager reach every remaining pattern.
+  A search with no reply in 3s is put back for Resume, and a scan that ends with any unanswered
+  stays on Resume rather than done. Lookup timeouts keep their own counter, so a reset cannot hand a
+  new search the number of a pending timeout.
 - Starting a commodity purchase is protected (ADDON_ACTION_BLOCKED when tried on its own, seen
   2026-09-30), so the shopping list buys each material after the first on a click of Buy Next. A
   final price 10% over the check is warned about. A search sent while the auction house is busy is
@@ -170,7 +185,7 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   drink come from vendors, so they are not on it. The stones, oils and bandages are read from those modules
   when they are loaded. `WEAPON_ITEMS` and `BANDAGES` here are a copy used only while the Buff Reminders or
   the Smart Macros addon is off, so those groups still show; keep them in step with
-  `NaowhForever_AuraBuffs/Data/BuffReminders.lua` and `NaowhForever_Macros/Data/Items.lua`. Only the oils'
+  `NaowhForever_Combat/AuraBuffs/Data/BuffReminders.lua` and `NaowhForever_Macros/Data/Items.lua`. Only the oils'
   stats are kept here (`WEAPON_STATS`); every other weapon item is for attack power.
 - What suits your class is `CLASS_STATS`: warriors strength, agility and attack power; rogues agility and
   attack power; hunters those and intellect; mages and warlocks intellect, spirit and spell power; priests
@@ -189,6 +204,12 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   listens to bag changes and level ups only while it shows. The plan tells it of every list change
   (`Shopping.OnChange`); changes and bag updates redraw at most once a frame and only rewrite the rows'
   amounts and counts, while opening, a level up, the toggle and items loading pick the rows again.
+- A starred pick is a favourite: it moves out of its kind into Favorites at the top, in kind order. Favourites
+  are kept in the profile by item ID (`shopFavorites`), like the favourite recipes. Only what the picker
+  offers can show there, so a favourite the class filter or your level leaves out stays hidden until it is
+  offered again.
+- The search box above the list keeps the rows whose name holds what is typed, any case. Typing and a star
+  only lay out the rows already picked again, with no new pick; reopening the picker clears the search.
 - The shopping list makes a material from its parts, up to 4 levels down, only when whole crafts cost
   less than buying what is needed, and never from a recipe with a cooldown (it makes a few a day; a
   shared cooldown can read 0 on the spell). What was bought counts at every level, and a craft taken
@@ -203,10 +224,12 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   values, since which one Forever returns was not pinned down.
 - The Total Craft Timer takes the Flight Timer's measures and spot, as nobody crafts in flight. The
   player cast bars (EllesmereUI's and Blizzard's) stay at zero alpha for the batch, since their own
-  code shows them on every cast. Forever may report a cast time of 0 until it is cast, so 3s stands
-  in. Pressing Create mid-craft fails that press while the batch casts on, so that failure is
-  ignored. A batch with no craft event 5s past its expected end has stopped. Its hooks are installed
-  the first time it is switched on and stay, idle while it is off.
+  code shows them on every cast. Show Normal Cast Bar in the Total Craft Timer card keeps them
+  alongside the timer instead, restoring their original alpha immediately if enabled during a batch.
+  It defaults off and adds no events, frames or hooks. Forever may report a cast time of 0 until it
+  is cast, so 3s stands in. Pressing Create mid-craft fails that press while the batch casts on, so
+  that failure is ignored. A batch with no craft event 5s past its expected end has stopped. Its
+  hooks are installed the first time it is switched on and stay, idle while it is off.
 - Bag room is played out craft by craft on what the bags hold: the item onto a stack with room, else
   a free slot that can take it; the reagents out, smallest stack first (seen in game 2026-09-30), each
   emptied stack freeing its slot. A profession bag takes only its kind, the reagent bag only reagents.

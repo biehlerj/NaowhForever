@@ -23,7 +23,6 @@ local MAX_FRAME_LEVEL = 9999
 local OFFSCREEN = 0.9
 local BUTTON_TEXT_SIZE, BUTTON_REST_ALPHA = 12, 0.9
 local SKIN_CLASSIC, SKIN_FOREVER = "classic", "forever"
--- The Forever skin sets text as the game does: Friz Quadrata, and Arial Narrow for compact numbers.
 local FONT_NAOWH, FONT_CLASSIC, FONT_DATA = "Naowh", "Friz Quadrata TT", "Arial Narrow"
 local FONT_HEADING = FONT_CLASSIC
 local LOCALE_ADDON, ENGLISH = "NaowhForever_Locales", "enUS"
@@ -55,7 +54,17 @@ local SCALE_DEFAULT, SCALE_MIN, SCALE_MAX, PERCENT = 100, 50, 200, 100
 local LOGIN_APPLY_DELAY = 1
 local DAMAGE_METER_ADDON, GAME_METER_CVAR, GAME_METER_SAVED = "NaowhForever_DamageMeter", "damageMeterEnabled",
     "damageMeterGameWas"
-local GLIMMER_ADDON, GLIMMER_SAVED = "NaowhForever_Glimmer", { "glimmerSoftCVars", "glimmerSparkleCVars" }
+local GLIMMER_ADDON, GLIMMER_SAVED = "NaowhForever_QoL", { "glimmerSoftCVars", "glimmerSparkleCVars" }
+local RETIRED_ADDONS = { "NaowhForever_Glimmer", "NaowhForever_GlimmerData", "NaowhForever_TopBar", "NaowhForever_GearSets",
+    "NaowhForever_Blessings", "NaowhForever_AuraBuffs", "NaowhForever_ThreatMeter", "NaowhForever_PvP", "NaowhForever_SwingTimer",
+    "NaowhForever_Language" }
+local TEXT_RETIRED = "%s is now part of Quality of Life: delete its old folder from your AddOns folder."
+local TEXT_RETIRED_COMBAT = "%s is now part of Naowh Forever: Combat: delete its old folder from your AddOns folder."
+local RETIRED_TEXT = { NaowhForever_GearSets = TEXT_RETIRED_COMBAT, NaowhForever_Blessings = TEXT_RETIRED_COMBAT,
+    NaowhForever_AuraBuffs = TEXT_RETIRED_COMBAT, NaowhForever_ThreatMeter = TEXT_RETIRED_COMBAT,
+    NaowhForever_PvP = TEXT_RETIRED_COMBAT, NaowhForever_SwingTimer = TEXT_RETIRED_COMBAT,
+    NaowhForever_Language = "%s is now part of Naowh Forever: delete its old folder from your AddOns folder." }
+local TEXT_RETIRED_RELOAD = "Old Naowh Forever folders were switched off. Reload now to finish?"
 local ERR_NO_PROFILE = "no such profile"
 local TEXT_SECRET = "(withheld: this line contained a secret value)"
 local TEXT_LIBRARIES_MISSING = "Libraries missing (%s), so parts of the addon will not work. Download Naowh "
@@ -74,8 +83,10 @@ ns.MODULE_KEY = MODULE_KEY
 ns.MEDIA = MEDIA
 
 local function PickLocale()
-    local saved = _G.NaowhForeverLanguageDB
-    local pick = saved and saved.locale
+    local sv = _G.NaowhForeverDB
+    local account = type(sv) == "table" and sv.account
+    local pick = type(account) == "table" and account.language or nil
+    ns.LANGUAGE_PICK = pick
     if LANGUAGE_NAMES[pick or ""] then return pick end
     local client = GetLocale and GetLocale() or ENGLISH
     return LANGUAGE_NAMES[client] and client or ENGLISH
@@ -87,7 +98,11 @@ if ns.LOCALE ~= ENGLISH then
     C_AddOns.LoadAddOn(LOCALE_ADDON)
 end
 
-local catalog = _G.NaowhForeverLocale or {}
+local catalog = {}
+for key, text in pairs(_G.NaowhForeverLocale or {}) do
+    if text ~= true then catalog[key] = text end
+end
+_G.NaowhForeverLocale = nil
 local translation = _G.NaowhForeverTranslation or {}
 function ns.L(key, ...)
     local text = translation[key]
@@ -117,7 +132,7 @@ function ns.Lower(text)
     return (text:lower():gsub(LATIN_CAPITAL, LatinLower))
 end
 
-ns.CODE_BUILD = "1.1.11"
+ns.CODE_BUILD = "1.1.18"
 
 ns.THEME = {
     bg     = { r = 0x0e / 255, g = 0x0f / 255, b = 0x11 / 255 },
@@ -406,9 +421,24 @@ local function RestoreGlimmerSettings()
     end
 end
 
+local function RetireOldFolders()
+    local reload = false
+    for _, addon in ipairs(RETIRED_ADDONS) do
+        if C_AddOns.DoesAddOnExist(addon) then
+            C_AddOns.DisableAddOn(addon)
+            ns.Print(ns.L(RETIRED_TEXT[addon] or TEXT_RETIRED):format(addon))
+            reload = reload or C_AddOns.IsAddOnLoaded(addon)
+        end
+    end
+    if reload then ns.ConfirmReload(ns.L(TEXT_RETIRED_RELOAD)) end
+end
+
 local meterCheck = CreateFrame("Frame")
 meterCheck:RegisterEvent("PLAYER_LOGIN")
 meterCheck:SetScript("OnEvent", function()
+    local oldLanguage, account = _G.NaowhForeverLanguageDB, ns.AccountSettings()
+    if type(oldLanguage) == "table" and account.language == nil then account.language = oldLanguage.locale end
+    RetireOldFolders()
     RestoreGameMeter()
     RestoreGlimmerSettings()
 end)
@@ -470,9 +500,6 @@ if LSM then
 end
 
 ns.BLIZZARD_FONT = "__blizzard"
--- name is the font as requested (an LSM name or one of this file's FONT_* constants), path its
--- resolved file. The Cyrillic swap keys off the request, not the resolved path, so it still
--- applies if LSM's registration for Friz Quadrata ever changes.
 function ns.LocaleFont(name, path)
     if GLYPH_FONTS[ns.LOCALE] then return GLYPH_FONTS[ns.LOCALE] end
     if ns.LOCALE == "ruRU" and name == FONT_CLASSIC then return FRIZ_CYRILLIC end
@@ -505,7 +532,6 @@ function ns.HeadingFontPath(classic)
     return FontPath(FONT_HEADING) or ns.UIFontPath()
 end
 
--- Compact numbers (a slider's value): Arial Narrow on the Forever skin, else the Addon Font.
 function ns.DataFontPath()
     if not ns.foreverSkin or ns.AccountSettings().uiFont then return ns.UIFontPath() end
     return FontPath(FONT_DATA) or ns.UIFontPath()
@@ -693,7 +719,6 @@ function ns.Button(parent, text, w, h, onClick, template)
     return btn
 end
 
--- The game marks no button as the main one.
 function ns.AccentBorder(frame)
     if frame and frame._forever then return frame end
     if not (frame and frame._border) or frame._art then return frame end
@@ -837,7 +862,7 @@ function ns.NewEditBox(parent, opts)
     local edge = opts.border or BLACK
     box._border = ns.Border(box, edge)
     box.border = box._border
-    if opts.hover ~= false then
+    if opts.hover ~= false and not ns.foreverSkin then
         box:HookScript("OnEnter", function()
             local a = ns.THEME.accent
             box._border:SetColor(a.r, a.g, a.b, 1)
@@ -1308,11 +1333,6 @@ function ns.ApplySpecProfile(specID)
     if not want or type(sv.profiles[want]) ~= "table" then return false end
     if sv.charActive[CharKey()] == want then return false end
     return (ns.SwitchProfile(want)) and true or false
-end
-
-function ns.ProfileSettings(name)
-    local p = DB().profiles[name]
-    return type(p) == "table" and type(p.tankReminder) == "table" and p.tankReminder or nil
 end
 
 function ns.EnsureProfile(name)

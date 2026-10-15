@@ -32,14 +32,15 @@ local MODULES = {
       tabs = {
           { name = "Interface", reuse = true },
           { name = "Map & Pins", reuse = true },
-          { name = "Cursor & Crosshair", reuse = true },
           { name = "Combat", reuse = true },
-          { name = "Damage Meter", reuse = true },
           { name = "Questing & Group", reuse = true },
           { name = "XP", reuse = true },
           { name = "Loot & Items", reuse = true },
+          { name = "Glimmer", reuse = true },
           { name = "Travel", reuse = true },
           { name = "System", reuse = true },
+          { name = "Cursor & Crosshair", reuse = true },
+          { name = "Damage Meter", reuse = true },
       } },
     { name = "Dungeon Journal", group = "ADVENTURE", navIcon = "map", settings = "JournalSettings",
       addon = "NaowhForever_DungeonJournal",
@@ -51,7 +52,6 @@ local MODULES = {
           { name = "Quest Tracker", reuse = true },
           { name = "Map", reuse = true },
       } },
-    -- This hour and the visit history are a window of their own (open); only the settings live here.
     { name = "Instance Tracker", group = "UTILITIES", navIcon = "person", settings = "InstanceTrackerSettings",
       addon = "NaowhForever_InstanceTracker",
       open = "ToggleInstanceTrackerWindow",
@@ -94,8 +94,14 @@ local MODULES = {
           { name = "Quest List", reuse = true },
           { name = "Rares", reuse = true },
       } },
+    { name = "Consumable Bar", group = "COMBAT", navIcon = "heart", settings = "QoLSettings",
+      enabledKey = "consumableBar", addon = "NaowhForever_ConsumableBar",
+      subtitle = "Your consumables on a bar you can click.",
+      tabs = {
+          { name = "Settings", reuse = true },
+      } },
     { name = "Gear & Trinkets", group = "COMBAT", navIcon = "shield", settings = "QoLSettings", enabledKey = "gearSets",
-      addon = "NaowhForever_GearSets",
+      addon = "NaowhForever_GearSets", host = "NaowhForever_Combat",
       open = "ToggleGearSetsWindow",
       command = "gear", short = "Gear", icon = "Interface\\Icons\\INV_Chest_Plate04",
       subtitle = "Swap equipment sets from a bar, or on their own while you ride or rest.",
@@ -103,7 +109,7 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Blessings", group = "COMBAT", navIcon = "spark", settings = "QoLSettings", enabledKey = "blessings",
-      addon = "NaowhForever_Blessings",
+      addon = "NaowhForever_Blessings", host = "NaowhForever_Combat",
       open = "ToggleBlessingsWindow",
       command = "bless", short = "Bless", icon = "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings",
       subtitle = "Paladin blessings by class and player, shared with the group's paladins.",
@@ -118,15 +124,20 @@ local MODULES = {
       } },
     { name = "Macros", group = "UTILITIES", navIcon = "pen", settings = "MacroSettings",
       addon = "NaowhForever_Macros",
-      open = "ToggleMacroWindow",
+      open = "OpenMacroWindow",
       command = "macros", short = "Macros", icon = "Interface\\Icons\\INV_Misc_Note_01",
-      subtitle = "Naowh's Forge: your macros, checked and explained, and macros kept current for you.",
+      subtitle = "Your macros, checked and explained, and macros kept current for you.",
       tabs = {
+          { name = "My Macros", build = "BuildForgePage", arg = "mine", terms = "ForgeSearchTerms", reuse = true },
+          { name = "Smart Macros", build = "BuildForgePage", arg = "smart", reuse = true },
+          { name = "Library", build = "BuildForgePage", arg = "lib", reuse = true },
           { name = "Settings", reuse = true },
       } },
-    { name = "Consumable Bar", group = "UTILITIES", navIcon = "heart", settings = "QoLSettings",
-      enabledKey = "consumableBar", addon = "NaowhForever_ConsumableBar",
-      subtitle = "Your consumables on a bar you can click.",
+    { name = "Group Inspect", group = "UTILITIES", navIcon = "group", settings = "QoLSettings",
+      enabledKey = "groupInspect", addon = "NaowhForever_GroupInspect", needs = { "NaowhForever_BiS" },
+      open = "ToggleGroupInspect",
+      command = "group", short = "Group", icon = "Interface\\Icons\\INV_Misc_Spyglass_02",
+      subtitle = "Everyone in your party or raid: their Naowh Score, gear, talents and stats.",
       tabs = {
           { name = "Settings", reuse = true },
       } },
@@ -139,7 +150,7 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "AuraBuffs", group = "COMBAT", navIcon = "aura", settings = "AuraBuffSettings",
-      addon = "NaowhForever_AuraBuffs",
+      addon = "NaowhForever_AuraBuffs", host = "NaowhForever_Combat",
       open = "ToggleAuraBuffsWindow",
       command = "buffs", short = "Buffs", icon = "Interface\\Icons\\Spell_Holy_WordFortitude",
       subtitle = "Buff, consumable and campfire reminders, and a low health warning.",
@@ -147,22 +158,14 @@ local MODULES = {
           { name = "Settings", reuse = true },
       } },
     { name = "Threat Meter", group = "COMBAT", navIcon = "bars", settings = "ThreatMeterSettings",
-      addon = "NaowhForever_ThreatMeter",
+      addon = "NaowhForever_ThreatMeter", host = "NaowhForever_Combat",
       command = "threat", short = "Threat", icon = "Interface\\Icons\\Ability_Warrior_Sunder",
       subtitle = "Threat on your target for the whole group, and a warning before you pull.",
       tabs = {
           { name = "Settings", reuse = true },
       } },
-    { name = "Group Inspect", group = "COMBAT", navIcon = "group", settings = "QoLSettings",
-      enabledKey = "groupInspect", addon = "NaowhForever_GroupInspect", needs = { "NaowhForever_BiS" },
-      open = "ToggleGroupInspect",
-      command = "group", short = "Group", icon = "Interface\\Icons\\INV_Misc_Spyglass_02",
-      subtitle = "Everyone in your party or raid: their Naowh Score, gear, talents and stats.",
-      tabs = {
-          { name = "Settings", reuse = true },
-      } },
     { name = "PvP", group = "COMBAT", navIcon = "swords", settings = "PvPSettings",
-      addon = "NaowhForever_PvP",
+      addon = "NaowhForever_PvP", host = "NaowhForever_Combat",
       command = "pvp", short = "PvP", icon = "Interface\\Icons\\INV_Sword_27",
       subtitle = "What your target is doing in a fight: their short buffs and the crowd control on them.",
       tabs = {
@@ -170,18 +173,8 @@ local MODULES = {
           { name = "Battlegrounds", reuse = true },
           { name = "Flag", reuse = true },
       } },
-    { name = "Top Bar", navIcon = "window", settings = "TopBarSettings", addon = "NaowhForever_TopBar", needs = { "NaowhForever_QoL" },
-      inQoL = true,
-      subtitle = "Your buttons on either side of an optional clock, with FPS and latency underneath.",
-      tabs = {} },
-    { name = "Glimmer", group = "ADVENTURE", navIcon = "spark", settings = "GlimmerSettings",
-      addon = "NaowhForever_Glimmer",
-      subtitle = "Herbs, ore, chests and quest objects light up as you walk up to them.",
-      tabs = {
-          { name = "Settings", reuse = true },
-      } },
     { name = "Swing Timer", group = "COMBAT", navIcon = "infinity", settings = "SwingTimerSettings",
-      addon = "NaowhForever_SwingTimer",
+      addon = "NaowhForever_SwingTimer", host = "NaowhForever_Combat",
       subtitle = "Your swings from the game's own swing timer, with marks for timing around them.",
       tabs = {
           { name = "Settings", reuse = true },
@@ -205,7 +198,7 @@ local function DisplayName(mod)
 end
 
 local function Loaded(mod)
-    return not mod.addon or C_AddOns.IsAddOnLoaded(mod.addon)
+    return not mod.addon or C_AddOns.IsAddOnLoaded(mod.host or mod.addon)
 end
 
 local function Has(list, value)
@@ -274,7 +267,7 @@ local function EnableState(addon, who)
 end
 
 local function ModuleOn(mod, who)
-    if mod.addon and EnableState(mod.addon, who) == 0 then return false end
+    if mod.addon and EnableState(mod.host or mod.addon, who) == 0 then return false end
     if mod.settings then
         local store = ns[mod.settings]
         return store ~= nil and store.Get(mod.enabledKey or "enabled")
@@ -316,7 +309,17 @@ function ns.LinkedAddons(addon, on)
     return { addon }
 end
 
+function ns.ModuleHost(addon)
+    for _, mod in ipairs(MODULES) do
+        if mod.addon == addon then return mod.host end
+    end
+end
+
 local function SetModuleOn(mod, on)
+    if mod.host and Loaded(mod) then
+        ns.SetModuleState(mod.addon, on)
+        return UI:RefreshPage(true)
+    end
     if mod.addon and not on then return SwitchModuleAddon(mod, false) end
     local store = mod.settings and ns[mod.settings]
     if mod.settings and not store or not Loaded(mod) then return SwitchModuleAddon(mod, true) end

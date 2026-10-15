@@ -52,6 +52,7 @@ local function Frame()
     function f:GetStringHeight() return 14 end
     function f:GetStringWidth() return 100 end
     function f:SetAlpha(a) self.alpha = a end
+    function f:SetScale(v) self.scale = v end
     function f:SetScript(k, fn) self.scripts[k] = fn end
     function f:HookScript(k, fn)
         local old = self.scripts[k]
@@ -90,6 +91,19 @@ local s = { combat = false, profiles = { Default = {} }, charActive = { [ME] = "
 local buttons, fonts = {}, {}
 
 local Parts = { ForeverButtonArt = function(f) f.redButton = true; return true end }
+function Parts.Backdrop(f, forever)
+    local backdrop = { frame = f, forever = forever }
+    function backdrop.Paint(_, alpha, colors) backdrop.alpha, backdrop.colors = alpha, colors end
+    return backdrop
+end
+function Parts.ForeverFrame(window, opts)
+    local chrome = Frame()
+    chrome.parent, chrome.opts = window, opts
+    chrome.title = Frame()
+    chrome.title.parent, chrome.title.text = chrome, opts.title
+    window.forever = chrome
+    return chrome
+end
 local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.upper, Lower = string.lower, MEDIA = dofile("Tools/regression/core_media.lua"), THEME = T, UI = {},
     Shared = { Style = St, Parts = Parts },
     THEME_EDITABLE = EDITABLE, FOREVER_SKIN = FOREVER,
@@ -194,7 +208,8 @@ local env = setmetatable({ _G = { NaowhForever = ns }, CreateFrame = function(_,
         return f
     end, InCombatLockdown = function() return s.combat end, UnitName = function() return ME end,
     CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end,
-    wipe = function(t) for k in pairs(t) do t[k] = nil end return t end },
+    wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
+    CopyTable = function(t) local out = {} for k, v in pairs(t) do out[k] = v end return out end },
     { __index = _G })
 local chunk = assert(loadfile("Core/Onboarding/SetupWindow.lua"))
 setfenv(chunk, env)
@@ -305,7 +320,7 @@ check("past the welcome the animation stops", sign.scripts.OnUpdate == nil)
 check("step 1 of 4, its segments lit", window.subtitle.text == "Step 1 of 4" and #window.segments == 4
     and window.segments[1].shown)
 check("step 1 asks where to start", Said("Where do you want to start?") ~= nil)
-local minimal, recommended, keep = Tile("Minimalist"), Tile("Everything Enabled"), Tile("Keep mine")
+local minimal, recommended, keep = Tile("Recommended"), Tile("Everything Enabled"), Tile("Keep mine")
 check("three profiles: Naowh's two, with their own words, and Keep mine", #Tiles() == 3 and minimal and recommended
     and keep and minimal.blurb.text == w.ns.PRESETS.minimalist.about
     and recommended.blurb.text == w.ns.PRESETS.recommended.about and keep.blurb.text == "Your settings stay as they are.")
@@ -317,7 +332,7 @@ check("each draws our own icon", Ours(minimal.icon.tex.texture, "essentials")
     and Ours(recommended.icon.tex.texture, "everything") and Ours(keep.icon.tex.texture, "purist"))
 check("one row of cards, centred in the window", minimal.point[5] == keep.point[5]
     and math.abs(minimal.point[4] - (960 - (keep.point[4] + keep.w))) < 0.01)
-check("an account never set up starts on Minimalist, with its check", Picked() == "Minimalist"
+check("an account never set up starts on Minimalist, with its check", Picked() == "Recommended"
     and minimal.check.shown and not recommended.check.shown)
 check("Back and Next carry arrows", Find("Back").arrow.texture:find("back.tga", 1, true)
     and Find("Next").arrow.texture:find("next.tga", 1, true))
@@ -326,7 +341,15 @@ check("a pick glows on the card and pops its check", recommended.glow and recomm
     and recommended.check.pop and recommended.check.pop.plays == 1)
 check("one pick: the check moves", Picked() == "Everything Enabled")
 Clicked(minimal)
-check("and back", Picked() == "Minimalist")
+check("and back", Picked() == "Recommended")
+local shortH, blurbHeight = minimal.h, minimal.blurb.GetStringHeight
+minimal.blurb.GetStringHeight = function() return 70 end
+Clicked(minimal)
+check("a long description grows every card to fit it, in one row", minimal.h > shortH
+    and recommended.h == minimal.h and keep.h == minimal.h and keep.point[5] == minimal.point[5])
+minimal.blurb.GetStringHeight = blurbHeight
+Clicked(minimal)
+check("short descriptions keep the usual height", minimal.h == shortH and keep.h == shortH)
 local skinPage = window.skin
 local fades = skinPage.fadeIn and skinPage.fadeIn.plays or 0
 Find("Next").Click()
@@ -348,12 +371,22 @@ check("its black edge, its font, its accent-edged button", np.border == St.BORDE
     and np.body.fontPath == "naowh" and np.button.label.fontColor == NAOWH_PALETTE[4]
     and np.button.fill.gradient[1].r == NAOWH_PALETTE[2].r)
 local fp = forever.preview
-check("Forever's preview: its own palette", fp.bg.solid == FOREVER.bg and fp.rule.solid == FOREVER.line
-    and fp.body.fontColor == FOREVER.muted and fp.title.fontColor == FOREVER.accent)
-check("its bronze edge, its dark title bar, the game's fonts", fp.border == St.FOREVER_BRONZE_RGB
-    and fp.bar.gradient[2].r == St.FOREVER_TITLE_BAR_RGB[1].r and fp.title.fontPath == "friz" and fp.body.fontPath == "arial")
-check("its button the game's red one", fp.button.redButton and fp.button.fill == nil
-    and fp.button.label.fontColor == FOREVER.accent)
+local mini = fp.window
+check("Forever's preview: a small window in the skin's own frame, a picture that neither drags nor closes",
+    mini and mini.parent == fp and fp.frame.parent == mini and mini.forever == fp.frame and fp.frame.opts.preview
+    and fp.title == fp.frame.title and fp.title.text == "Naowh Forever" and fp.bg == nil and fp.bar == nil)
+check("on the game's rock in Forever's palette, on either skin", mini.backdrop.forever == true
+    and mini.backdrop.colors == FOREVER and mini.backdrop.alpha == 1 and mini.border == St.BORDER_RGB)
+check("scaled down to fit the tile", mini.scale > 0 and mini.scale < 1 and fp.w == np.w and fp.h == np.h
+    and fp.w < forever.w and fp.h < 220)
+check("the game's fonts, the title in its heading", fp.title.fontPath == "friz"
+    and fp.title.fontSize == St.FOREVER_TITLE_SIZE + St.CLASSIC_HEADING_STEP
+    and fp.body.fontPath == "arial" and fp.body.fontColor == FOREVER.muted)
+check("its text and button as big on screen as Naowh's", math.abs(fp.body.fontSize * mini.scale - np.body.fontSize) < 1e-9
+    and math.abs(fp.button.w * mini.scale - np.button.w) < 1e-9
+    and math.abs(fp.button.label.fontSize * mini.scale - np.button.label.fontSize) < 1e-9)
+check("its button the game's red one, inside the little window", fp.button.redButton and fp.button.fill == nil
+    and fp.button.parent == mini and fp.button.label.fontColor == FOREVER.accent)
 check("Naowh's preview keeps its plain title bar", np.bar.gradient == nil)
 Clicked(forever)
 check("Forever picked", Picked() == "Forever")
@@ -433,7 +466,12 @@ local function TallEnough()
 end
 check("a three-line blurb makes every tile tall enough for it, still above the footer", TallEnough() and AboveFooter())
 completo.blurb.GetStringHeight = function() return 14 end
-check("and moves it up to the ones on, in its place, the same tile", InGroup(completo) and Sorted()
+local function LastOn()
+    local last
+    for _, tile in ipairs(Reading()) do if tile.on then last = tile end end
+    return last
+end
+check("and moves it up to the end of the ones on, the same tile", InGroup(completo) and LastOn() == completo
     and Tile("Discovery") == completo and #Tiles() == #LISTED)
 Clicked(qol)
 check("Quality of Life off", not qol.on)
@@ -442,16 +480,17 @@ for _, tile in ipairs(Reading()) do if not firstOff and not tile.on then firstOf
 check("moves down to the ones off, at their head", InGroup(qol) and Sorted() and firstOff == qol)
 local frames = #made
 Clicked(qol)
-check("on again: back at the top, with no new frames", qol.on and InGroup(qol) and Reading()[1] == qol
-    and #made == frames)
+check("on again: at the end of the ones on, after Discovery, with no new frames", qol.on and InGroup(qol)
+    and LastOn() == qol and Reading()[1] ~= qol and #made == frames)
 Clicked(qol)
 Clicked(qol)
 check("and on again", qol.on)
 Clicked(Tile("Professions"))
 check("Professions on leaves the Training Planner off", Tile("Professions").on and not Tile("Training Planner").on)
+check("and lands last of the ones on", LastOn() == Tile("Professions"))
 Find("Back").Click()
 Find("Back").Click()
-check("Back goes a step back, the pick kept", window.subtitle.text == "Step 1 of 4" and Picked() == "Minimalist")
+check("Back goes a step back, the pick kept", window.subtitle.text == "Step 1 of 4" and Picked() == "Recommended")
 Find("Next").Click()
 check("the skin kept too", Picked() == "Forever")
 Find("Next").Click()
@@ -459,14 +498,14 @@ check("the same profile: the module flips kept", Tile("Discovery").on and Tile("
 Find("Back").Click()
 Find("Back").Click()
 Clicked(Tile("Everything Enabled"))
-Clicked(Tile("Minimalist"))
+Clicked(Tile("Recommended"))
 Find("Next").Click()
 Find("Next").Click()
 check("another profile picked: its modules again", Picked() == MINIMALIST)
 Find("Next").Click()
 check("step 4: the summary", window.subtitle.text == "Step 4 of 4" and Said("Here's your setup") ~= nil
     and Said("Nothing changes until you apply it.") ~= nil)
-check("it names the profile and the new skin", Said("Profile") and Said("Minimalist") and Said("Skin") and Said("Forever"))
+check("it names the profile and the new skin", Said("Profile") and Said("Recommended") and Said("Skin") and Said("Forever"))
 local off = Saying("Discovery")
 check("and the modules it turns off, in red", Said("Turns off") and off and off.color[1] == St.RED_RGB.r
     and not off.text:find("BiS List", 1, true))
@@ -483,10 +522,9 @@ check("after the fight it is ready again", Said("Apply after your fight.") == ni
 Find("Apply").Click()
 check("applied: the window closes and the reload is offered", not window.shown and s.reloadAsked ~= nil)
 check("its modules on, the rest off, Forever, Minimalist", w.enabled.NaowhForever_QoL and w.enabled.NaowhForever_BiS
-    and w.enabled.NaowhForever_DungeonJournal and not w.enabled.NaowhForever_ThreatMeter
-    and not w.enabled.NaowhForever_PvP and not w.enabled.NaowhForever_Discovery
-    and not w.enabled.NaowhForever_GroupInspect
-    and not w.enabled.NaowhForever_SwingTimer and not w.enabled.NaowhForever_ConsumableBar
+    and w.enabled.NaowhForever_DungeonJournal and not w.enabled.NaowhForever_Combat
+    and not w.enabled.NaowhForever_Discovery and not w.enabled.NaowhForever_GroupInspect
+    and not w.enabled.NaowhForever_ConsumableBar
     and w.account.skin == "forever" and w.root.qol.preset == "minimalist" and w.account.setupBefore ~= nil)
 check("closed: the onboarding is seen, so it never opens by itself again", w.account.onboardingSeen == true
     and w.account.welcomeSeen == true)
@@ -504,7 +542,7 @@ Clicked(Tile("PvP"))
 Clicked(Tile("Threat Meter"))
 for _, tile in ipairs(Tiles()) do if not tile.on then Clicked(tile) end end
 check("all on: one group, no line, still above the footer", modulesPage.onSection.shown
-    and not modulesPage.offSection.shown and Sorted() and AboveFooter())
+    and not modulesPage.offSection.shown and Grouped() and AboveFooter())
 window:Hide()
 check("X or Escape partway: nothing changes", Snapshot() == kept)
 
@@ -601,8 +639,8 @@ Clicked(Tile("PvP"))
 Clicked(Tile("Threat Meter"))
 Find("Next").Click()
 Find("Apply").Click()
-check("applied for this character: PvP on, Threat Meter off", w.enabled.NaowhForever_PvP
-    and not w.enabled.NaowhForever_ThreatMeter and w.others.NaowhForever_ThreatMeter)
+check("applied for this character: PvP on, Threat Meter off", w.On("pvp") and not w.On("threatMeter")
+    and w.enabled.NaowhForever_Combat and w.others.NaowhForever_Combat)
 local named = #w.calls > 0
 for _, c in ipairs(w.calls) do named = named and w.ForMe(c) end
 check("every C_AddOns call named this character", named)

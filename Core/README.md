@@ -132,8 +132,8 @@ Namespace and builds
 - The Damage Meter module is no longer shipped (its folder stays in git). It turned the game's meter
   (`damageMeterEnabled`) off and kept what it was on the account, so the core puts that back at login
   when the addon is not loaded.
-- Glimmer changes soft target and outline settings and keeps what they were on the account; the core
-  puts those back at login too when NaowhForever_Glimmer is not loaded, so turning the addon off in the
+- QoL's Glimmer changes soft target and outline settings and keeps what they were on the account; the
+  core puts those back at login too when NaowhForever_QoL is not loaded, so turning QoL off in the
   AddOns list, or applying a preset that turns it off, never leaves them changed.
 
 Theme
@@ -207,6 +207,8 @@ Modals and windows
   builds (previews, lazy journal reads) never run off-screen. A profile import can change any tab, so
   every cached tab is invalidated, not only the one on show.
 - Window scale is set from a dropdown, not a slider: the control sits inside the frame it resizes.
+- Sidebar rows are 28 high (`NAV_ROW`) so every module fits the default 852-high window
+  (test-navigation.lua).
 - The options window and a module's window size through `Parts.Resizable`; letting go of the grip
   (`onReleased`) fits the page to the new width and redraws it only when that width changed.
 
@@ -243,6 +245,9 @@ Widgets
   Config tables stay attached to their controls and are updated in place, so never share one config
   table between two rows.
 - The color picker saves nothing until the color moves off the one it opened with.
+- A row region's `onDrop` takes whatever the cursor holds: a drag let go anywhere on the region,
+  its button included, or a click while the cursor holds something. It returns true when it took
+  it; a button whose `onDrop` did not then runs its own click.
 - `ns.NewEditBox(parent, opts)` is every input box. `opts` is optional: `inset` (the text inset),
   `border` (its edge color, black by default), `hover = false` (no accent edge under the mouse) and
   `sunken = false` (no Forever rim). A settings row's text box is one with no hover.
@@ -256,7 +261,8 @@ Widgets
 - On Forever a field has a bronze rim one pixel outside its black edge (`Parts.ForeverField`), and
   a button is the game's red `128-RedButton` (`Parts.ForeverButton`, see Shared/README.md); its
   pieces are its `_art`, and drawn, its bronze rim hangs off the edge's frame, so the
-  Flight Timer fades them with the rest.
+  Flight Timer fades them with the rest. `ns.AccentBorder` leaves the game's button art alone: the
+  game marks no button as the main one.
 - `UI.KeyField` takes a binding command, or functions for its action and label, for one field
   pointed at another binding each time its panel opens; its `_refreshValue` shows the new one.
 
@@ -344,6 +350,10 @@ Waypoints
   game would block its Share.
 - Only the last TomTom waypoint is kept, so clicking pin after pin does not pile up arrows. Routes
   always use the game's waypoint, since TomTom's never reports arriving.
+- `ns.PlaceWaypoint`'s last argument, for a dungeon's entrance, clears the waypoint as you go from
+  outside a dungeon or raid to inside one, so it is done wherever you walked in. Every game
+  waypoint placed since, a Journeys step included, drops it, and a waypoint set since by hand is
+  left alone. A Journeys route or TomTom's arrow does not carry it.
 
 Senders
 - Forever names are a first name and a surname and are not unique, so a message's sender is
@@ -351,14 +361,23 @@ Senders
   dropped.
 
 Search
-- Every typed word has to start a word of the target. A module with one tab does not add its tab's
-  name (mostly "Settings", which would match "set" everywhere).
+- Every typed word has to start a word of the target, or be close to a word of its name: its
+  letters in order (a Lua pattern, `^()t.-()o.-`) in a word that starts with the same letter and is
+  at most twice as long, from three letters typed. Help is matched only by word starts: matched
+  closely it found something in almost every help text. Close matches come after every exact one,
+  the ones whose word was most fully typed first. A pattern holds at most 32 captures, so a longer
+  typed word is only matched exactly.
+- A module with one tab does not add its tab's name (mostly "Settings", which would match "set"
+  everywhere).
 - A setting's module and tab names can narrow it ("journal minimap") but never find it alone, or
   typing a module's name would count every setting it has.
 - A page its own builder draws (Settings, Profiles) names what is on it through `terms`; the
   Settings page runs its own sections into a recorder, so what is searched is what is drawn.
-- A module that is not loaded has no pages to search; its name is found on the Settings page,
-  which says it is off.
+- A module that is not loaded declares no pages, so it is searched from the generated index in the
+  load-on-demand `NaowhForever_SearchIndex` addon (built at release), loaded by the first search while a module is off.
+  Its matches put it in a Turned Off group at the bottom of the sidebar, shown only while the search
+  finds something in it; its page lists them and its header switch turns it on. Its name is also
+  found on the Settings page, which says it is off.
 - A window card is searched by its button and its fixed text, never by a headline function: those
   read live state and some do real work.
 
@@ -407,8 +426,17 @@ Onboarding
   the skin; a backup from before skins were saved leaves the skin alone.
 - The skin step's previews are drawn, not pictures: a small window in each skin's own colors
   (`ns.ThemePalette` for Naowh's, with the player's theme; `ns.FOREVER_SKIN`), edge,
-  fonts (`ns.AddonFontPath` and `ns.HeadingFontPath` take whether to preview the game's) and button:
-  Forever's has its dark title bar, a bronze edge and the game's red button (`Parts.ForeverButtonArt`).
+  fonts (`ns.AddonFontPath` and `ns.HeadingFontPath` take whether to preview the game's) and button.
+  Forever's is a small Forever window built from the skin's own parts whichever skin is on: the rock
+  backdrop in Forever's palette (`Parts.Backdrop(frame, true)`, `Paint(1, ns.FOREVER_SKIN)`), the
+  portrait frame with its gold title and red close (`Parts.ForeverFrame` with `preview`, so it
+  neither drags nor closes) and the game's red button (`Parts.ForeverButtonArt`). The game's frame art
+  cannot be sized down, so the little window is a frame at `FOREVER_PREVIEW.scale` of real size, its
+  text and button sized up by the same amount to match the Naowh preview's on screen. It is inset in
+  the preview's box by the room the frame's art takes outside the window: `FOREVER_SIDE` plus the
+  portrait corner's 13 to the left, `FOREVER_TITLE_H` plus its 16 above (`PortraitFrameTemplate` in
+  `NineSliceLayouts.lua`), and `FOREVER_SIDE` plus the drawn rim's 5 to the right and below. The text
+  starts under the header band (`WINDOW_HEADER`), clear of the portrait, as in a real window.
   The step has a tile per skin in `Setup.SKINS` (Naowh, Forever), side by side.
 - The modules step lists the modules that are on first and the ones off under a line, each group in
   the options' order; a flip moves its tile across at once, laid out again from the same tiles. Four
@@ -466,9 +494,11 @@ Module state
   what was turned off. A module whose switch is only its default is not written to.
 - A module on without what it needs is turned off (`Setup.Settle`), and turning a module on or off
   from Settings brings or takes the linked ones (`ns.LinkedAddons`), as before.
-- The Top Bar is part of QoL and has no item, so it has no switch here: `ns.SetModuleState` changes only
-  its list entry (turning it on switches its own store on, when loaded), and `ns.ReconcileModules`
-  leaves it alone.
+- The Top Bar is part of QoL, with no item and no AddOn list entry of its own: its switch is its card's.
+- A module with a `host` (the six in NaowhForever_Combat) has no AddOn list entry of its own: it is on
+  when its host is enabled and its switch is on. `ns.SetModuleState`, `ns.ReconcileModules` and the
+  onboarding's Apply keep the host enabled for this character while any of its modules is on and
+  disable it once none is; switching one while its host is loaded needs no reload.
 - A change to the list takes a reload: one prompt (`ns.ConfirmReload`) after a pass that changed
   something, held until combat ends. Settings > Modules and the module windows read this character's
   list together with the switch, so they agree with the game's AddOn list.

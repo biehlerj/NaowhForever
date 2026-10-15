@@ -43,6 +43,8 @@ local TILE_LAYOUT = { checkInset = 6, markInset = 4, iconTop = 20, nameGap = 14,
 local SKIN_LAYOUT = { columns = #Setup.SKINS, tileH = 220, nameGap = 14 }
 local PREVIEW = { w = 190, h = 112, bar = 22, pad = 8, titleSize = 12, bodySize = 11, labelSize = 10,
     buttonW = 64, buttonH = 20 }
+local FOREVER_PREVIEW = { scale = 0.7, left = St.FOREVER_SIDE + 13, top = St.FOREVER_TITLE_H + 16,
+    right = St.FOREVER_SIDE + 5, bottom = St.FOREVER_SIDE + 5 }
 local MODULE_LAYOUT = { columns = 4, tileH = 56, pad = 10, gap = 8, plate = 36, glyph = 22, iconX = 10, textGap = 10,
     textRoom = 30, blurbGap = 2, sectionH = 16, sectionGap = 10, groupGap = 14, ruleGap = 8 }
 local SUMMARY_LAYOUT = { w = 560, rowH = 58, gap = 10, plate = 34, glyph = 22, iconX = 12, textGap = 12,
@@ -526,6 +528,7 @@ local function ProfileKeys()
 end
 
 local function PickProfile(tile)
+    if picks.profile ~= tile.key then picks.added = nil end
     Setup.PickProfile(picks, tile.key)
     Paint()
 end
@@ -548,7 +551,13 @@ end
 
 local function PaintProfile()
     local page = window.profile
-    PlaceGrid(page, #page.tiles, #page.tiles, TileWidth(#page.tiles), TILE_H, TILE_GAP)
+    local height = TILE_H
+    for _, tile in ipairs(page.tiles) do
+        height = math.max(height, TILE_LAYOUT.iconTop * 2 + ICON + TILE_LAYOUT.nameGap + tile.name:GetStringHeight()
+            + TILE_LAYOUT.blurbGap + tile.blurb:GetStringHeight())
+    end
+    for _, tile in ipairs(page.tiles) do tile:SetHeight(height) end
+    PlaceGrid(page, #page.tiles, #page.tiles, TileWidth(#page.tiles), height, TILE_GAP)
     for _, tile in ipairs(page.tiles) do PaintTile(tile, tile.key == picks.profile) end
 end
 
@@ -560,16 +569,15 @@ local function Palette(skin)
 end
 
 local function ForeverLook(c)
-    return { colors = c, edge = St.FOREVER_BRONZE_RGB, title = c.accent, bar = St.FOREVER_TITLE_BAR_RGB,
-        redButton = true, label = c.accent,
+    return { colors = c, scale = FOREVER_PREVIEW.scale, redButton = true, label = c.accent,
         body = ns.AddonFontPath(true), heading = ns.HeadingFontPath(true) }
 end
 
 local function SkinLook(skin)
     local c = Palette(skin)
     if skin == Setup.SKIN_FOREVER then return ForeverLook(c) end
-    return { colors = c, edge = BLACK, title = c.fg, fill = { c.panel, c.panel }, rim = c.accent, label = c.fg,
-        body = ns.AddonFontPath(false), heading = ns.HeadingFontPath(false) }
+    return { colors = c, scale = 1, edge = BLACK, title = c.fg, fill = { c.panel, c.panel }, rim = c.accent,
+        label = c.fg, body = ns.AddonFontPath(false), heading = ns.HeadingFontPath(false) }
 end
 
 local function PreviewText(parent, path, size, color)
@@ -579,9 +587,10 @@ local function PreviewText(parent, path, size, color)
 end
 
 local function PreviewButton(preview, look)
+    local s = look.scale
     local button = CreateFrame("Frame", nil, preview)
-    button:SetSize(PREVIEW.buttonW, PREVIEW.buttonH)
-    button:SetPoint("BOTTOMRIGHT", -PREVIEW.pad, PREVIEW.pad)
+    button:SetSize(PREVIEW.buttonW / s, PREVIEW.buttonH / s)
+    button:SetPoint("BOTTOMRIGHT", -PREVIEW.pad / s, PREVIEW.pad / s)
     if look.redButton then
         Parts.ForeverButtonArt(button)
     else
@@ -591,14 +600,40 @@ local function PreviewButton(preview, look)
         button.fill:SetGradient("VERTICAL", CreateColor(bottom.r, bottom.g, bottom.b, 1), CreateColor(top.r, top.g, top.b, 1))
         button.edge = ns.Border(button, look.rim)
     end
-    button.label = PreviewText(button, look.heading, PREVIEW.labelSize, look.label)
+    button.label = PreviewText(button, look.heading, PREVIEW.labelSize / s, look.label)
     button.label:SetPoint("CENTER")
     button.label:SetText(TEXT_SKIN.previewButton)
     return button
 end
 
+local function ForeverPreview(tile, look)
+    local c, s = look.colors, look.scale
+    local preview = CreateFrame("Frame", nil, tile)
+    preview:SetSize(PREVIEW.w, PREVIEW.h)
+    preview.look = look
+    local mini = CreateFrame("Frame", nil, preview)
+    mini:SetScale(s)
+    mini:SetPoint("TOPLEFT", FOREVER_PREVIEW.left, -FOREVER_PREVIEW.top)
+    mini:SetPoint("BOTTOMRIGHT", -FOREVER_PREVIEW.right, FOREVER_PREVIEW.bottom)
+    mini.backdrop = Parts.Backdrop(mini, true)
+    mini.backdrop:Paint(1, c)
+    ns.Border(mini, BLACK)
+    preview.window = mini
+    preview.frame = Parts.ForeverFrame(mini, { title = TEXT_SKIN.previewTitle, preview = true })
+    preview.title = preview.frame.title
+    preview.title:SetFont(look.heading, St.FOREVER_TITLE_SIZE + St.CLASSIC_HEADING_STEP, "")
+    preview.title:SetShadowColor(0, 0, 0, 1)
+    preview.title:SetShadowOffset(St.CLASSIC_HEADING_SHADOW, -St.CLASSIC_HEADING_SHADOW)
+    preview.body = PreviewText(mini, look.body, PREVIEW.bodySize / s, c.muted)
+    preview.body:SetPoint("TOPLEFT", PREVIEW.pad / s, -HEADER)
+    preview.body:SetText(TEXT_SKIN.previewBody)
+    preview.button = PreviewButton(mini, look)
+    return preview
+end
+
 local function Preview(tile, skin)
     local look = SkinLook(skin)
+    if skin == Setup.SKIN_FOREVER then return ForeverPreview(tile, look) end
     local c = look.colors
     local preview = CreateFrame("Frame", nil, tile)
     preview:SetSize(PREVIEW.w, PREVIEW.h)
@@ -610,11 +645,6 @@ local function Preview(tile, skin)
     preview.bar:SetPoint("TOPLEFT")
     preview.bar:SetPoint("TOPRIGHT")
     preview.bar:SetHeight(PREVIEW.bar)
-    if look.bar then
-        local top, bottom = look.bar[1], look.bar[2]
-        preview.bar:SetColorTexture(1, 1, 1, 1)
-        preview.bar:SetGradient("VERTICAL", CreateColor(bottom.r, bottom.g, bottom.b, 1), CreateColor(top.r, top.g, top.b, 1))
-    end
     preview.rule = ns.Solid(preview, "ARTWORK", c.line, 1)
     preview.rule:SetPoint("TOPLEFT", preview.bar, "BOTTOMLEFT")
     preview.rule:SetPoint("TOPRIGHT", preview.bar, "BOTTOMRIGHT")
@@ -681,7 +711,16 @@ local function LayoutModuleTile(tile, width)
 end
 
 local function FlipModule(tile)
+    local was = CopyTable(picks.modules)
     Setup.Toggle(picks, tile.key, not picks.modules[tile.key])
+    local added = {}
+    for _, id in ipairs(picks.added or {}) do
+        if picks.modules[id] then added[#added + 1] = id end
+    end
+    for _, m in ipairs(modules) do
+        if picks.modules[m.id] and not was[m.id] then added[#added + 1] = m.id end
+    end
+    picks.added = added
     Paint()
 end
 
@@ -760,6 +799,8 @@ local function PaintModules()
     local width = TileWidth(MODULE_LAYOUT.columns)
     wipe(page.on)
     wipe(page.off)
+    local added, late = {}, {}
+    for _, id in ipairs(picks.added or {}) do added[id] = true end
     for i, m in ipairs(modules) do
         local tile = Tile(page, i)
         LayoutModuleTile(tile, width)
@@ -769,9 +810,14 @@ local function PaintModules()
         tile.icon.tex:SetTexture(NAV_ICONS .. (m.navIcon or NAV_FALLBACK) .. ".tga", nil, nil, FILTER)
         local on = picks.modules[m.id] == true
         PaintTile(tile, on)
-        local group = on and page.on or page.off
-        group[#group + 1] = tile
+        if on and added[m.id] then
+            late[m.id] = tile
+        else
+            local group = on and page.on or page.off
+            group[#group + 1] = tile
+        end
     end
+    for _, id in ipairs(picks.added or {}) do page.on[#page.on + 1] = late[id] end
     PlaceModules(page, width)
     window.note:SetText(TEXT_MODULES.count:format(OnCount(), #modules))
 end

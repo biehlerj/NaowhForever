@@ -4,7 +4,7 @@ The QoL features, shipped as their own addon (`NaowhForever_QoL`): one file per 
 with its rules, its drawing and its settings card at the end. They share one settings store,
 `ns.QoLSettings`, which stays in the core (`Core/Settings.lua`) because the core and other modules
 read it too; its on/off switches come from `ns.FEATURES.qol` (`Core/Features.lua`). Turn the addon
-off (Settings > Modules) and every QoL feature is gone, with the Top Bar, which needs it.
+off (Settings > Modules) and every QoL feature is gone, the Top Bar with them.
 
 ## Layout
 
@@ -13,6 +13,26 @@ NaowhForever_QoL/
   NaowhForever_QoL.toc             its metadata, and one file line: QoL.xml
   QoL.xml                          every file, in load order
   Constants.lua                    the numbers, colors and patterns several QoL features share (ns.QoLConstants)
+  Glimmer/                         Glimmer, its own tab: herbs, ore, chests and quest objects light up as you walk up
+    Glimmer.xml                    its files, in load order, included by QoL.xml
+    Glimmer.lua                    its settings (ns.GlimmerSettings), its table (ns.Glimmer, G), its categories
+    Constants.lua                  the names, game settings, timings and limits its files share (G.C)
+    Data/Nodes.lua                 every herb, vein and chest by object ID, with the skill it needs (G.NODES),
+                                   from Tools/build/glimmer_nodes.py
+    Data/Spots.lua                 where herbs and veins grow, packed into one string (ns.GlimmerSpotsPacked),
+                                   from Tools/build/glimmer_nodes.py
+    CVars.lua                      the game settings it changes, saved first and put back (G.CVars)
+    Target.lua                     what the soft interact target is, its reach and its skill-up chance (G.Target)
+    Spots.lua                      where herbs and veins grow, unpacked on first use, and the ones gathered (G.Spots)
+    View/Style.lua                 its look: skill colors, effect sizes and timings (G.Style)
+    View/Effects.lua               the five effects on a frame, over the world and on the previews (G.Effects)
+    UI/Conflict.lua                the question when another addon changes the same game settings (G.CheckOthers)
+    UI/Highlight.lua               the effect and its line on the target's nameplate, and its events
+    UI/Minimap.lua                 where herbs and veins grow, as icons on the minimap
+    UI/MapPins.xml                 the Gathered pin's template, and the file that fills it
+    UI/MapPins.lua                 the herbs and veins you gathered on the world map, noted as you loot them
+    UI/SettingsPage.lua            its tab, QoL > Glimmer, declared as cards, with its previews
+  TopBar/                          the Top Bar, its card on QoL > Interface; its own README has its files
   Interface/
     SpellEfficiencyData.lua  each mana spell rank's healing or damage (ns.SpellEfficiencyData) and their talents (ns.SpellEfficiencyTalents), generated
     SpellEfficiency.lua Mana Efficiency on spell tooltips, its Preview Tooltip and the Tooltips card's preview; ns.SpellEfficiencyOf, the numbers both it and the report show
@@ -61,6 +81,7 @@ NaowhForever_QoL/
                         ns.InviteAll, ns.ShowInviteEditor)
     GroupButtons.lua    On-Screen Buttons (Invite, your invite buttons, Invite All, Disband)
     FreeForAll.lua      Always Free for All, the party loot method while you lead
+    FinderRoles.lua     Group Finder Roles, the role buttons on the Group Finder
     TalentPoints.lua    the unspent talent points reminder
     QuestAutomation.lua accept, hand in and share quests, saved reward picks (ns.QuestRewards)
     RewardList.lua      the Saved Quest Rewards window (ns.OpenQuestRewards)
@@ -68,9 +89,13 @@ NaowhForever_QoL/
     Disband.lua         removing everyone from your group (ns.DisbandGroup), for the Disband button
     Trainer.lua         the trainer popup and rank swaps (ns.TrainerRankCheck, ns.TrainerForgetKept),
                         and its card on the Training Planner's page
+  Gambling/
+    Gamble.lua          Gamble sessions: Classic rolls and Deathroll
+    GambleHelp.lua      Holds help text on how the gamble function works.
   XP/
     GroupXP.lua         Group XP
     XPTicker.lua        XP per Hour (ns.ResetXPTicker)
+    XPBarFX.lua         the XP Bar's effects and hover breakdown (ns.XPBarFX)
     XPBar.lua           the XP Bar (ns.XPBarColor, ns.ResetXPBarSession, ns.ResetXPBarLayout)
   Loot/
     LootCard.lua        the one card on Loot & Items that Looting, Vendors, Auction Prices and Mail & Alts join
@@ -90,6 +115,7 @@ NaowhForever_QoL/
   Travel/
     FlightData.lua      each flight route's flown length (ns.FLIGHT_ROUTES), generated
     Flight.lua          the Flight Timer, Flight Games and flight times on the flight map
+    FlightPoint.lua     zone-entry and nearby-town flight point reminders
     AimTrainer.lua      the Aim Trainer (/nfaim, ns.AimRules, ns.AimPlay, ns.AimOffer)
     AimBoard.lua        the Aim Trainer's leaderboard (ns.AimBoard)
     QuizData.lua        the quiz questions (ns.QUIZ_QUESTIONS)
@@ -100,6 +126,9 @@ NaowhForever_QoL/
   Media/
     crosshair_ring.tga  the Crosshair's ring
     MouseRing/          the Mouse Ring's rings, glows and trail
+    Glimmer/            Glimmer's glow, flare, ring, beam and bracket, drawn by
+                        Tools/media/make_media.py
+    TopBar/             the Top Bar's button icons and resting glyph
   README.md           this file
 ```
 
@@ -150,9 +179,16 @@ NaowhForever_QoL/
   the Alerts group in `Core/AlertStack.lua`, Naowh's setups in `Core/Profiles/Setups.lua`) or in
   `Shared/` (the copy cards, the town NPCs, the food and potion lists).
   `Tools/regression/test-module-boundaries.lua` checks it.
-- The Top Bar's card sits on QoL > Interface, so the Top Bar depends on QoL: switching QoL off takes
-  it along. It has no item in the onboarding and its own switch is on its card. Settings > Modules
-  lists it only while its addon is not loaded, so a player who switched it off can turn it back on.
+- The Top Bar lives in `TopBar/`, loaded last, after the QoL features it sits beside. Its on/off is
+  its card's switch on QoL > Interface, and it keeps its own store, `ns.TopBarSettings` (the
+  profile's `topBar` table): it was a module addon of its own (NaowhForever_TopBar) before it moved
+  into QoL, and the same table means every setting carried over. An old NaowhForever_TopBar folder
+  is switched off at login (`RETIRED_ADDONS` in `Core/Core.lua`), with a reload offered when it
+  loaded. In that one session the old addon, which loads after QoL, has the bar: `TB.On` is false
+  while it is loaded, and the QoL copy declares no card while it is enabled, since the old copy
+  stops on a second `topBar` card. The enable state is asked for all characters, as the player
+  may not be known yet while QoL loads; a folder enabled only on other characters costs the card
+  for one session.
 - The Trainer Popup card is declared here, on QoL > XP with Talent Points, so it goes when QoL is
   off. The Bag Space and Food & Drink key binding names live in `Core/Commands.lua`, so the key
   bindings read right with QoL off, where the Bag Space key says so.
@@ -233,8 +269,9 @@ NaowhForever_QoL/
   it, and its `isOnGCD` flag stays readable in combat. A press and a cooldown error within 0.3s
   (`MATCH_WINDOW`) are one.
 - Buff Thank You Message: the game only names a caster who has a nameplate, is your target or
-  mouseover, or is in your group; for anyone else it can send the built-in /thank instead. An
-  addon's custom /emote, like /say, is blocked outside instances without a key press, but
+  mouseover, or is in your group; unknown casters are skipped. With whispers off, the built-in
+  /thank receives the caster's unit token, without changing your current target. An addon's
+  custom /emote, like /say, is blocked outside instances without a key press, but
   `C_ChatInfo.PerformEmote` is not (tested on Forever from a `C_Timer` callback).
 - Its buff lists hold every rank and group version of each class buff another player can give
   you (Wowhead Forever). They are kept in the file, not read from Auras & Buffs, because that
@@ -249,6 +286,31 @@ NaowhForever_QoL/
 - The line editor's box fills the scroll area down to its buttons and grows past it with the
   lines. `Parts.ShowBeside` sets its height once, so its bottom is tied to the options window's
   too, to follow a resize.
+- Gamble uses party or raid chat for its announcements and join/leave words, and the addon-message
+  channel to keep Gamble windows in sync. Players and the host join or leave in group chat and use
+  `/roll` when prompted. The addon tracks rolls and reports settlements; it never moves gold.
+- Enter the pool as integer gold and silver, such as `10g50s`; one gold is 100 silver, so that
+  example sets the roll maximum to 1,050. Classic rerolls only players tied at the highest or
+  lowest roll to decide that side's winner or loser; the original high-low difference determines
+  the amount; when every roll is the same, everyone rolls again. Deathroll chooses two joined players and alternates their rolls until one rolls 1;
+  its first roll uses the same total-silver maximum.
+- Gamble registers chat events only while its window is open or a session is active. Its join and
+  leave words and game mode can be changed in the main window. The host can cancel an active
+  session from the main window. The title bar's How to play button opens a detailed in-game guide
+  from `Gambling/GambleHelp.lua`.
+- Gamble keys players by GUID: Forever names are not unique, a party or raid chat line carries
+  only the first name, and an addon message's sender is "Name Surname". A join takes the GUID from
+  its chat line; a `/roll` line has only the first name, so it is matched to the one expected roller
+  of that name (two with the same first name are not counted). The session message names the host's
+  GUID and every host message is checked against it with `ns.SenderIs`; the host has left when no
+  group unit has that GUID.
+- Chat, system and addon message arguments can be secret during chat lockdown; a secret one is
+  skipped before it is read.
+- The host sends each join and leave on its own ("J", "L") rather than the whole roster; the whole
+  roster ("R") goes out only when a window opens and asks ("Q"). A join is not repeated in chat:
+  the player has just typed it.
+- `MAX_POOL` is 1,000,000 silver (10000g00s), the highest `/roll` the game takes on retail; Forever's
+  UI source sets no limit of its own.
 - The Crosshair checks melee range with one ability per class, its lowest rank (Forever keeps
   every rank known). Druids depend on form: Claw in Cat Form (form 1), Maul in Bear and Dire Bear
   (5 and 8). Shamans without Stormstrike and casters have none; Melee Spell ID sets one of your
@@ -356,6 +418,20 @@ NaowhForever_QoL/
   wide (155, 2 in). Forever's rows differ from Classic Era's, so the zone takes the activity
   line's font and stops short of the role icons, measured on screen (the icons are scaled).
   The game sends only the leader's zone; other members show one if it is known elsewhere.
+- Group Finder Roles never writes the Group Finder's results or calls its refresh: its list, totals,
+  selection and right-click menu stay Blizzard's own, untainted. It hooks
+  `LFGBrowseSearchEntry_Update` (after `Blizzard_GroupFinder_VanillaStyle` loads) and fades a row
+  that does not match to alpha 0 with its mouse off, so a hidden row keeps its place and the list
+  can show gaps; Blizzard's sort puts solo players by tank, healer, then damage and groups with
+  room for your own roles first, so matches mostly sit together at the top. A pick change repaints
+  the rows on screen. A solo lister's roles are the `lfgRoles` they signed up with; a group has
+  only each member's assigned role, which says nothing about who you can invite, so the player
+  buttons match solo listers only. The Groups need buttons read `GetSearchResultMemberCounts`'
+  `*_REMAINING` counts, the open spots Blizzard's own sort uses, and match groups only. Your own
+  listing always stays. When every listing is faded, a line where the game's "No results" sits
+  says the picks did it. The search results are secret in chat messaging lockdown
+  (`SecretInChatMessagingLockdown`), so while `C_ChatInfo.InChatMessagingLockdown()` is true
+  nothing is filtered.
 - A guildmate's zone may have changed since the last roster, so guild chat from one not fresh
   asks for the roster again (the game throttles that).
 - The Co-Tank Frame's debuffs go through Blizzard's aura container (`CustomAuraContainerTemplate`),
@@ -451,6 +527,48 @@ NaowhForever_QoL/
   layout, so it is faded (SetAlpha) rather than hidden, and only outside combat.
 - The Flight Timer's mover reports offsets in the timer's own scaled units; they are saved in
   screen units so the Scale slider resizes it in place.
+- Flight Point reads `C_TaxiMap.GetTaxiNodesForMap` for the zone, and the parent maps up through
+  the continent when that list is empty. `isUndiscovered` is not set for a classic flight path you
+  have not spoken to. Until this character opens a flight master's map on that continent
+  (`GetAllTaxiNodes` only lists the open map's continent), a friendly point in range
+  asks you to open one to save the points you know, and only a node the map marks undiscovered is
+  named. Talking to a flight master (a gossip option with the taxi icon) records that town's node
+  as known, so the reminder hides without opening the flight map, and does not mark the snapshot
+  complete. The snapshot is this character's GUID in `flightPoints` (`TAXIMAP_OPENED`), and opening
+  the map still replaces every node from `GetAllTaxiNodes`. A name cannot tell two characters apart.
+- Opening a flight map saves both its taxi map ID and the player's real continent in
+  `seenMaps`. Classic and Forever use separate taxi maps: 1463 for Eastern Kingdoms (1415)
+  and 1464 for Kalimdor (1414). `TAXI_MAPS` lets both the screen reminder and pin hint recognize
+  older saves containing only those taxi map IDs after a reload, without another visit.
+- The learn sentence drops a leading `The ` from the place name so The Sepulcher reads
+  "Learn the Sepulcher flight point". The original name still matches the town's subzone.
+- A node is reminded only when it is unlearned and its faction is neutral or the player's.
+  An Alliance character in Undercity sees nothing, because that flight point is Horde.
+- A capital (`ns.TownCapitals`) reminds you only of that city's own flight point, and only while
+  it is still unlearned, anywhere in the city. The place name is the city's when the two are equal,
+  or one contains the other as a whole word: Stormwind matches Stormwind City, and Darkshire does
+  not. Once that point is known, another town does not take its place. Anywhere else the player has to
+  be within 400 yards, or standing in the subzone of that flight point, which is how the Auberdine
+  inn counts. The Crossroads and Ratchet are about 1,200 yards apart, so one town does not
+  light the next. An empty subzone matches nothing.
+- Entering a zone also shows one reminder through `ns.AlertStack`, anywhere in that zone.
+  `ZONE_HOLD` is ten seconds so the entry alert clears while you keep questing. Stops, subzone
+  changes and restyling do not restart it. Combat and flying defer the alert until they end.
+  Leaving the zone or disabling the reminder cancels its timer. Returning to the zone allows
+  another entry alert. Nearby-town reminders still stay up until the node is learned or you leave.
+- Node world positions are projected into the current zone with `C_Map.GetMapPosFromWorldPos`.
+  Only coordinates inside that zone's map count for the entry alert, including when the taxi API
+  falls back to the continent. A flight point in another zone cannot trigger that alert.
+- Existing `TownMap.lua` flight-master pins add the learn reminder to their tooltip when the
+  closest friendly taxi node within `TOWN_RANGE` is unlearned. Known nodes get no reminder,
+  even if another unlearned node is nearby. The Town Pins and Flight Masters switches still
+  control those pins; Flight Point Reminder controls the extra tooltip line. No pin system or
+  setting is added. Gossip still uses the nearby-town scan, so a distant entry alert cannot
+  record that node as learned.
+- It checks on a zone change, when you stop, when you talk to a flight master, when the flight map
+  opens or closes, when a flight takes or returns control, and when combat starts or ends. While the
+  switch is off, none of those events are registered and the frame is not built.
+- A stop reuses the zone's flight points until the zone changes or the flight map opens or closes.
 - The Aim Trainer's leaderboard sends your best in each mode to your group and guild while Share
   My Scores is on, once you have one (nothing is registered before your first best), and keeps
   the bests others send account-wide in `aimBoard[mode][GUID]` (Forever names are not unique) for
@@ -570,6 +688,7 @@ NaowhForever_QoL/
 ### Performance
 - The game keeps its settings per computer, so the values the recommended ones replaced live in the account store (`cvarBackups`), not the profile.
 - `SAME_WITHIN` compares numeric CVars loosely, as the game writes some back with float noise.
+- HDR and Peak Brightness set the game's own `HDRFactor` and `HDRPeakBrightness`, which have no place in the game's options. Peak Brightness also turns on `useHDRPeakBrightness`, without which the game ignores it. They are the player's own values, not recommended ones, so they are not backed up, and they show only where the client has `HDRFactor`.
 
 ### Stealth Reminder
 - The form IDs are `GetShapeshiftFormID` values, the same ones the Threat Meter reads.
@@ -587,12 +706,17 @@ NaowhForever_QoL/
 
 ### Scrap Marker and Scrap List
 - Items are marked by ID, never by name: for the account (`scrapItems`) or for one character by its GUID (`scrapChars`).
+- With Save Marks off (the default) a mark lasts only while you hold the item: on `BAG_UPDATE_DELAYED`, a marked ID
+  this character has had in its bags this session and no longer has loses its mark. Only IDs seen in the bags this
+  session are dropped, so a login before the bags are read, another character's account mark, or a mark added from
+  the Scrap List for an item you do not carry are all kept.
 - Scrap sells `BATCH` (6) items at a time, `STEP_DELAY` (0.25 s) apart, and each sale checks again that you are still at the vendor, out of combat, with the same item in that slot. That is why the taint scan allows its one `C_Container.UseContainerItem`; keep that check right before the call.
 - A generation number drops a step left over from an earlier sale, so closing the vendor or entering combat ends a sale cleanly.
 - The X on a rule match keeps it (`scrapKeep`), so the rule leaves it alone until you mark it yourself.
 - Bag buttons, the game's, EllesmereUI's and Baganator's, are hooked once with HookScript, and only out of combat.
+- Marking Modifier is Alt or Ctrl. The game's own modified click still runs after the hook, so with Ctrl a click on gear also opens the dressing room (DRESSUP is Ctrl by default); the setting's help says so instead of blocking the game's handler.
 - Baganator gets the mark as a corner widget and the marks as a junk plugin, through `Baganator.API`. Neither can be taken back, so both are registered once, the first time the Scrap Marker is on, and answer nothing while it is off.
-- Baganator pools its item buttons and moves them between slots, so an Alt-click reads the button's bag and slot when it lands, not at the last paint. Its buttons for other characters' bags have no bag, so they get no click and no mark.
+- Baganator pools its item buttons and moves them between slots, so a marking click reads the button's bag and slot when it lands, not at the last paint. Its buttons for other characters' bags have no bag, so they get no click and no mark.
 - Baganator's junk plugin takes over its junk detection, so ours counts grey items with a sell price as junk too, as Baganator's own Poor quality does, and adds scrap on top.
 - `MAX_ITEM_ID` caps an imported ID at the largest 32-bit signed number, so a pasted list cannot ask for an impossible item.
 
@@ -664,12 +788,12 @@ NaowhForever_QoL/
 ### Waypoint Pin
 - It follows the game's navigation frame (`C_Navigation`), so quests, your corpse and map pins get it as well as `ns.PlaceWaypoint`'s spots, which it names. A user waypoint counts as ours when it lies within `SAME_SPOT` (map percent) of `ns.placedWaypoint`.
 - A map pin's or corpse's navigation point is the spot on the ground: the ring at the line's foot goes there and the pin stands above it. A quest giver's is over their head, where the pin goes as it is, with no line down.
-- The game clears a map pin on arrival, but a quest stays tracked at the quest giver, so the pin goes within `REACHED` (5 yards) of a quest's target and comes back past `LEAVE` (7), so a step back does not make it flicker. The navigator stays.
-- Your speed reads secret at times, as in restricted content, so the last readable one is kept; standing still, the walking time uses `RUN_SPEED` (7 yards a second).
+- The game clears a map pin on arrival, but it keeps tracking a quest, and Forever reports a quest reached only right on its point. So for a tracked quest the pin and cue go within `QUEST_NEAR` (40 yards) of its point, the quest's area or the quest giver, and come back past `QUEST_LEAVE` (55), so walking about the area does not make them flicker. The game has no call that says you are inside a quest's area (Forever's QuestLog and Navigation docs: only map points, `IsOnMap` and a display state), so the distance stands in for it. Other targets use Arrival Distance (`waypointArrive`, 5 yards by default) and come back `LEAVE_MARGIN` (2) yards past it. The navigator stays.
+- The walking time comes from how fast the distance shrinks, sampled every `SAMPLE_EVERY` second and smoothed by `SMOOTH`. Your speed reads secret at times (on a mount too), and the last readable one was often the run on foot, so a mounted time came out about double. A sample under `MIN_CLOSING` (stopped, turned away) or over `MAX_CLOSING` (the spot moved) drops the pace, and so does a new target; without one, the time uses your last readable speed, or `RUN_SPEED` (7 yards a second) standing still.
 - The card and navigator are repainted only when the mode, side, whole yards or whole seconds change; the place and arrows move every frame, and nothing is built per frame.
 - `BEHIND` is the angle either side of straight down that counts as behind you. `FAR` is the distance at which the pin is smallest (`FAR_SCALE`), and `FADE_FLOOR` its alpha at your feet with Fade Up Close on.
 - The game places a waypoint you click on the map without tracking it (its map code calls `SetSuperTrackedUserWaypoint(false)` right after `SetUserWaypoint`), and the pin only follows what is tracked, so on `USER_WAYPOINT_UPDATED` it tracks the new waypoint itself: one frame later with the map closed (the game's own untracking has run by then), or as the map closes (`trackOnMapClose`), as `Core/Waypoint.lua` holds its own placements, since setting one with the map open taints it. Already tracked, it leaves it.
-- A waypoint you set has no held arrival: reaching it plays the sound and the pin, cue and bar go at once. A quest, the corpse and a route's stop hold the arrival where the pin last stood for `ARRIVED_HOLD` (a route's names the next stop). The game clears a waypoint you set as you reach it, its navigation frame going too, before or after NAVIGATION_DESTINATION_REACHED; that event's `isWaypoint` is a stop on the way (a zone's exit), not the spot itself. A waypoint you set does not wait for it: on the waypoint's map or one inside it (a waypoint placed on a continent still counts in its zones; the game routes a waypoint on another map through stops on the way, such as a zone's exit, which are not the spot), within `REACHED` of its spot, once the pin has seen you more than `LEAVE` away since the waypoint was attached or placed (a new waypoint can report no distance at first, and one placed under you has nothing to reach; other tracking changes on the way do not reset it), the pin shows the arrival and clears the waypoint itself, so it goes even when the game sends no arrival, or sends it as a stop. The game's event, when it does come first, clears it before the pin does. It does this once per waypoint (`selfCleared`: with the world map open the clear is held, and the pin must not arrive again every hold), and never on a route's stop, which moves on by the game's arrival event: clearing it would end the route.
+- A waypoint you set has no held arrival: reaching it plays the sound and the pin, cue and bar go at once. A quest, the corpse and a route's stop hold the arrival where the pin last stood for `ARRIVED_HOLD` (a route's names the next stop). The game clears a waypoint you set as you reach it, its navigation frame going too, before or after NAVIGATION_DESTINATION_REACHED; that event's `isWaypoint` is a stop on the way (a zone's exit), not the spot itself. A waypoint you set does not wait for it: on the waypoint's map or one inside it (a waypoint placed on a continent still counts in its zones; the game routes a waypoint on another map through stops on the way, such as a zone's exit, which are not the spot), within Arrival Distance of its spot once the pin has seen you more than `LEAVE_MARGIN` past it, or within `REACHED` (5 yards) once it has seen you more than `LEAVE_MARGIN` past that, since the waypoint was attached or placed (a new waypoint can report no distance at first, and one placed under you has nothing to reach; other tracking changes on the way do not reset it), the pin shows the arrival and clears the waypoint itself, so it goes even when the game sends no arrival, or sends it as a stop. The game's event, when it does come first, clears it before the pin does. It does this once per waypoint (`selfCleared`: with the world map open the clear is held, and the pin must not arrive again every hold), and never on a route's stop, which moves on by the game's arrival event: clearing it would end the route. The `REACHED` fallback keeps a waypoint placed inside a long Arrival Distance from clearing at once.
 - Nothing tracked means cleared or reached. A clear can leave the navigation frame up with no NAVIGATION_FRAME_DESTROYED, which used to leave the navigator showing.
 - The game's own marker keeps setting its frame's alpha, so Hide the Game's Marker fades its parts (`GAME_PARTS`) instead.
 - With no waypoint, Unlock Mode still shows the navigator on a sample, to place it by.
@@ -719,8 +843,12 @@ NaowhForever_QoL/
 - The texts are measured and placed only when one of them, or the bar, changed. `TEXT_GAP` sits between two texts in a row and `SLOT_FONT_MIN` is the smallest they shrink to before they cut off; a text is measured with a pixel spare so rounding never cuts it. Side texts start at the bar's ends; the middle one is centred while it has room and slides away from a long side text when not; when a row does not fit even at its smallest, it is split evenly and long texts cut off. The rows above and below shrink only as far as their own texts need; the texts beside the bar keep the full size. The texts inside follow the bar's height (`INSIDE_SHARE`).
 - Rested runs from the end of your XP, like Blizzard's, the full height of the bar and over the incomplete quests, so a bar full of quest XP cannot push it off the end; at least `RESTED_MIN_W` (3 px), so a sliver of rest still reads.
 - In a battleground or an arena (`PVP_INSTANCES`, from IsInInstance) the bar hides, like Blizzard's stays faded: the instance type only changes behind a loading screen, so it is read on PLAYER_ENTERING_WORLD and when the bar turns on, never per update. The HUD Editor still shows it there, to place it.
-- The bar takes the mouse only while Ctrl is down, for its reset click; otherwise a click or a camera drag that starts over it goes through to the world.
+- The bar takes clicks only while Ctrl is down, for its reset click; otherwise a click or a camera drag that starts over it goes through to the world. It follows the mouse without taking clicks (SetMouseMotionEnabled) while Show Texts On Mouseover or Hover Breakdown is on; its hover area then reaches the texts around it (SetHitRectInsets), so moving onto a text keeps them up.
+- Leveling Pace is Time to Level and XP/h in one text. Time to Level, XP/h and Leveling Pace stay blank until XP comes in this session, never `--` or `0`.
+- The effects (`XPBarFX.lua`, its own file because XPBar.lua sits near the 200-local cap) each have a switch: Shine and Notches are on, as the bar's look; Rested Stripes, Quest XP Pulse, Ready to Level, Level-Up Flash and Hover Breakdown start off. They use the game's own animations (AnimationGroup), so nothing runs per frame: the quest pulse plays once per hand-in, the Ready to Level glow loops only while completed quests cover the rest of the level, and the level-up flash plays once on PLAYER_LEVEL_UP. The quest pulse comes from QUEST_TURNED_IN's XP reward, so kills never pulse. That event and PLAYER_XP_UPDATE come in either order, so the pulse waits for the fill to move, or `PULSE.WAIT` at most (a redraw follows `FX.SETTLE` after the hand-in), and the slice is the reward's width back from where the fill ends: right in either order, and cut at the bar's start when the reward levels you. Hand-ins between two draws add up into one pulse.
+- Hover Breakdown's kills are of your own level, `5 x level + 45` XP each (Classic's formula for a normal mob of your level), counted double while rested XP lasts, so it says "About".
 - The texts are picked on the preview, so their rows are not drawn on the page; they are still declared for the search, the changed count and the card's Reset. A preview spot answers HandlesGlobalMouseEvent so the menu manager does not close its menu before OnMouseDown toggles it.
+- The card's preview draws the bar at its real size, never enlarged, and shrinks it only when it does not fit. Its Quest Hand-In, Ready and Level Up states play the effects, each while its switch is on. An empty spot is a small + that shows only while the mouse is over the stage, placed after the texts so it never covers one. The two Resets live in the preview's right-click menu, as on the Campfire card, which keeps the rows to the settings themselves.
 
 ### Unexplored Areas
 - The overlays (`MapOverlays.lua`, generated by `Tools/build/map_overlays.py` from the game's tables) are `[uiMapID] = { { width, height, offsetX, offsetY, fileDataID, ... } }`: an area's size and place on the map art in its pixels, then its `TILE` (256 px) tiles row by row (`AREA_FIELDS` before them).
@@ -787,6 +915,101 @@ NaowhForever_QoL/
   people already in the group are skipped.
 - The invite buttons are plain buttons: invites are not protected, so they work in combat. Adding or
   removing one moves the bar, which waits for the fight to end, as the bar's other changes do.
+
+### Glimmer
+- Herbs, ore, quest objects, chests and your fishing bobber light up as you walk up to them, in one of
+  five effects: dim while out of reach, a flash and full brightness once you can use them. Its tab is
+  QoL > Glimmer, its on/off the Glimmer card's switch there. It keeps its own settings store,
+  `ns.GlimmerSettings` (the profile's `glimmer` table, defaults from `ns.FEATURES.glimmer`), not
+  `ns.QoLSettings`: it was a module addon of its own (NaowhForever_Glimmer) before it moved into QoL,
+  and the same table means every setting carried over with no migration.
+- Herbs and ore take the color of your chance of a skill-up and get a line under their name saying so; a
+  node your skill is too low for shows red with the skill it needs; a character without Herbalism or
+  Mining at all sees no herbs or ore lit, since they are not theirs to gather. Quest objects are
+  found three ways: the game marking them quest related, a quest objective in their tooltip, or the
+  quest pick-up or turn-in cursor the game shows on them; that cursor is also what lights an NPC with a
+  quest to pick up or hand in, the only NPCs Glimmer lights. Quest objects get the line of the
+  quest objective they count for. Quest Item Sparkle keeps the game's loot sparkle on quest items
+  through graphics presets. Minimap Icons shows every spot herbs and ore grow near you, ringed in their
+  skill-up color, and Gathered on the Map every herb and vein you gather.
+- Quest Givers were part of Quest Objects until they got their own category, and turning Quest Objects
+  off was the only way to keep the nameplate off quest NPCs. A profile with no `giver` setting yet
+  takes `quest`, `questStyle` and `questColor` for it on `ns.Apply`, which also runs on a profile
+  switch; once `giver` is set it never runs again for that profile.
+- Its spots (25,177 on 44 maps) used to be the load-on-demand NaowhForever_GlimmerData; they are now one string in
+  QoL, CBOR deflated in Base64 (about 130 KB), which Spots.Load unpacks with the client's own C_EncodingUtil
+  the first time Minimap Icons or Gathered on the Map needs them (about 1.2 MB as a table, measured in Lua 5.1),
+  then lets the string go. A player who never turns those on holds only the string, and there is one addon
+  fewer in the list. It never unpacks in combat. An old NaowhForever_GlimmerData folder is switched off at
+  login with a note to delete it.
+- The game always picks one object to interact with, the `softinteract` unit, and gives it a
+  nameplate when `SoftTargetNameplateInteract` is on. Glimmer hangs its effect on that nameplate,
+  so only that one object lights up and the effect follows it on screen with no work of ours.
+- `SoftTargetInteract` 3 keeps the soft target on, and `SoftTargetInteractOnlyInRange` 0 lets it pick
+  objects beyond reach, so they can light up dim before you get there. The range is capped at 15
+  yards on the page because the client drops the soft target near there whatever is asked.
+- `SoftTargetIconGameObject` 1 is needed too: with it at 0 the game picks the object as the soft
+  target but never makes its nameplate, so nothing lights up. A setting Glimmer adds later is saved
+  into the old values the first time it is written, so turning Glimmer off puts it back as well.
+- The nameplate is only opened for an object Glimmer lights (`onlyHighlighted`), so NPCs, mailboxes
+  and doors do not grow a nameplate. Whether to open it does not need the nameplate: the object is
+  read from the unit token, then the nameplate arrives with `NAME_PLATE_UNIT_ADDED`.
+- In combat the game will not change these settings, and an open soft target nameplate would sit
+  on every lootable corpse with 0% health. The nameplate is closed on `PLAYER_REGEN_DISABLED`, just
+  before the lockdown, and Glimmer rests until combat ends; a setting changed in combat is applied
+  after it.
+- What an object is comes from the object ID in its GUID, looked up in `G.NODES`; the bobber is
+  object 35591. IDs work in every language. A herb or vein the data does not know is still found by
+  the cursor the game would show on it (`SetUnitCursorTexture`): Mine or GatherHerbs, with an Unable
+  variant when the game would refuse it.
+- Quest objects come from `C_QuestLog.UnitIsRelatedToActiveQuest`, and their line is the quest
+  objective line of the object's own tooltip, as the game words it.
+- Gathering gives a point every time up to 25 skill over the node's (orange), usually up to 50
+  (yellow), rarely up to 100 (green), and never past that (grey): `SKILL_ORANGE`, `SKILL_YELLOW`,
+  `SKILL_GREEN`. The node's skill comes from the data, so a node your skill is too low for is red
+  from as far as it is picked, not only once in reach.
+- `UnitIsInInteractRange` is not in the 12.1 API docs but answers on Forever; without it every
+  object counts as in reach. Its answer is read every `STATE_CHECK` while an object is lit, and a
+  change must hold for `STATE_HOLD` before it shows, so the edge of reach does not flicker. That
+  check runs only while something is lit; nothing runs while no object is.
+- The effect is parented to the nameplate, one frame level under it so the game's name stays on
+  top, and ignores the nameplate's alpha so it does not fade with it.
+- The game settings Glimmer changes are saved in the account settings before the first change and
+  written back when Glimmer or the Quest Item Sparkle is turned off, or by Restore. A graphics
+  preset turns the quest sparkle settings back; `CVAR_UPDATE` on a preset or one of those settings
+  puts them back `SPARKLE_AGAIN` seconds later, after the preset has finished writing.
+- Taking the quest sparkle off only shows after a full restart of the game, so the card says so.
+- There used to be a Behind My Character cut-out, a mask at a guessed spot near the middle of the
+  screen, since the game does not tell an addon where your character is. It took three settings to fit
+  and testers did not understand it, so it was removed.
+- Other addons that change the same soft target settings (`OTHER_ADDONS`) undo Glimmer's and it
+  undoes theirs; with one on as well, Glimmer asks once per session to disable it.
+- A slider drag sets its key on every step, so settings apply once on the next frame.
+- The game does not tell an addon where its tracking dots are, and it cannot switch tracking for you:
+  Find Herbs and Find Minerals are casts, which only a click may start. So the minimap icons come from
+  where Wowhead Forever has each herb and vein growing (`ns.GlimmerSpots`, unpacked from
+  Data/Spots.lua on first use), and herbs and ore show together whatever you track. The game's own dot on
+  top of an icon is a node up right now.
+- The minimap shows at most `MINIMAP_MAX` icons, the spots inside its view. Placing them is
+  `Parts.MinimapLayer` (Shared/UI/MinimapPins.lua): it moves them only while you move or the minimap
+  turns.
+- The spot data loads the first time Minimap Icons is on, out of combat: loading an addon in combat is
+  not something to rely on, so it waits for the fight to end, and only then does `PLAYER_REGEN_ENABLED`
+  redraw the icons. A skill-up repaints their rings, and redraws them only when it changes whether
+  herbs or ore show. Gathered on the Map alone never loads the data.
+- Only My Professions shows herbs to an herbalist and ore to a miner; a character with neither sees
+  both, so the icons still help someone deciding what to learn.
+- A gather is noted when the loot window opens while the soft target is a herb or vein in reach and
+  the loot came from it (`GetLootSourceInfo`), so it needs no spell IDs and a corpse looted beside a
+  node does not count. One node counts once per loot window, even if it is opened again. Where it is
+  noted is a pin already there for that node within `SNAP` (tenths of a map percent) of where you
+  stand, else the data's own spot for it when the data is loaded, else where you stand, so gathering
+  a node again when it grows back counts on the same pin. Each
+  map keeps at most `MAX_GATHERED` nodes, dropping the one gathered longest ago. They are kept in the
+  account settings, so every character's gathering shows.
+- Check it offline: `lua Tools/regression/test-glimmer.lua`: reading the target, skill-up colors, the game settings
+  saved and put back, combat, the nameplate it opens, the minimap icons and the gathered pins, against
+  stubs of the game's API.
 
 ### QoL defaults (Core/Settings.lua)
 - Every on/off switch default in the QoL store is read from `ns.FEATURES.qol`; the values are unchanged.

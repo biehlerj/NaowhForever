@@ -40,6 +40,7 @@ local HELP_LINES = {
     ns.L("/nf efficiency: Mana Efficiency, every rank of your mana spells"),
     ns.L("/nf shopping: the Professions Shopping List"),
     ns.L("/nf quiz: the WoW quiz"),
+    ns.L("/nf gamble: open Gamble"),
     "/nf setup: the onboarding",
     ns.L("/nfquests (or /nfcompleto): the Quest List, in Discovery"),
 }
@@ -151,6 +152,8 @@ SlashCmdList["NAOWHFOREVER"] = function(msg)
         ns.ToggleDisenchant()
     elseif cmd == "scrap" and ns.ToggleScrapList then
         ns.ToggleScrapList()
+    elseif cmd == "gamble" and ns.ToggleGamble then
+        ns.ToggleGamble()
     elseif cmd == "efficiency" and ns.ToggleSpellEfficiencyReport then
         ns.ToggleSpellEfficiencyReport()
     elseif cmd == "shopping" and ns.ToggleShoppingList then
@@ -195,7 +198,7 @@ function _G.NaowhForever_ToggleModule(command)
 end
 
 function _G.NaowhForever_OpenTopBar()
-    if not C_AddOns.IsAddOnLoaded("NaowhForever_TopBar") then
+    if not ns.TopBar then
         return ns.Print(TEXT_SWITCHED_OFF:format(ns.L("Top Bar")))
     end
     ns.OpenOptionsWindow("QoL/Interface")

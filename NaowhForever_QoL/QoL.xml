@@ -1,6 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
     <!-- QoL.xml: every QoL feature, in load order. -->
     <Script file="Constants.lua"/>
+    <Include file="Glimmer\Glimmer.xml"/>
     <Script file="Combat\StealthReminder.lua"/>
     <Script file="Combat\CoTank.lua"/>
     <Script file="Combat\HealerMana.lua"/>
@@ -9,6 +10,8 @@
     <Script file="Loot\Durability.lua"/>
     <Script file="Questing\TalentPoints.lua"/>
     <Script file="Questing\BuffThanks.lua"/>
+    <Script file="Gambling\GambleHelp.lua"/>
+    <Script file="Gambling\Gamble.lua"/>
     <Script file="Combat\CombatAlert.lua"/>
     <Script file="Questing\QuestAutomation.lua"/>
     <Script file="Questing\RewardList.lua"/>
@@ -16,6 +19,7 @@
     <Script file="Questing\Invites.lua"/>
     <Script file="Questing\GroupButtons.lua"/>
     <Script file="Questing\FreeForAll.lua"/>
+    <Script file="Questing\FinderRoles.lua"/>
     <Script file="Loot\LootConfirm.lua"/>
     <Script file="Cursor\CursorClip.lua"/>
     <Script file="Combat\CombatTimer.lua"/>
@@ -39,6 +43,7 @@
     <Script file="Loot\LootFeed.lua"/>
     <Script file="Loot\AuctionPrices.lua"/>
     <Script file="XP\XPTicker.lua"/>
+    <Script file="XP\XPBarFX.lua"/>
     <Script file="XP\XPBar.lua"/>
     <Script file="XP\GroupXP.lua"/>
     <Script file="Questing\PlayerHistory.lua"/>
@@ -66,9 +71,11 @@
     <Script file="Questing\Trainer.lua"/>
     <Script file="Travel\FlightData.lua"/>
     <Script file="Travel\Flight.lua"/>
+    <Script file="Travel\FlightPoint.lua"/>
     <Script file="Interface\Waypoints.lua"/>
     <Script file="Travel\QuizData.lua"/>
     <Script file="Travel\Quiz.lua"/>
     <Script file="Travel\AimTrainer.lua"/>
     <Script file="Travel\AimBoard.lua"/>
+    <Include file="TopBar\TopBar.xml"/>
 </Ui>
