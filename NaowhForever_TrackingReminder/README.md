@@ -22,7 +22,7 @@ NaowhForever_TrackingReminder/
 - Forever can track more than one thing at once, so each missing racial or class tracking gets its own icon. A hunter has eight, and three mouse buttons cannot cast them all.
 - Each icon is a secure button. Its spell is set out of combat, and the row hides when combat starts, so combat never changes a secure attribute.
 - The buttons are built on first enable, and tracking events are registered only while the feature is on.
-- A tracking pick with no saved value is on, so turning the feature on reminds you of every tracking you know. Turn one off to opt out.
+- A tracking pick with no saved value is off. Turning racial or class tracking on reminds you of nothing until you turn that spell on.
 - The spell IDs are Forever's classic-era IDs: Find Treasure, the hunter tracks, Sense Undead, and Sense Demons.
 - The row homes at 260, 170 so it sits above the Professions gather icon at 260, 120, without reading that addon.
 - A minimap slot is turned on with SetTracking, so Unlock Mode cannot toggle it off. A spell with no slot is cast from the secure button.
