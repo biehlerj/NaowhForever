@@ -58,7 +58,9 @@ function methods:CreateFontString() return New("FontString", self) end
 local settings = {}
 local defaults = { blessings = true, blessBarSize = 30, blessSpacing = 6, blessGroupSpacing = 6,
     blessTimerSize = 14, blessShowLabels = true, blessTimers = true, blessShowAura = true, blessShowFury = false,
-    blessLabelStyle = "name", blessLayout = "horizontal" }
+    blessLabelStyle = "name", blessLayout = "horizontal", blessTank = "none", blessAssist = "none",
+    blessColorMissing = { r = 0.97, g = 0.27, b = 0.27 }, blessColorExpiring = { r = 1, g = 0.85, b = 0.3 },
+    blessColorOwn = { r = 0.35, g = 0.6, b = 1 } }
 local sets = 0
 local S = {}
 function S.Get(k) local v = settings[k]; if v == nil then return defaults[k] end return v end
@@ -307,6 +309,13 @@ local look
 for _, row in ipairs(cards.bar.rows) do if row[1] and row[1].look then look = row[1] end end
 check("the card has the standard Text rows on the timer size", look and look.look == "bless"
     and look.opts.keys.FontSize == "blessTimerSize")
+settings.blessThemeColors = false
+settings.blessColorMissing = { r = 0, g = 1, b = 0 }
+settings.blessColorExpiring = { r = 1, g = 0, b = 1 }
+studio.paint(preview, "group")
+check("your own colors replace the missing and running out ones", warriorCell.icon.vertex[2] == 1
+    and warriorCell.icon.vertex[1] == 0 and priestCell.icon.vertex[3] == 1 and priestCell.icon.vertex[2] == 0)
+settings.blessColorMissing, settings.blessColorExpiring = nil, nil
 settings.blessFont, settings.blessOutline, settings.blessTimerSize, settings.blessThemeColors = nil, nil, nil, nil
 
 -- Class names keep to their own slot, the button plus the gap: a long one shrinks down to 7 pt,
@@ -464,7 +473,14 @@ local classRows
 for _, row in ipairs(cards.bar.rows) do
     if row[1] and row[1].group == "Blessings by Class" then classRows = row end
 end
-check("the card has a Blessings by Class group, a row per class", classRows and #classRows == #B.CLASSES + 1)
+check("the card has a Blessings by Class group, a row per class and Salvation",
+    classRows and #classRows == #B.CLASSES + 2)
+local salvRow = classRows[#classRows]
+check("the last row is Salvation, off to begin with", salvRow.get() == "none")
+salvRow.set("give")
+check("giving Salvation writes your plan", B.Store().salv == true and salvRow.get() == "give")
+salvRow.set("none")
+check("and None turns it off", B.Store().salv == nil)
 local warriorRow = classRows[2]
 check("each row is named for its class", warriorRow.label == "Warrior")
 check("its help names the blessings, so a search for one finds it",
@@ -491,5 +507,52 @@ local kings = Search("kings")
 check("the options search finds Kings on the Blessing Bar card, a row per class",
     #kings >= #B.CLASSES and kings[1].label == "Warrior" and kings[1].card == "Blessings/Settings:bar")
 check("and finds them by \"greater\"", #Search("greater") >= #B.CLASSES)
+
+-- Saved plans from before Salvation was split off the class blessings: each Salvation becomes "Salvation on",
+-- once, and the plan keeps its other blessings.
+account.blessings["Glyadin-Forever"] = { classes = { MAGE = "salvation", WARRIOR = "might" },
+    players = { me = "salvation", you = "kings" } }
+local migrated = B.Store()
+check("an old class Salvation is cleared", migrated.classes.MAGE == nil and migrated.classes.WARRIOR == "might")
+check("an old player Salvation is cleared, the others kept", migrated.players.me == nil and migrated.players.you == "kings")
+check("and Salvation is on", migrated.salv == true)
+migrated.salv = nil
+check("it does not come back once turned off", B.Store().salv == nil)
+
+-- The preset keeps whether you give Salvation.
+class = "PALADIN"
+B.Store().salv = true
+check("saving the preset", B.SavePreset())
+check("the preset keeps Salvation", account.blessingPreset["Glyadin"].salv == true)
+B.Store().salv = nil
+check("loading the preset gives it back", B.LoadPreset() and B.Store().salv == true)
+B.Store().salv = nil
+account.blessingPreset = { Glyadin = { classes = { MAGE = "salvation", WARRIOR = "might" } } }
+check("loading a preset from before the split", B.LoadPreset())
+check("turns its class Salvation into Salvation on",
+    B.Store().classes.MAGE == nil and B.Store().classes.WARRIOR == "might" and B.Store().salv == true)
+B.Store().salv = nil
+
+-- The seal button: seals are looked up like the other spells, picked from a menu and kept in your plan.
+check("the seals are indexed by key and spell", B.BY_KEY.sealCommand.ranks[1] == 20375 and B.FAMILY[20375] == "sealCommand")
+check("a seal has a name and an icon", B.SpellName("sealFury") == "Spell 1311649" and B.SpellIcon("sealFury") == 1311649)
+B.SealMenu({})
+local sealLabels = {}
+for _, item in ipairs(menu.items) do sealLabels[#sealLabels + 1] = item.label end
+check("the seal menu lists every seal you know, then the default", #sealLabels == #B.SEALS + 2
+    and sealLabels[2] == "Spell 20154" and sealLabels[#sealLabels] == "Default")
+B.SetSeal("sealCommand")
+check("choosing a seal keeps it and refreshes", B.Store().seal == "sealCommand" and refreshed > 0)
+B.SetSeal(nil)
+check("and Default clears it", B.Store().seal == nil)
+
+-- Clear empties your whole plan.
+local plan = B.Store()
+plan.classes.WARRIOR, plan.aura, plan.salv, plan.players.me = "might", "retribution", true, "kings"
+B.ClearAll()
+plan = B.Store()
+check("Clear empties your classes, aura, Salvation and own choices",
+    next(plan.classes) == nil and plan.aura == nil and plan.salv == nil and next(plan.players) == nil)
+class = "WARRIOR"
 
 print(("test-blessing-preview: %d checks passed"):format(checks))

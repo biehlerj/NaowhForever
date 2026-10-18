@@ -21,6 +21,8 @@ local LOOK = { consumableBarFont = true, consumableBarFontSize = true, consumabl
 local BAR_NAME = "NaowhForeverConsumableBar"
 local RULE_COMBAT_HIDE = "[combat] hide; show"
 local RULE_COMBAT_SHOW = "[combat] show; hide"
+local SPOT = { TOPLEFT = { -1, 1 }, TOPRIGHT = { 1, 1 }, BOTTOMLEFT = { -1, -1 }, BOTTOMRIGHT = { 1, -1 } }
+local HELD = { RIGHT = { -1, 0 }, LEFT = { 1, 0 }, UP = { 0, -1 }, DOWN = { 0, 1 } }
 
 local frame, pending, wakeDue
 local syncedMacros = ""
@@ -82,6 +84,49 @@ end
 local function SavePosition(pos)
     S.Set("consumableBarPos", pos)
     if ItemBar.Anchored(S, CB.PREFIX) then S.Set("consumableBarAnchor", "UIParent") end
+end
+
+local function FullSize(grow)
+    local size, gap, _, perRow, height = CB.Grid()
+    return ItemBar.Size(#CB.Items(), size, gap, grow, perRow, height)
+end
+
+local function HoldDocks(grow)
+    local db = S.DB()
+    if db.consumableBarDockHeld then return end
+    db.consumableBarDockHeld = true
+    local held = HELD[grow]
+    if not held then return end
+    local w, h = FullSize(grow)
+    local hud = ns.UnlockModeSettings.DB()
+    local sets = { hud.anchoredTo }
+    if type(hud.layouts) == "table" then
+        for _, saved in pairs(hud.layouts) do
+            if type(saved) == "table" then sets[#sets + 1] = saved.anchors end
+        end
+    end
+    for _, set in ipairs(sets) do
+        local info = type(set) == "table" and set[MOVER_LABEL]
+        if type(info) == "table" then
+            if info.side == "TOP" or info.side == "BOTTOM" then
+                info.x = (info.x or 0) + held[1] * w / 2
+            else
+                info.y = (info.y or 0) + held[2] * h / 2
+            end
+        end
+    end
+end
+
+local function Hold()
+    if CB.unlocked or ns.UI.HasAnchor(frame.mover) then return end
+    local point, rel, relPoint, x, y = frame:GetPoint(1)
+    if point ~= "CENTER" or rel ~= UIParent then return end
+    local _, _, grow, _, _, flip = CB.Grid()
+    local w, h = FullSize(grow)
+    local corner = ItemBar.Corner(grow, flip)
+    local to = SPOT[corner]
+    frame:ClearAllPoints()
+    frame:SetPoint(corner, UIParent, relPoint, x + to[1] * w / 2, y + to[2] * h / 2)
 end
 
 local function Build()
@@ -363,8 +408,12 @@ function Apply()
     end
     if not frame then Build() end
     Events()
+    local grow = S.Get("consumableBarGrow")
+    HoldDocks(grow)
+    ns.UI.SetMoverGrow(frame.mover, grow)
     Layout()
     ItemBar.Put(frame, S, CB.PREFIX, C.HOME_Y)
+    Hold()
     frame.mover:SetShown(CB.unlocked == true)
     Listen(AnyHideUsed())
     UpdateCounts()

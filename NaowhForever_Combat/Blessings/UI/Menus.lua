@@ -5,11 +5,13 @@ local B = ns.Blessings
 local BLESSINGS, AURAS = B.BLESSINGS, B.AURAS
 local Store, Learned, SpellName, ClassName, Roster = B.Store, B.Learned, B.SpellName, B.ClassName, B.Roster
 
-local AURA_COLUMN = B.AURA_COLUMN
+local AURA_COLUMN, SALV_COLUMN = B.AURA_COLUMN, B.SALV_COLUMN
 local TEXT_AURA, TEXT_DEFAULT, TEXT_NONE = ns.L("Aura"), ns.L("Default"), ns.L("None")
 local TEXT_PLAYERS, TEXT_ASSIGNMENTS = ns.L("Players"), ns.L("Assignments")
 local TEXT_OWN_ONE, TEXT_OWN_MANY = ns.L("1 player has their own blessing"), ns.L("%d players have their own blessing")
 local TEXT_CLEAR_OWN = ns.L("Give them the class blessing")
+local TEXT_SALV = ns.L("Give Salvation")
+local TEXT_SEAL = ns.L("Seal")
 
 local function OwnAura()
     return Store().aura
@@ -36,7 +38,13 @@ end
 
 function B.SetOwn(column, key)
     local store = Store()
-    if column == AURA_COLUMN then store.aura = key else store.classes[column] = key end
+    if column == AURA_COLUMN then
+        store.aura = key
+    elseif column == SALV_COLUMN then
+        store.salv = key and true or nil
+    else
+        store.classes[column] = key
+    end
     B.BroadcastSoon()
     B.Changed()
 end
@@ -59,15 +67,47 @@ local function SetAura(key)
     B.SetOwn(AURA_COLUMN, key)
 end
 
+function B.SetSeal(key)
+    Store().seal = key
+    B.Changed()
+end
+
+function B.SealMenu(owner)
+    B.OpenMenu(owner, TEXT_SEAL, B.SEALS, function() return Store().seal end, B.SetSeal, TEXT_DEFAULT)
+end
+
 function B.AuraMenu(owner)
     B.OpenMenu(owner, TEXT_AURA, AURAS, OwnAura, SetAura, TEXT_DEFAULT)
+end
+
+function B.SetFree(on)
+    Store().free = on and true or nil
+    B.BroadcastSoon()
+    B.Changed()
+end
+
+local function SalvOn()
+    return Store().salv == true
+end
+
+local function ToggleSalv()
+    B.SetOwn(SALV_COLUMN, not SalvOn() and B.SALVATION.key or nil)
+end
+
+function B.SalvMenu(owner)
+    MenuUtil.CreateContextMenu(owner, function(_, root)
+        root:CreateTitle(SpellName(B.SALVATION.key))
+        root:CreateCheckbox(TEXT_SALV, SalvOn, ToggleSalv)
+        root:CreateDivider()
+        root:CreateButton(TEXT_ASSIGNMENTS, OpenWindow)
+    end)
 end
 
 function B.ClassMenu(owner, class, inSettings)
     MenuUtil.CreateContextMenu(owner, function(_, root)
         root:CreateTitle(ClassName(class))
         for _, entry in ipairs(BLESSINGS) do
-            if Learned(entry) then
+            if Learned(entry) and (Store().classes[class] == entry.key or B.Allowed(class, entry.key)) then
                 root:CreateRadio(SpellName(entry.key), function() return Store().classes[class] == entry.key end,
                     function() B.SetOwn(class, entry.key) end)
             end
@@ -81,7 +121,8 @@ function B.ClassMenu(owner, class, inSettings)
             root:CreateButton(TEXT_CLEAR_OWN, function() ClearOwn(own) end)
         end
         root:CreateDivider()
-        if not inSettings then
+        if Learned(B.SALVATION) then root:CreateCheckbox(TEXT_SALV, SalvOn, ToggleSalv) end
+        if not inSettings and B.Settings.Get("blessPlayerList") then
             root:CreateCheckbox(TEXT_PLAYERS, function() return B.PlayerList.Showing() == class end,
                 function() B.PlayerList.Toggle(class) end)
         end

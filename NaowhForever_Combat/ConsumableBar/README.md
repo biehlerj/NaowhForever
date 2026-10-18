@@ -77,6 +77,15 @@ NaowhForever_Combat/ConsumableBar/
   Smart Macro counts as out while it names no item you carry. Laying out secure buttons waits for
   the end of a fight: one that runs out in a fight fades at once and leaves when the fight ends,
   and one gained in a fight joins after it. Unlock Mode shows every item.
+- A place on the screen is saved by its middle, as the HUD Editor saves every element, and the
+  HUD Editor places the bar by it. Outside the HUD Editor the bar is held by the corner the first
+  icon sits in, measured with every item shown as the HUD Editor shows them, so the bar grows and
+  shrinks away from it and the first icon stays where it was placed. Undo, Redo and saved layouts
+  read only elements placed by their middle, so the bar is placed by it while the HUD Editor is open.
+- Docked to another HUD element, the bar tells the HUD Editor its Growth Direction
+  (`UI.SetMoverGrow`), which then holds the edge it grows from. A dock saved before that held the
+  bar's middle, so it is moved once to the edge of the bar with every item shown, in the saved
+  layouts too (`consumableBarDockHeld`); `HELD` matches the HUD Editor's own held edges.
 - Other Consumables are off in the scan filters by default: the game files quest items, holiday
   items and the like there, and Scan Bags would fill the bar with them.
 - Remove Empty takes off the items you have none of in your bags; Smart Macros stay, since they
