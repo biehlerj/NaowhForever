@@ -121,12 +121,24 @@ local function KnownReagent(family)
     return item
 end
 
+local function RequestItem(itemID)
+    if pendingItems[itemID] then return end
+    pendingItems[itemID] = true
+    events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+    C_Item.RequestLoadItemDataByID(itemID)
+end
+
 local function CarriedAmmo()
     if THROWN_CLASSES[PLAYER_CLASS] then
         local item = GetInventoryItemID("player", RANGED_SLOT)
         if item then
             local _, _, _, _, _, classID, subclassID = C_Item.GetItemInfoInstant(item)
-            if classID == WEAPON_CLASS and subclassID == THROWN_SUBCLASS then return item end
+            if classID == WEAPON_CLASS and subclassID == THROWN_SUBCLASS then
+                local _, _, _, _, _, _, _, stackSize = C_Item.GetItemInfo(item)
+                if not stackSize then RequestItem(item); return end
+                if stackSize > 1 then return item end
+                return
+            end
         end
     end
     return GetInventoryItemID("player", AMMO_SLOT)
@@ -148,11 +160,7 @@ end
 local function FoodLevel(itemID)
     local _, _, _, _, level = C_Item.GetItemInfo(itemID)
     if level then return level end
-    if not pendingItems[itemID] then
-        pendingItems[itemID] = true
-        events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-        C_Item.RequestLoadItemDataByID(itemID)
-    end
+    RequestItem(itemID)
 end
 
 local function InLevelRange(level)
@@ -547,8 +555,7 @@ local function RestockRows()
     for _, family in ipairs(FAMILIES) do
         if family.class == class then grouped = AddReagentRows(family, grouped) end
     end
-    restockRows[#restockRows + 1] = Group(ns.L("Ammo: %s, %s and %s", ClassName("ROGUE"), ClassName("WARRIOR"),
-        ClassName("HUNTER")))
+    restockRows[#restockRows + 1] = Group(ns.L("Ammo: %s and %s", ClassName("ROGUE"), ClassName("WARRIOR")))
     for _, row in ipairs(AMMO) do restockRows[#restockRows + 1] = row end
     restockRows[#restockRows + 1] = Group(ns.L("Ammo: %s", ClassName("HUNTER")))
     for _, row in ipairs(HUNTER) do restockRows[#restockRows + 1] = row end

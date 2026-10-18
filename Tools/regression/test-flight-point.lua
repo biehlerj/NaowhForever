@@ -113,6 +113,7 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, QoLSettings = S,
     AlertStack = function(frame) state.alertFrame = frame end,
     Apply = function() end, ShowUnlockMode = function() end, HideUnlockMode = function() end,
     Shared = {
+        Places = dofile("Tools/regression/shared_places.lua"),
         Parts = { HudBackdrop = function()
             return { SetMode = function(_, mode) return mode end }
         end, HudFont = function() end },
@@ -233,6 +234,14 @@ state.pos = { x = 0, y = 0 }
 check("a confirmed gap wins over a nearer point we have not checked",
     At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 50, false, AUBERDINE),
         Node("Lor'danel, Darkshore", ALLIANCE, 10, true, 99) }) == "Learn the Auberdine flight point")
+check("a retired zz node is never named, even nearer",
+    At(DARKSHORE, { Node("zzOLDPowderfuse Port", NEUTRAL, 10, false, 98),
+        Node("Auberdine, Darkshore", ALLIANCE, 50, false, AUBERDINE) }) == "Learn the Auberdine flight point")
+check("nor a [DNT] one",
+    At(DARKSHORE, { Node("[DNT] Test Node", NEUTRAL, 10, false, 97),
+        Node("Auberdine, Darkshore", ALLIANCE, 50, false, AUBERDINE) }) == "Learn the Auberdine flight point")
+check("nor on its own",
+    not (At(DARKSHORE, { Node("zzOLDPowderfuse Port", NEUTRAL, 10, false, 98) }) or ""):find("zz", 1, true))
 state.pos = nil
 check("Auberdine's inn asks you to open the flight map before any snapshot",
     At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 0, true, AUBERDINE) }) == "Open a flight master's map to save the points you know")
@@ -463,6 +472,13 @@ check("an unchecked pin is not labelled as unlearned", ns.FlightPointReminderFor
 state.nodes = { Node("Auberdine, Darkshore", ALLIANCE, 8000, false, AUBERDINE) }
 Fire("ZONE_CHANGED")
 check("a remote pin cannot borrow this zone's node", ns.FlightPointReminderForPin(DARKSHORE, { 10, 0 }) == nil)
+state.nodes = { Node("zzOLDAuberdine", NEUTRAL, 8000, false, 98),
+    Node("Auberdine, Darkshore", ALLIANCE, 8100, false, AUBERDINE) }
+Fire("ZONE_CHANGED")
+check("a retired node nearer the pin does not hide the real one",
+    ns.FlightPointReminderForPin(DARKSHORE, pin) == "Learn the Auberdine flight point")
+state.nodes = { Node("Auberdine, Darkshore", ALLIANCE, 8000, false, AUBERDINE) }
+Fire("ZONE_CHANGED")
 
 At(BARRENS, {})
 At(DARKSHORE, { Node("Auberdine, Darkshore", ALLIANCE, 8000, false, AUBERDINE) })
@@ -545,6 +561,28 @@ Fire("TAXIMAP_OPENED")
 check("saving the player's continent does not depend on a recognized taxi map",
     account.flightPoints[GUID].seenMaps[EASTERN_KINGDOMS] == true
     and Text() == "Learn the Darkshire flight point")
+
+local ZEPHRAS, ZEPHRAS_TOO, AZEROTH = 2521, 2665, 947
+local mapInfo = env.C_Map.GetMapInfo
+env.C_Map.GetMapInfo = function(id)
+    if id == ZEPHRAS then return { mapID = ZEPHRAS, mapType = 3, parentMapID = AZEROTH } end
+    if id == ZEPHRAS_TOO then return { mapID = ZEPHRAS_TOO, mapType = 3, parentMapID = 0 } end
+    if id == AZEROTH then return { mapID = AZEROTH, mapType = 1, parentMapID = 0 } end
+    return mapInfo(id)
+end
+account.flightPoints = nil
+local zephrasNode = Node("Windshaper's Rest, Zephras Isle", NEUTRAL, 50, true, 3001)
+check("Zephras Isle, under no continent, asks for the flight map at first",
+    At(ZEPHRAS_TOO, { zephrasNode }) == "Open a flight master's map to save the points you know")
+state.taxiMap, state.openNodes = ZEPHRAS, { { nodeID = 3001, state = CURRENT } }
+Fire("TAXIMAP_OPENED")
+check("opening the flight map there marks the island seen and its point known",
+    account.flightPoints[GUID].seenMaps[ZEPHRAS] == true and At(ZEPHRAS_TOO, { zephrasNode }) == nil)
+check("so the island stops asking on either of its maps", At(ZEPHRAS, { zephrasNode }) == nil)
+check("an unknown point on the island is named, not asked about",
+    At(ZEPHRAS, { Node("Skyreach, Zephras Isle", NEUTRAL, 50, true, 3002) }) == "Learn the Skyreach flight point")
+env.C_Map.GetMapInfo = mapInfo
+state.taxiMap = DARKSHORE
 
 state.subzone, state.pos, state.faction = "The Sepulcher", nil, "Horde"
 local sepulcher = Node("The Sepulcher, Silverpine Forest", HORDE, 8000, false, 69)

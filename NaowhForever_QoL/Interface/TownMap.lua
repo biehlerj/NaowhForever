@@ -3,6 +3,7 @@ local ns = _G.NaowhForever
 
 local S = ns.QoLSettings
 local ScalePin = ns.Shared.ScalePin
+local SameMap = ns.Shared.Places.SameMap
 
 local TEMPLATE = "NaowhForeverTownPinTemplate"
 local LINK_TEMPLATE = "NaowhForeverZoneLinkPinTemplate"
@@ -24,7 +25,7 @@ local ICON_FOLDER = "\\Icons\\"
 local FULL_LOW, FULL_HIGH = 0, 1
 local HINT = ns.QoLConstants.HINT_RGB
 local EMPTY = {}
-local MINI_SIZE = 12
+local MINI_SCALE = 0.9
 local MINI_INTERVAL = 0.05
 local PIN_RANGE = ns.Shared.Style.PIN_SIZE_RANGE
 local TOWN_PIN_SCALE = 0.5625
@@ -206,6 +207,10 @@ local function TravelArt(label)
     return TRAVEL_ATLAS
 end
 
+local function SetTravelIcon(icon, label)
+    TryArt(icon, TravelArt(label))
+end
+
 local function ScaleTownPin(pin)
     ScalePin(pin, TOWN_PIN_SCALE)
 end
@@ -351,7 +356,7 @@ function provider:RefreshAllData()
     self:RemoveAllData()
     if not On() then return end
     local map = self:GetMap()
-    local mapID = map:GetMapID()
+    local mapID = SameMap(map:GetMapID())
     local shops = not S.Get("townCapitalsOnly") or CAPITALS[mapID]
     if S.Get("townZoneLinks") then AddExits(map, mapID) end
     local faction = UnitFactionGroup("player") == "Horde" and "H" or "A"
@@ -436,7 +441,6 @@ local function MiniPin(i)
     local pin = miniPins[i]
     if pin then return pin end
     pin = CreateFrame("Frame", nil, Minimap, TEMPLATE)
-    pin:SetSize(MINI_SIZE, MINI_SIZE)
     pin:SetScript("OnEnter", pin.OnMouseEnter)
     pin:SetScript("OnLeave", pin.OnMouseLeave)
     miniPins[i] = pin
@@ -453,13 +457,15 @@ local function MiniRefresh()
     wipe(miniSpots)
     miniMap = MiniOn() and C_Map.GetBestMapForUnit("player")
     if miniMap and MiniFit(miniMap) then
-        if S.Get("townMinimap") then AddSpots(ns.TownMailboxes[miniMap]) end
-        if S.Get("townMinimapSpirit") then AddSpots(ns.TownSpiritHealers[miniMap]) end
+        if S.Get("townMinimap") then AddSpots(ns.TownMailboxes[SameMap(miniMap)]) end
+        if S.Get("townMinimapSpirit") then AddSpots(ns.TownSpiritHealers[SameMap(miniMap)]) end
         miniWidth, miniHeight = C_Map.GetMapWorldSize(miniMap)
     end
     for i = #miniSpots + 1, #miniPins do miniPins[i]:Hide() end
+    local size = S.Get("townPinSize") * MINI_SCALE
     for i, spot in ipairs(miniSpots) do
         local pin = MiniPin(i)
+        pin:SetSize(size, size)
         pin.npc = spot
         SetPinArt(pin, spot)
     end
@@ -514,7 +520,7 @@ local function OnAuditEvent()
     local x, y = pos:GetXY()
     x, y = Tenths(x), Tenths(y)
     Record(map, name, x, y)
-    for _, npc in ipairs(ns.TownNPCs[map] or EMPTY) do
+    for _, npc in ipairs(ns.TownNPCs[SameMap(map)] or EMPTY) do
         if npc[4] == name then
             ns.Print(TEXT_AUDIT_NEAR:format(name, x, y, npc[1], npc[2], math.sqrt((x - npc[1]) ^ 2 + (y - npc[2]) ^ 2)))
             return
@@ -594,6 +600,7 @@ boot:SetScript("OnEvent", Apply)
 ns.TownPinRows = PIN_ROWS
 ns.TownPinRange = PIN_RANGE
 ns.TownPinTexts = { group = TEXT_TOWN, switch = TEXT_TOWN_PINS, tip = TEXT_TOWN_TIP }
+ns.TownTravelIcon = SetTravelIcon
 
 local page = ns.Shared.Settings.Page("QoL/Map & Pins", S)
 

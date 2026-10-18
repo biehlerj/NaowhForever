@@ -79,7 +79,7 @@ widgetMeta.__index = function(_, k) return methods[k] or (k:match("^%u") and Noo
 local function NewEnv(withModules)
     local account, levels, timers, profile = {}, {}, {}, {}
     local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Lower = string.lower,
-        Professions = { Settings = { DB = function() return profile end } },
+        Professions = { Settings = { DB = function() return profile end, Get = function() return false end } },
         THEME = { muted = {} },
         HEALING_POTIONS = { 13446, 3928, 929, 118 },
         MANA_POTIONS = { 13444, 6149, 2455 },
@@ -190,7 +190,7 @@ check("weapons and bandages are not item groups of the data", D.ITEMS.weapon == 
 -- The fallback copies match the lists their modules own.
 local owners = { NaowhForever = { Macros = {} } }
 owners._G = owners
-Load({ "NaowhForever_Combat/AuraBuffs/Data/BuffReminders.lua", "NaowhForever_Macros/Data/Items.lua" },
+Load({ "NaowhForever_Combat/AuraBuffs/Data/BuffReminders.lua", "NaowhForever_Utilities/Macros/Data/Items.lua" },
     setmetatable(owners, { __index = _G }))
 local function Same(a, b)
     if #a ~= #b then return false end

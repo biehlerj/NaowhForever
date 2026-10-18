@@ -55,6 +55,8 @@ NaowhForever_QoL/
     ZoneLevelsData.lua  each zone's level range (ns.ZoneLevels), generated
     FishingLevelsData.lua  each zone's Fishing skill range (ns.FishingLevels)
     ZoneLevels.lua      Zone Levels and Fishing Levels on the world map
+    ZoneInfo/           Model.lua (zone details), View.lua (panels), Runtime.lua (map and HUD lifecycle),
+                        SettingsPage.lua (Map & Pins card), loaded by ZoneInfo.xml
     SkyborneData.lua    the Skyborne spots every player starts with (ns.SkyborneSpots), MIT notice inside
     SkyborneSpots.xml   the Skyborne pin template, then SkyborneSpots.lua
     SkyborneSpots.lua   Skyborne Spots on the world map
@@ -72,6 +74,7 @@ NaowhForever_QoL/
     GcdTracker.lua      GCD Tracker (ns.GCDSpell)
     FocusCastBar.lua    the Focus Cast Bar
     DamageMeterLayout.lua the game's damage meter Bar Height, saved in the active Edit Mode layout
+    DamageMeterPreview.lua the card's preview: a mock of the game's meter drawn with the card's picks
     DamageMeterSkin.lua the card Default Damage Meter: the game's meter in the theme, and its place
     StealthReminder.lua the Stealth Reminder
     PetTracker.lua      the Pet Tracker
@@ -81,6 +84,7 @@ NaowhForever_QoL/
                         ns.InviteAll, ns.ShowInviteEditor)
     GroupButtons.lua    On-Screen Buttons (Invite, your invite buttons, Invite All, Disband)
     FreeForAll.lua      Always Free for All, the party loot method while you lead
+    LayerSwap.lua       Auto-Accept Layer Swap, confirming the game's layer swap prompt on joining a group
     FinderRoles.lua     Group Finder Roles, the role buttons on the Group Finder
     TalentPoints.lua    the unspent talent points reminder
     QuestAutomation.lua accept, hand in and share quests, saved reward picks (ns.QuestRewards)
@@ -109,17 +113,22 @@ NaowhForever_QoL/
     Alts.lua            your characters per realm and faction (ns.AltRealm, ns.AltList, ns.OpenForgetAltMenu)
     LootFeed.lua        the Loot Feed, gold per hour and quick loot (ns.ResetLootFeedSession)
     Restock.lua         the Restock Reminder, Auto Repair and Auto Sell Junk
-    ScrapMarker.lua     the Scrap Marker (ns.ScrapMarker), read by Bag Space and the Scrap List
-    ScrapList.lua       the Scrap List window (ns.OpenScrapList, /nf scrap)
+    ScrapMarker.lua     the Junk Marker (ns.ScrapMarker), read by Bag Space and the Junk List
+    ScrapList.lua       the Junk List window (ns.OpenScrapList, /nf junk)
     Mail.lua            Alts and Attach buttons at the mailbox, the expiring mail warning
   Travel/
     FlightData.lua      each flight route's flown length (ns.FLIGHT_ROUTES), generated
     Flight.lua          the Flight Timer, Flight Games and flight times on the flight map
     FlightPoint.lua     zone-entry and nearby-town flight point reminders
+    TransportData.lua   each boat and zeppelin stop with its period and dwell, generated from Journeys data
+    TransportTimes.lua  saved per-realm server-clock sightings and estimates (ns.TransportTimes)
+    Transport.lua       Boat and Zeppelin Timers: its minimap pins, their tooltips and Travel settings
     AimTrainer.lua      the Aim Trainer (/nfaim, ns.AimRules, ns.AimPlay, ns.AimOffer)
     AimBoard.lua        the Aim Trainer's leaderboard (ns.AimBoard)
     QuizData.lua        the quiz questions (ns.QUIZ_QUESTIONS)
     Quiz.lua            the Quiz (ns.ToggleQuiz, ns.QuizOffer, ns.QuizDismiss)
+    DailyWordData.lua   the Daily Word's answers and accepted words, generated
+    DailyWord.lua       the Daily Word (/nf word, ns.DailyWordPlay, ns.DailyWordOffer, ns.DailyWordDismiss)
   System/
     SlashCommands.lua   Custom Slash Commands and their editor (ns.SlashCommandList, ns.RefreshSlashCommands)
     Performance.lua     QoL > System > Performance: recommended game settings and their backups
@@ -127,6 +136,8 @@ NaowhForever_QoL/
     crosshair_ring.tga  the Crosshair's ring
     MouseRing/          the Mouse Ring's rings, glows and trail
     Glimmer/            Glimmer's glow, flare, ring, beam and bracket, drawn by
+                        Tools/media/make_media.py
+    Flight/             the Flight Timer's Land Early and game button icons, drawn by
                         Tools/media/make_media.py
     TopBar/             the Top Bar's button icons and resting glyph
   README.md           this file
@@ -138,7 +149,7 @@ NaowhForever_QoL/
 - The Damage Meter Skin never hides or re-lays out the game's meter: it recolors its textures and
   fonts after the game sets them (hooksecurefunc on each entry, a scroll box callback for new
   ones), and remembers the art, the font with its flags and shadow, and the bar's atlas to give
-  them back when the switch goes off. It reads no damage numbers, which are secret in combat.
+  them back when the switch is off and nothing is picked. It reads no damage numbers, which are secret in combat.
   Bar Texture swaps the file on the bar's own texture, which the game only ever colors. Font and
   Outline are written once per change of a setting, since the game never sets them again; the
   colors are the theme's tokens until one is picked, as in the Damage Meter module.
@@ -152,8 +163,88 @@ NaowhForever_QoL/
   `SetVertexColor`, their first look remembered to give back; sizes are one setting each for the
   names, the amounts and the title, 0 keeping the game's own, which Edit Mode's Text Size still
   scales.
-- The card is in sections (Window, Bars, Text, Title Bar, Spell Panel, Reset) that mix the reskin's rows, which wait
-  for the Reskin switch, with the game's own settings, which do not.
+- Theme (`damageMeterTheme`) is only where a color that was not picked comes from (`Resolve`): the game's own
+  (Blizzard), the addon's current theme (`ns.THEME`, the default), or the palette of one of the themes, read
+  from `ns.ThemePalette` and kept until the next apply (`Token`, `palettes`). A color that is picked applies
+  whichever it is, so every row works in all of them, and choosing a theme repaints at once with no reload,
+  since the meter reads the palette as it paints. Everything that follows the theme reads it the same way
+  (`Color`): Accent bars, the Accent scroll bar and the icon borders are the chosen theme's, not the current
+  one's. With Blizzard a flat texture that has no color goes back to
+  its atlas (`Unflat`), a text keeps the color it had, the bar's shadow and edge stay, and the spell panel's
+  opacity waits for a color of its own or the Window Color (the row says so). That look has its own Font, Bar
+  Color, Bar Texture and Icon Border (`damageMeterGameFont`, `damageMeterGameBars`, `damageMeterGameTexture`,
+  `damageMeterGameIconEdge`), which start as the game's own, so it does not leave the text in the addon's font,
+  the bars in the theme's accent or its gradient, nor the icons bordered (`FontPath` answers nothing for the game's
+  face, and `Face` then writes the face the text had). Each is a row of its own that the other look hides, so the
+  card's Reset and its count of changes see every one.
+- The Reskin switch is the theme's colors, not the switch of the whole card. The skin runs when it is on or when a
+  row of the card has been picked (`Customized`: each of `PICKS` that is not its default, read through `Raw` and
+  `Default`, once and kept until a setting changes or a profile is applied, since the hooks ask at every refresh of
+  every bar), so a player who wants the game's own look with a font, a hidden timer or a bar opacity does not have
+  to reskin. With it off, `Blizzard()` is true and `Token` answers nothing: every color that is not picked is the
+  game's own, exactly as with the Blizzard (Default) theme, and the rows are that look's. Nothing picked and the
+  switch off runs nothing, as before: no hook, no tick, and the first pick starts it. Theme is the only row that
+  waits for the switch. The picks of the theme look's own (`damageMeterBars`, `damageMeterTexture`,
+  `damageMeterIconEdge`, `damageMeterFont`) are not in `PICKS` for that reason: they do nothing with it off.
+- Picks only apply with the Reskin switch off once `damageMeterPicksLive` is true, which the first change of a
+  row in `PICKS` sets. Before that release the picks only applied with the switch on, so a player who picked
+  colors, turned Reskin off and kept the game's look would otherwise have them painted on it after updating.
+  Their saved picks are not touched: they apply with Reskin on, as before, and with it off from the first pick
+  the player makes, all together.
+- The title bar's timer, session button, settings button and minimize button are each switched off with
+  `SetAlpha(0)`, never a Hide, and a post-hook on each one's `SetAlpha` puts a part the game raises back to 0
+  (`Title.KeepAlpha`); the title fade keeps them at 0 (`TitleAlpha`) and nothing picked, with the reskin off, gives
+  them back. The
+  list's button is two switches, since it is a text and an arrow: the text is `TypeName`'s own opacity, and the
+  arrow is every texture of the dropdown but its texts (`Title.Inner`: a text answers to `SetVertexColor` as a
+  texture does, so the object type is asked, and each is given back its own opacity, since a highlight
+  starts at 0). A hidden part is also made one pixel wide (`Title.Fit`, its width kept to give back, and a
+  post-hook on `SetWidth` for the game's own), so what the game anchors to its edge closes the gap instead of
+  leaving the room it had; the list's button closes only when both of its switches are off. A hidden button
+  still takes a click where it was, as an opacity of 0 does not turn the mouse off.
+  The game hangs the list's button from the timer's right edge, so the timer is in front and the title after it,
+  and `Title.Layout` leaves that order: the timer is one anchor of its own and a width of 0, so it is as wide as
+  its text and the title is at the far left when there is no time, and a post-hook on the timer's `SetPoint` and
+  `SetWidth`, on the dropdown's `SetPoint` and on the title's `SetText` lays it out again when the game or the
+  list changes. The two X offsets move one part each: the timer's moves the timer, and the button, which hangs
+  from it, is given the same offset the other way so the title stays; the title's moves the text only. Only the
+  game's own anchors are added to (`Title.homes`, read once and given back when the skin goes off, and not read at
+  all when an offset is secret: the part then stays where the game has it), and nothing is measured: where a
+  text starts and how wide it is are numbers the game keeps secret in some states, and adding them raised
+  "arithmetic on a secret number value" and cut the rest of the skin short. A timer hung after the title was
+  tried and dropped: the title's frame can be as wide as the window, so the end of it is not the end of the text,
+  which could not be measured. The timer's offset puts it there when it is wanted.
+  The game anchors the title's text flush to the arrow (an x of 0), so while the arrow shows the text's left
+  anchor, and only that one, is given `TITLE_GAP` (4) pixels more, and a hidden arrow has no gap. The gap waits
+  for a pick (`Title.Spaced`: `damageMeterPicksLive`, or a title bar option that is not its default), so a
+  player with Reskin on who picks nothing keeps the title where it was before. Themed buttons
+  tint the art of the buttons only (`Title.Glyphs`): the list's text and the session's letter are texts with colors
+  of their own, and tinting them changed the title. The parts are anchored in an
+  order where no anchor depends on what depends on it (the game raises "Cannot anchor to a region dependent on
+  it" otherwise). `Title.placing` keeps the layout's own `SetPoint` and `SetWidth` from laying it out again
+  through the hooks; `Apply` clears it, so a layout that raised an error does not stop the next one.
+- The skin's title bar parts are fields of one `Title` table, not locals: the file is close to the 200 locals
+  a Lua 5.1 chunk can have.
+  The right-click menu is a hook on the window's
+  `OnMouseUp`, made only when Right-Click Menu is on, that opens `MenuUtil.CreateContextMenu` with a checkbox for
+  each switch, so a part that was switched off can be switched on from the window.
+- The card's preview (`DamageMeterPreview.lua`) is a mock of the meter on the card's stage (`studio`), not the
+  game's own window: the game shows sample bars only inside Edit Mode (`SetIsEditing`), and calling that from an
+  addon taints the meter's own refresh, which reads data that is secret in combat. The mock is drawn from
+  `ns.DamageMeterLook.Describe` (what each pick makes of each part, from the same functions the skin paints with,
+  so the two cannot say different things) and from the game's own settings in `DamageMeterLayout` (width, bar
+  height, spacing, icons, class color, style, opacities and text size), so it follows every row at once, with no
+  reload and no fight. Its art is the game's own atlases, with the buttons sized and anchored as the game's templates
+  have them (the mode button `common-dropdown-a-button-shadowless`, the cog `...-settings-shadowless`, the session's
+  box `common-dropdown-c-button` reaching 7 pixels past its frame). Nothing in it is read from the game's window.
+  The page is drawn again for a change of the card's own settings, but not for the game's (they are saved through
+  Edit Mode and `DamageMeterLayout` keeps the value on its way), and not while a slider is held, so the preview
+  repaints itself: a frame after any QoL setting changes (after the skin has taken it, so it reads what the skin
+  will paint) and whenever `DamageMeterLayout` changes a value (`Refresh`). It does nothing while it is not shown.
+  Its stage has one height, so the page does not move under a slider: a window taller than the stage is scaled.
+- The card is in sections (Game Settings, Look, Window, Bars, Text, Title Bar, Spell Panel, Reset). The game's own
+  settings are first, in a section of their own, since they are written through Edit Mode and the game may only
+  take them at a reload (the row says so); the skin's rows are below, and work with the Reskin switch off too.
 - The game's own settings in it (`DamageMeterLayout.lua`) are the game's list for its damage
   meter, written through `C_EditMode`: it copies the manager's layout info (never writes into it),
   changes the values in the copy and saves that, so the game applies it with its own code and
@@ -326,8 +417,9 @@ NaowhForever_QoL/
 - The Food & Drink buttons are secure, so the bar is built, shown, hidden and pointed at items
   only out of combat. Its key bindings (Bindings.xml) work once the bar is switched on, as that is
   when the buttons exist.
-- The Food & Drink Bar's card sits on the Consumable Bar's page while that module is on (its addon
-  loaded, before QoL by `OptionalDeps`, and `consumableBar` set), and on Loot & Items otherwise. A
+- The Food & Drink Bar's card sits on the Consumable Bar's page while that module is on
+  (`NaowhForever_Combat` loaded, before QoL by `OptionalDeps`, and `consumableBar` set), and on Loot &
+  Items otherwise. A
   card's page is chosen at load, so switching the Consumable Bar on or off moves it at the next
   reload. Its settings keep their `foodBar*` keys either way.
 - Its count, key text and anchor are the Consumable Bar's own rows and placement
@@ -466,6 +558,9 @@ NaowhForever_QoL/
   unit only, so the rest of the raid's power and aura events never reach it; drinking is read
   from each aura event's own changes; a burst of roster events or mana ticks is one redraw
   (0.25s). Unit names are made once, so a roster pass makes no strings.
+- Healer Mana's Growth Direction holds the top or bottom edge of the four-healer sample box placed in
+  the HUD Editor, so the list starts at that edge whatever the group size. In the HUD Editor it is
+  placed by its centre, as every mover saves it.
 - Drink is found by the name of spell 430 (in the client's language), which is the buff's. Auras
   go secret during boss pulls; the last answer stands until they clear.
 - Unit data can come back secret in restricted content, and is never compared then. While a
@@ -500,8 +595,15 @@ NaowhForever_QoL/
   `fromNodeID * 10000 + toNodeID`, generated from the TaxiPath data of WoW Forever build
   1.60.1.69913.
 - Flight Games (`flightGame`) is the one choice of what opens by itself when a flight starts: the
-  button only, the Quiz or the Aim Trainer (Off hides the button). It was migrated once from the
-  old `quizFlight` and `aimAutoFlight`.
+  buttons only, the Quiz, the Aim Trainer or the Daily Word (Off hides the game buttons). It was
+  migrated once from the old `quizFlight` and `aimAutoFlight`.
+- The Flight Timer has one icon button per game (the Quiz, each Aim Trainer mode and the Daily
+  Word), so a game opens in one click. A game whose feature is off keeps its button, greyed out,
+  with a tooltip saying where to turn it on, as the old Games menu did for the Aim Trainer.
+- A game a flight opened by itself shows an eye beside its close button
+  (`ns.FlightGameHideButton`, `ns.FlightGameOffered`), so a player can stop that from the game
+  instead of the settings. It sets Flight Games to Buttons only, so the games stay one click away.
+  The Aim Trainer hides it with its other header buttons while a round runs.
 - Flight times come from the route data at 30.4 yards a second (`FLIGHT_SPEED`), fitted to
   measured Classic flight times. Frequent Flier, node 110300 of the Adventure Legacy tree (1188),
   makes flight path mounts 20% faster; Legacy perks are bought per character, and a character
@@ -528,8 +630,10 @@ NaowhForever_QoL/
 - The Flight Timer's mover reports offsets in the timer's own scaled units; they are saved in
   screen units so the Scale slider resizes it in place.
 - Flight Point reads `C_TaxiMap.GetTaxiNodesForMap` for the zone, and the parent maps up through
-  the continent when that list is empty. `isUndiscovered` is not set for a classic flight path you
-  have not spoken to. Until this character opens a flight master's map on that continent
+  the continent when that list is empty. That list keeps nodes the game has retired ("zzOLDPowderfuse
+  Port"), so a name with one of the markers `Tools/build/journeys.py` drops (`RETIRED`) is never a
+  reminder, nor the nearest node to a flight master's pin. `isUndiscovered` is not set for a classic
+  flight path you have not spoken to. Until this character opens a flight master's map on that continent
   (`GetAllTaxiNodes` only lists the open map's continent), a friendly point in range
   asks you to open one to save the points you know, and only a node the map marks undiscovered is
   named. Talking to a flight master (a gossip option with the taxi icon) records that town's node
@@ -540,6 +644,9 @@ NaowhForever_QoL/
   `seenMaps`. Classic and Forever use separate taxi maps: 1463 for Eastern Kingdoms (1415)
   and 1464 for Kalimdor (1414). `TAXI_MAPS` lets both the screen reminder and pin hint recognize
   older saves containing only those taxi map IDs after a reload, without another visit.
+- A zone under no continent counts as its own: Zephras Isle (2521) sits straight under Azeroth and
+  its second map (2665) has no parent, so with only continents counted, opening a flight map there
+  never marked it seen and the reminder kept asking for one.
 - The learn sentence drops a leading `The ` from the place name so The Sepulcher reads
   "Learn the Sepulcher flight point". The original name still matches the town's subzone.
 - A node is reminded only when it is unlearned and its faction is neutral or the player's.
@@ -580,7 +687,7 @@ NaowhForever_QoL/
   limited (12 a minute per sender, 400 senders) and capped (200 entries a mode, the weakest and
   oldest dropped first). A best is kept only from the player its GUID names, found in your group
   or guild (`ns.SenderIs`), and an entry saved under one name is not replaced from another.
-- The Aim Trainer opens from /nfaim, the Flight Timer's Games button or a flight starting (Flight
+- The Aim Trainer opens from /nfaim, the Flight Timer's mode buttons or a flight starting (Flight
   Games). A miss costs 50 points and pops a "-50" where it landed. Every round is the same for
   everyone (fixed 30s length, target size and play area), so bests compare on the leaderboard;
   `ns.AimRules.Ceiling` caps a believable score (20 clicks a second at most) so a forged one is
@@ -592,7 +699,7 @@ NaowhForever_QoL/
   (`Parts.HudBackdrop`); the icons keep their own edges in each. Its Font Size is the header's
   (12 is the size its other measures are drawn for); the bag, the header line and the prices
   scale with it. The card is the house panel at the Flight Timer's fill (0.85) round a slim
-  header (the bag, free slots out of your total, Scrap Marker's "+N", the Stack button) over a
+  header (the bag, free slots out of your total, Junk Marker's "+N", the Stack button) over a
   cell per item (its icon, its marks, its price under it).
 - Bag Space's cells and gap shrink with the Icon Size below 36 (the size the rest is drawn for):
   the gap, the price column and the price font follow it, to a floor, so a small row stays
@@ -654,6 +761,7 @@ NaowhForever_QoL/
   `UI.SlimScroll`, like the options window.
 
 ### Trainer
+- Closing a non-profession trainer checks the current spellbook for lower ranks even without a learned-ability notification. The trainer type is captured while its window is open. A fresh visit drops the previous popup list; kept-only rank offers stay silent automatically but remain available through Check Bars. Combat deferral is unchanged.
 - The new-ability glow is LibCustomGlow's on the action buttons, never Blizzard's own new-ability highlight: that marks table is read from secure code, and a write from an addon taints it.
 - Blizzard's, EllesmereUI's and the controller bars' buttons all inherit ActionBarButtonTemplate, which lists them in ActionBarButtonEventsFrame.frames, so the glow finds every bar there.
 - Paging and slot events arrive before the buttons pick up their new action, so the glow waits a frame, and a burst of events costs one pass.
@@ -688,40 +796,115 @@ NaowhForever_QoL/
 ### Performance
 - The game keeps its settings per computer, so the values the recommended ones replaced live in the account store (`cvarBackups`), not the profile.
 - `SAME_WITHIN` compares numeric CVars loosely, as the game writes some back with float noise.
-- HDR and Peak Brightness set the game's own `HDRFactor` and `HDRPeakBrightness`, which have no place in the game's options. Peak Brightness also turns on `useHDRPeakBrightness`, without which the game ignores it. They are the player's own values, not recommended ones, so they are not backed up, and they show only where the client has `HDRFactor`.
+- HDR and Peak Brightness set the game's own `HDRFactor` and `HDRPeakBrightness`, which have no place in the game's options. Peak Brightness also turns on `useHDRPeakBrightness`, without which the game ignores it. They are the player's own values, not recommended ones, so they are not backed up, and they show only where the client has `HDRFactor`. HDR Settings (`hdr`, off by default) is the opt-in: until it is on, the page leaves both alone.
 
 ### Stealth Reminder
 - The form IDs are `GetShapeshiftFormID` values, the same ones the Threat Meter reads.
 - A reminder is fitted to its text only with a background, so elements anchored to it keep their spot.
 
 ### Quiz
+- The Quiz and Flight Timer use HIGH strata, like the Aim Trainer, so reminder text stays behind their controls.
 - `CAMPFIRE_SEATED` (1229739) is Forever's "Welcoming Campfire" aura, present only while seated at a campfire (probed 2026-09-24). "Campfire Nearby" (1283391) is an area aura from simply walking past one, so it is not used.
 - Auras cannot be read in combat, so the camp check pauses there rather than reading a missing aura as having walked away.
 - A dismiss with no reason is the close button; one with a reason closes only what that reason opened, so landing never shuts a quiz opened by hand.
 - In `QuizData.lua` the first answer is the right one; the quiz shuffles them before showing.
 
+### Daily Word
+- Everyone gets the same word on the same day without any server: the day is the one the next
+  daily reset falls on, less one (`GetServerTime` plus `C_DateAndTime.GetSecondsUntilDailyReset`,
+  in days), so the word changes at the daily reset, and `FIRST_DAY` (20741, 15 October 2026 UTC)
+  is #1. Day N's answer is the Nth in `ns.DailyWordAnswers`, starting over after the last.
+- `Tools/build/daily_word.py` shuffles the answers with a fixed seed, so a run gives the same
+  order. Rebuilding with other sources, words left out or seed changes the words of days already
+  played, and players comparing a day's result would have had different words.
+- The words are public domain: the answers are the five-letter words of 12dicts' 2of12 also in its
+  3esl learners' list, less plurals and past tenses and a hand-picked list of slurs and crude
+  words; every answer and every five-letter word of ENABLE is accepted as a guess. 12dicts asks
+  for acknowledgment, which is on the Credits page.
+- The words are two strings of five-letter words, not tables: the accepted ones are sorted, so a
+  guess is a binary search, and nothing is built when the file loads.
+- The letters are typed into an invisible edit box over the grid, which keeps the keyboard while
+  it has focus: Play and the game buttons focus it, a flight opening it by itself does not, and
+  Escape, a finished game and closing it all let go.
+- A result is saved for the account, so every character shares the day's game, streak and best.
+  A streak counts consecutive days won; a day skipped breaks it.
+- Shared results mark each letter with raid target icons, `{rt4}` (green triangle) in place,
+  `{rt1}` (yellow star) elsewhere in the word and `{rt5}` (moon) not in it: chat cannot color text
+  or show the colored squares other word games share.
+
+### Boat and Zeppelin Timers
+- The game draws nothing for a boat or zeppelin on the minimap: no tracking type, area POI or
+  vignette covers them, and the minimap's own mouseover tooltip comes from the engine
+  (`GameTooltip:SetMinimapMouseover`) with nothing an addon can read or extend. So each stop gets
+  its own minimap pin, placed by `Parts.MinimapLayer` (Shared/UI/MinimapPins.lua) like Glimmer's.
+- A pin sits where the ship waits at its stop (Journeys' stop point, the taxi path node with a
+  delay), not at the town map's dock pin: the Horde towers each hold two zeppelins about 50 to 60
+  yards apart, so one pin per tower could not tell which ship a click recorded. `PIN_SIZE` (16)
+  keeps the two pins of a tower apart at the default zoom; `MAX_PINS` (3) is the most stops one
+  map has (Auberdine's).
+- A left click on a pin records an arrival and a right click a departure, against `GetServerTime`.
+  Click at the actual arrival or departure, rather than partway through its stop. Another click
+  corrects the phase.
+- The tooltip's countdown is redrawn every `UPDATE_EVERY` (1 s) only while the pointer is on a
+  pin. The pins are placed only on a zone or loading event; the layer moves them while you move.
+- `TransportData.lua` is generated by `lua5.1 Tools/build/transport.lua` from Journeys' ships, one
+  entry per ship stop. A ship with a published cycle time uses it: warcraft.wiki.gg's "Travel
+  guide to zeppelins and boats" gives Undercity-Orgrimmar every 3:59 and Undercity-Grom'gol every
+  5:15, with every ship docked 60 seconds (the Feathermoon Ferry 30). Journeys' path-length
+  estimate (each dock's wait plus each leg's yards over its flat speed) had those two at 6:44 and
+  6:08, outside the refine band, so a second sighting could never correct them.
+- Every other ship keeps Journeys' estimate until it is timed in game: the flat speed ignores
+  acceleration, so it can be well off. Rebuild after Journeys' network or speeds change.
+- A second sighting of the same kind (arrival after arrival, departure after departure) at the
+  same stop measures the period: the time between them divided by the whole cycles in it. It is
+  kept only when exactly one cycle count puts it within `REFINE_BAND` (15%) of the data's
+  period; otherwise the sighting just re-anchors the phase. The measured period is saved with it.
+- An estimate more than `STALE_CYCLES` (6) cycles past its last sighting shows as out of date
+  instead of a countdown: by then a small period error has added up to a large phase error.
+- The three-stop Southshore boat is one pin at each of its docks, naming both places it sails
+  on to.
+- Sightings are saved in the account settings per realm (`transportSightings`), keyed by stop, not
+  the profile: a realm's transports run on the server's clock whichever character watches them.
+  Turning the feature or QoL off keeps them.
+- Each login and enable drops sightings older than the last weekly reset (from
+  `C_DateAndTime.GetSecondsUntilWeeklyReset`), since the weekly restart restarts the
+  transports, and sightings of stops no longer in the data. An unscheduled restart is not
+  detectable; only a new sighting fixes that phase. Enabling prunes only once `IsLoggedIn`; at
+  login, PLAYER_ENTERING_WORLD prunes.
+- A backwards server clock suspends an estimate until a fresh sighting.
+- Each stop's map position is worked out once, with `C_Map.GetMapPosFromWorldPos`, the first time
+  its map is shown. Disable unregisters the events and hides the pins; nothing is built until the
+  feature is first on in a zone with a stop.
+
 ### Mail
 - Quick Attach puts in one stack at a time, from a scan made at the click: each is checked in its bag slot and on the cursor before it goes in, and the next goes only once the last has landed (MAIL_SEND_INFO_UPDATE).
 - Its one `C_Container.PickupContainerItem` runs only from a click at the open mailbox, which is why the taint scan allows it.
 
-### Scrap Marker and Scrap List
+### Junk Marker and Junk List
+- Players see Junk Marker and Junk List; the code, setting keys (`scrap*`), saved marks, the `NFSCRAP:1:` share
+  string and Baganator's plugin id (`NaowhForeverScrap`) keep the old Scrap name, so saved settings, marks and
+  shared lists carry over. `/nf scrap` still opens the list.
 - Items are marked by ID, never by name: for the account (`scrapItems`) or for one character by its GUID (`scrapChars`).
 - With Save Marks off (the default) a mark lasts only while you hold the item: on `BAG_UPDATE_DELAYED`, a marked ID
   this character has had in its bags this session and no longer has loses its mark. Only IDs seen in the bags this
   session are dropped, so a login before the bags are read, another character's account mark, or a mark added from
-  the Scrap List for an item you do not carry are all kept.
-- Scrap sells `BATCH` (6) items at a time, `STEP_DELAY` (0.25 s) apart, and each sale checks again that you are still at the vendor, out of combat, with the same item in that slot. That is why the taint scan allows its one `C_Container.UseContainerItem`; keep that check right before the call.
+  the Junk List for an item you do not carry are all kept.
+- The Junk Marker sells `BATCH` (6) items at a time, `STEP_DELAY` (0.25 s) apart, and each sale checks again that you are still at the vendor, out of combat, with the same item in that slot. That is why the taint scan allows its one `C_Container.UseContainerItem`; keep that check right before the call.
 - A generation number drops a step left over from an earlier sale, so closing the vendor or entering combat ends a sale cleanly.
 - The X on a rule match keeps it (`scrapKeep`), so the rule leaves it alone until you mark it yourself.
+- `QUEST_GEAR` is gear a quest takes but the game files as a weapon or armour, not a quest item, so a rule
+  would sell it: the Razormane wand, dagger and shield (5092-5094) for Weapons of Choice in the Barrens.
+  It is never junk, even with an old mark, and can't be marked.
 - Bag buttons, the game's, EllesmereUI's and Baganator's, are hooked once with HookScript, and only out of combat.
 - Marking Modifier is Alt or Ctrl. The game's own modified click still runs after the hook, so with Ctrl a click on gear also opens the dressing room (DRESSUP is Ctrl by default); the setting's help says so instead of blocking the game's handler.
-- Baganator gets the mark as a corner widget and the marks as a junk plugin, through `Baganator.API`. Neither can be taken back, so both are registered once, the first time the Scrap Marker is on, and answer nothing while it is off.
+- Baganator gets the mark as a corner widget and the marks as a junk plugin, through `Baganator.API`. Neither can be taken back, so both are registered once, the first time the Junk Marker is on, and answer nothing while it is off.
 - Baganator pools its item buttons and moves them between slots, so a marking click reads the button's bag and slot when it lands, not at the last paint. Its buttons for other characters' bags have no bag, so they get no click and no mark.
-- Baganator's junk plugin takes over its junk detection, so ours counts grey items with a sell price as junk too, as Baganator's own Poor quality does, and adds scrap on top.
+- Baganator's junk plugin takes over its junk detection, so ours counts grey items with a sell price as junk too, as Baganator's own Poor quality does, and adds marked junk on top.
 - `MAX_ITEM_ID` caps an imported ID at the largest 32-bit signed number, so a pasted list cannot ask for an impossible item.
 
 ### Skyborne Spots
 - The game marks neither ley lines nor Elemental Convergences, so the spots come from two places: the list every player starts with (`SkyborneData.lua`, from tr0tsky's Skyborne Ley Line & Convergence Marker, under its MIT licence, whose notice stays in that file) and the ones this account finds. Casting the racial on a spot gives its buff, and where it was cast is saved.
+- The shipped list is tr0tsky's v0.4.0 data, 76 ley lines and 56 convergences, after Forever added spawn spots in most Eastern Kingdoms and Kalimdor zones. A spot this account found before it shipped is dropped from the found list on the first map draw of a session (`PruneFound`), so it is not pinned twice.
 - `SAME_SPOT` is 40 yards: a find this close to a known spot is that spot. `MIN_BUFF` is 60 s: the spot's buff lasts minutes, not a moment.
 - The game applies the buff a moment after the cast, so it is looked for `FIRST_LOOK` after and then up to `MAX_TRIES` times, `RETRY_DELAY` apart. `CAST_SLACK` lets a buff that started just before the cast's own time count.
 - Auras are secret in combat: the buff is read only while readable, and through pcall all the same. A cast in combat waits for combat to end.
@@ -742,6 +925,7 @@ NaowhForever_QoL/
 ### Town Map
 - The service NPCs (`Shared/Game/Towns.lua`, which the Training Planner and Professions read too) come from Classic Era data: `[uiMapID] = { { x, y, category, name, title, class token (class trainers), factions ("A", "H" or "AH"), optional NPC ID } }`, x and y in map percent. NPCs Forever added sit last in each map's list. Forever redrew Stormwind, Mulgore, Redridge and the Eastern Plaguelands, so Classic positions there went through world coordinates.
 - `ns.TownCapitals` lists the capitals' maps: the game reports them as zones, so this is the only way to tell.
+- The town pins, the Boat and Zeppelin Timers, the Flight Point Reminder, Glimmer's spots and the Waypoint Pin read a map's data through `Places.SameMap`, so Zephras Isle's second map (2665) shows 2521's (Shared/README.md, Why).
 - `/naowh townaudit` checks that data against Forever by standing at each NPC: opening their window records where you are next to where the data puts them, in the account store (`townAudit[mapID][name]`).
 - The hint lines' light blue (`HINT`) goes through `SoftBlue`: the shade it always was, or the theme's lighter Accent once a theme changes the Accent.
 - The map calls `CheckMouseButtonPassthrough` on every acquired pin, and its SetPassThroughButtons is protected: from our refresh it is blocked in combat. Town pins take no clicks, so clicks reach the map anyway; zone exits and docks are separate clickable pins, so the vendor and trainer pins stay click-through. A zeppelin tower's pin has a second destination on right click. Their click opens the map with `C_Map.OpenWorldMap`, never the map's `SetMapID`: written from addon code, the map's `mapID` stays tainted for the session, and the next map opened in combat blocks the quest pins' SetPassThroughButtons.
@@ -755,6 +939,7 @@ NaowhForever_QoL/
 - The drawer sits against the map window's left side (the Dungeon Journal takes the right), `GAP` -1 putting its border on the map's so the two read as one window; with no room there, the right. It is the map's height, as wide as the quest log beside the map (`PANEL_W` where there is none), and its rows shrink to fit a small map, down to `ROW_MIN_H`; past that they scroll, so the drawer never runs off the map. The scroll bar sits inside the rows' right margin, raised over them so its grip takes the mouse.
 - The maximized map letterboxes its picture on a wide screen, so there the drawer goes in the black bar left of the picture, as wide as the bar allows; with no bar `BAR_MIN_W` wide it hangs under the Map Pins button, which stays free to close it. Either way it is no taller than the picture and its rows scroll. The map's Maximize and Minimize place it again.
 - On the minimap, the game says when you start and stop moving but not where you are, so the pins are placed every `MINI_INTERVAL` (0.05 s) while you move, or always with a rotating minimap, for turning. The zone's map is kept in world coordinates (its continent, top left corner and the steps for one whole map across and down): `UnitPosition` makes no table each tick, `GetPlayerMapPosition` does.
+- Minimap pins follow Town Pin Size too, at `MINI_SCALE` (0.9) of it: Town Pin Size 20 makes them 18, the size of the game's own tracking icons beside them.
 - Pins draw the game's own map art, not square spell icons with a border: `MAP_ART` lists each kind's art in order, the redesigned atlases of the minimap's object icon sheet (`Interface/Minimap/ObjectIconsAtlas`) first, then the older `Interface/Minimap/Tracking` and gossip files. A kind whose art the client lacks keeps its square icon. A missing file makes SetTexture return false, so a file is only kept where it loaded.
 - Flight masters are the flight map's green spot (`Taxi_Frame_Green`): its yellow one is lost on the Barrens' yellow. Vendors and trade goods are the sheet's bags, which is its `Banker` art, so the bank shares it.
 - Spirit healers are the sheet's blue spirit ghost. Where the client lacks it, the Spirit Healer's angel cut round (`ROUND_ART`, `ROUND_MASK`), as the Skyborne pins are, reads better than a tombstone. Pins are pooled across kinds, so the mask goes on and comes off again.
@@ -778,6 +963,9 @@ NaowhForever_QoL/
 - `FAMILIES` are the class spells that use a vendor reagent on Forever, from its SpellReagents data (build 1.60.1.69913). Each family lists its ranks from lowest; the highest rank you know sets the reagent, so a rank 2 Prayer of Fortitude asks for Sacred Candles, not Holy Candles.
 - `TARGETS` is how many of each reagent to carry unless the player sets their own.
 - Forever reports an empty ammo slot as item 0, not nil.
+- Equipped thrown weapons are restocked only when their maximum stack size exceeds one;
+  permanent single weapons are not ammunition. Uncached item data is requested once and the
+  existing GET_ITEM_INFO_RECEIVED path checks again, without guessing a restock target.
 - Food and drink are Consumable: Food & Drink (`FOOD_CLASS`, `FOOD_SUBCLASS`). Drink is told apart by its spell: `DRINK_ITEM` (159, Refreshing Spring Water) carries the localized Drink spell, so its data is asked for up front.
 - Quivers, ammo pouches and soul bags do not count as room: only plain bags (`PLAIN_BAG`) add free slots.
 - The reminder pulses `FLASH_LOOPS` times when it appears, then stays solid until it is dealt with; refreshed as bags change, only a new appearance pulses.
@@ -786,11 +974,15 @@ NaowhForever_QoL/
 - Auto Repair and Auto Sell Junk work at the vendor whether or not the reminder is on. Reagents are cached at switch-on so the reminder can name ones the client has not seen this session.
 
 ### Waypoint Pin
+- Quest Objectives and Downward Arrows are independent switches, initially off. Objectives come from the tracked quest or guide context and refresh on quest-log changes; unfinished objectives keep the quest pin visible inside its area. The three chevrons use the existing shared arrow art and disappear in off-screen and arrival modes.
+- Follow RestedXP is initially off and uses the shared guide waypoint feed. Guide destinations skip our manual-pin auto-clear; if native navigation ends at arrival, the original guide arrow returns until the next guide destination. A manual pin temporarily takes priority until the next guide destination.
 - It follows the game's navigation frame (`C_Navigation`), so quests, your corpse and map pins get it as well as `ns.PlaceWaypoint`'s spots, which it names. A user waypoint counts as ours when it lies within `SAME_SPOT` (map percent) of `ns.placedWaypoint`.
 - A map pin's or corpse's navigation point is the spot on the ground: the ring at the line's foot goes there and the pin stands above it. A quest giver's is over their head, where the pin goes as it is, with no line down.
 - The game clears a map pin on arrival, but it keeps tracking a quest, and Forever reports a quest reached only right on its point. So for a tracked quest the pin and cue go within `QUEST_NEAR` (40 yards) of its point, the quest's area or the quest giver, and come back past `QUEST_LEAVE` (55), so walking about the area does not make them flicker. The game has no call that says you are inside a quest's area (Forever's QuestLog and Navigation docs: only map points, `IsOnMap` and a display state), so the distance stands in for it. Other targets use Arrival Distance (`waypointArrive`, 5 yards by default) and come back `LEAVE_MARGIN` (2) yards past it. The navigator stays.
 - The walking time comes from how fast the distance shrinks, sampled every `SAMPLE_EVERY` second and smoothed by `SMOOTH`. Your speed reads secret at times (on a mount too), and the last readable one was often the run on foot, so a mounted time came out about double. A sample under `MIN_CLOSING` (stopped, turned away) or over `MAX_CLOSING` (the spot moved) drops the pace, and so does a new target; without one, the time uses your last readable speed, or `RUN_SPEED` (7 yards a second) standing still.
 - The card and navigator are repainted only when the mode, side, whole yards or whole seconds change; the place and arrows move every frame, and nothing is built per frame.
+- The pin stands on its spot only inside an oval around the middle of the screen, `EDGE_RING` (0.3) of its width and height out from the centre. Past it, on screen or off, it rides the oval with its arrow: the minimap, quest tracker, buffs and bars sit at the edges and corners, and a pin and card clamped there landed on top of them. One boundary for both cases means no jump when the game starts clamping the spot, which it does right at the screen's edge. With Edge Arrow Off Screen off, a spot on screen keeps its pin wherever it is. Once past the oval it holds there until the spot is back inside `EDGE_BACK` (0.9) of it, so a spot sitting on the line does not flicker between the two looks. Within `EDGE_NEAR` (40 yards) a spot on screen keeps its pin, beam and fade wherever it is: walking up to it, it is often low on screen.
+- Behind you is the game's clamped spot within `BEHIND` of straight down, not the oval's: a spot low on screen past the oval is in front of you.
 - `BEHIND` is the angle either side of straight down that counts as behind you. `FAR` is the distance at which the pin is smallest (`FAR_SCALE`), and `FADE_FLOOR` its alpha at your feet with Fade Up Close on.
 - The game places a waypoint you click on the map without tracking it (its map code calls `SetSuperTrackedUserWaypoint(false)` right after `SetUserWaypoint`), and the pin only follows what is tracked, so on `USER_WAYPOINT_UPDATED` it tracks the new waypoint itself: one frame later with the map closed (the game's own untracking has run by then), or as the map closes (`trackOnMapClose`), as `Core/Waypoint.lua` holds its own placements, since setting one with the map open taints it. Already tracked, it leaves it.
 - A waypoint you set has no held arrival: reaching it plays the sound and the pin, cue and bar go at once. A quest, the corpse and a route's stop hold the arrival where the pin last stood for `ARRIVED_HOLD` (a route's names the next stop). The game clears a waypoint you set as you reach it, its navigation frame going too, before or after NAVIGATION_DESTINATION_REACHED; that event's `isWaypoint` is a stop on the way (a zone's exit), not the spot itself. A waypoint you set does not wait for it: on the waypoint's map or one inside it (a waypoint placed on a continent still counts in its zones; the game routes a waypoint on another map through stops on the way, such as a zone's exit, which are not the spot), within Arrival Distance of its spot once the pin has seen you more than `LEAVE_MARGIN` past it, or within `REACHED` (5 yards) once it has seen you more than `LEAVE_MARGIN` past that, since the waypoint was attached or placed (a new waypoint can report no distance at first, and one placed under you has nothing to reach; other tracking changes on the way do not reset it), the pin shows the arrival and clears the waypoint itself, so it goes even when the game sends no arrival, or sends it as a stop. The game's event, when it does come first, clears it before the pin does. It does this once per waypoint (`selfCleared`: with the world map open the clear is held, and the pin must not arrive again every hold), and never on a route's stop, which moves on by the game's arrival event: clearing it would end the route. The `REACHED` fallback keeps a waypoint placed inside a long Arrival Distance from clearing at once.
@@ -988,8 +1180,9 @@ NaowhForever_QoL/
 - The game does not tell an addon where its tracking dots are, and it cannot switch tracking for you:
   Find Herbs and Find Minerals are casts, which only a click may start. So the minimap icons come from
   where Wowhead Forever has each herb and vein growing (`ns.GlimmerSpots`, unpacked from
-  Data/Spots.lua on first use), and herbs and ore show together whatever you track. The game's own dot on
-  top of an icon is a node up right now.
+  Data/Spots.lua on first use), and herbs and ore show together whatever you track. The icons draw over
+  the game's tracking dot, so while Find Herbs or Find Minerals tracks (`MINIMAP_UPDATE_TRACKING`),
+  that kind's icon moves onto its ring and the dot shows inside the ring when the node is up.
 - The minimap shows at most `MINIMAP_MAX` icons, the spots inside its view. Placing them is
   `Parts.MinimapLayer` (Shared/UI/MinimapPins.lua): it moves them only while you move or the minimap
   turns.
@@ -997,8 +1190,10 @@ NaowhForever_QoL/
   not something to rely on, so it waits for the fight to end, and only then does `PLAYER_REGEN_ENABLED`
   redraw the icons. A skill-up repaints their rings, and redraws them only when it changes whether
   herbs or ore show. Gathered on the Map alone never loads the data.
-- Only My Professions shows herbs to an herbalist and ore to a miner; a character with neither sees
-  both, so the icons still help someone deciding what to learn.
+- Only My Professions shows herbs to an herbalist and ore to a miner, and nothing to a character with
+  neither (the spot data is not even unpacked); players read a character with no gathering showing both
+  as the setting not working. It is a Minimap Icons setting: Gathered on the Map shows the account's
+  gathers on any character.
 - A gather is noted when the loot window opens while the soft target is a herb or vein in reach and
   the loot came from it (`GetLootSourceInfo`), so it needs no spell IDs and a corpse looted beside a
   node does not count. One node counts once per loot window, even if it is opened again. Where it is
@@ -1015,3 +1210,62 @@ NaowhForever_QoL/
 - Every on/off switch default in the QoL store is read from `ns.FEATURES.qol`; the values are unchanged.
 - The supporter badges are on by default so everyone sees them, except the group banner, which Naowh asked to start off.
 - The Character Panel's slot marks are on by default, an exception to off by default: they are marks on the game's own panel, with no restyle.
+
+
+### Zone Info
+
+- QoL > Map & Pins > Zone Info adds a compact map hover and a pinned details panel.
+  Apply beside Recommended Details enables the master switch and dungeon, fishing and travel content; the HUD and
+  gathering tab stay optional. Every new feature switch is off by default in Core/Features.lua.
+- The existing zone-level and fishing labels stand aside while Zone Info is enabled, without
+  changing their saved switches, and return when it is disabled.
+- Map hover queries run only while the map is visible and the cursor moves, at most once per
+  0.08 seconds. Closing the map clears the ticker; disabling removes the provider and unregisters
+  every feature event. No event frame, provider or HUD is constructed while the feature is off.
+- Pin details holds one zone through unrelated hovers and map changes. The saved map ID belongs
+  to the current profile. The map button pins the hovered zone, the displayed zone, or the player's
+  zone. Current Zone Details opens our own panel when the map is closed, without opening Blizzard UI.
+- The current-zone HUD belongs to the shared HUD Editor, with position and scale in QoL settings.
+  Zone, skill and level events refresh it, not a per-frame ticker. Combat hides it when requested;
+  otherwise it keeps its last checked character information until combat ends.
+- Profession skill includes GetProfessionInfo's eighth return (rankModifier). Levels, skills and
+  map fields are checked before use; unavailable skills are not treated as missing or ready.
+  Difficulty colors use the checked cached level and static house colors, not a helper which
+  reads UnitEffectiveLevel again. PLAYER_LEVEL_UP's level payload refreshes the cached level.
+- Dungeon entries reuse the enabled Journal's registry, entrances and level ranges. No Journal
+  means an explanation, not an assumed dependency. Journal settings repaint a visible zone panel.
+  Opening a dungeon is an explicit click on our own Journal UI. Waypoint actions use PlaceWaypoint
+  and are unavailable during combat; they never open or modify Blizzard's own frames.
+- Travel reuses TownNPCs flight masters, TownTravel stops and ZoneExits roads, filtering faction
+  stops against the checked character faction. SameMap resolves equivalent map IDs as it does
+  for existing map pins. Missing data is labeled rather than guessed.
+- Gathering reuses Glimmer's node definitions and compressed location data. It decodes only
+  when the gathering tab is requested outside combat and indexes unique node names per map.
+  Glimmer itself need not be enabled and none of its switches change. A waypoint is a known
+  historical location, not a claim that the object is currently spawned or the nearest node.
+- Fishing distinguishes the minimum skill from the reliable threshold and displays the player's
+  checked skill. Territory text is shown only for the current zone, from the client's PvP API;
+  territory for a different hovered zone is omitted because the existing registries do not supply it.
+- Details use shared panels, tabs, buttons, fonts and pooled row drawing. The preview uses the
+  same HUD drawing with sample Westfall data; it does not activate the feature or register a mover.
+
+- Map panels use an opaque theme fill, with their layer set above the canvas after parenting,
+  so the map cannot cover their background, title or metadata. Parts.Panel accepts an optional
+  flat-fill opacity; other callers retain their existing opacity.
+- Pinned map details dock outside the whole Map and Quest Log window on its right, with
+  width fitted to the available screen space. If only the left side has room, they dock there.
+- The compact hover card uses the same external dock; visible pinned details stack below it.
+  The map button sits above the two coordinate lines rather than covering their text.
+- On-map Summary is an off-by-default alternative to docked cards: centered outlined text
+  shows the selected zone, or the hovered/current zone on continent maps. Map Text Only > Apply
+  enables all content, disables the HUD, clears the pinned selection and selects this layout.
+  Recommended Details > Apply returns to the docked layout. Content switches still apply.
+- Map text is pooled, mouse-transparent and refreshed by the existing map provider and zone,
+  profession and level events. It has no additional ticker. Gathering remains known static
+  data; a short list ends with a count when there are more entries. Missing data is omitted.
+- The built-in area-label frame is faded while our map summary is visible, then restored to
+  its original alpha when the map closes or this layout is disabled; no Blizzard script,
+  label content or layout is replaced. This avoids duplicate zone names at the top of the map.
+- A hover selection stays available across empty map space, the canvas boundary, same-map
+  redraws and character refreshes so its Pin Details action remains reachable. Another valid
+  zone replaces it; closing or changing the map, disabling the feature or combat clears it.

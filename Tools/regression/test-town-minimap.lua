@@ -1,6 +1,6 @@
 -- Run with Lua 5.1 from the repository root: the town map's minimap pins. With the setting on,
 -- the zone's mailboxes and spirit healers (whatever the world map's toggles for them say) are
--- pinned around the player in yards, scaled to the minimap's view radius, hidden out of range,
+-- pinned around the player in yards, sized from Town Pin Size, scaled to the minimap's view radius, hidden out of range,
 -- turned with a rotating minimap, placed often only while moving, and nothing is registered
 -- while the setting is off.
 local function Read(path)
@@ -12,7 +12,8 @@ end
 local checks = 0
 local function Check(ok, label) assert(ok, label); checks = checks + 1 end
 
-local settings = { enabled = true, townMap = true, townMinimap = false, townMail = false, townSpiritHealers = false }
+local settings = { enabled = true, townMap = true, townMinimap = false, townMail = false, townSpiritHealers = false,
+    townPinSize = 20 }
 local S = { Get = function(key) return settings[key] end, Set = function() end }
 local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.upper, Lower = string.lower,
     QoLConstants = dofile("Tools/regression/qol_constants.lua"),
@@ -20,7 +21,7 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.up
     TownCapitals = {}, TownNPCs = {},
     TownMailboxes = { [1] = { { 55, 50, "mail", "Mailbox", "", nil, "AH" }, { 50, 30, "mail", "Mailbox", "", nil, "AH" } } },
     TownSpiritHealers = { [1] = { { 50, 55, "spirit", "Spirit Healer", "Graveyard", nil, "AH" } } },
-    Shared = { Style = dofile("Tools/regression/shared_style.lua"),
+    Shared = { Style = dofile("Tools/regression/shared_style.lua"), Places = dofile("Tools/regression/shared_places.lua"),
         Settings = { Group = function() end, Page = function() return { Card = function() end } end } },
 }
 
@@ -30,7 +31,7 @@ local function NewFrame()
     function f:RegisterEvent(e) self.events[e] = true end
     function f:UnregisterEvent(e) self.events[e] = nil end
     function f:SetScript(name, fn) self.scripts[name] = fn end
-    function f:SetSize() end
+    function f:SetSize(w) self.size = w end
     function f:SetPoint(_, _, _, x, y) self.x, self.y = x, y end
     function f:SetShown(shown) self.shown = shown end
     function f:Hide() self.shown = false end
@@ -44,6 +45,7 @@ end
 
 local player = { 0.5, 0.5 }
 local facing, rotate, walking, continent = 0, false, false, 0
+local bestMap = 1
 -- World coordinates as the game has them: the axes swapped and mirrored from the map's.
 local function World(x, y) return 5000 - y * 1000, 3000 - x * 1000 end
 local function Vector(x, y) return { GetXY = function() return x, y end } end
@@ -57,7 +59,7 @@ local env = setmetatable({
         dataProviders = {}, EnumeratePinsByTemplate = function() return function() end end },
     Minimap = { GetWidth = function() return 200 end, GetHeight = function() return 200 end },
     C_Map = {
-        GetBestMapForUnit = function() return 1 end,
+        GetBestMapForUnit = function() return bestMap end,
         GetMapWorldSize = function() return 1000, 1000 end,
         GetWorldPosFromMapPos = function(_, pos) return 0, Vector(World(pos:GetXY())) end,
         GetPlayerMapPosition = function() error("makes a table on every tick") end,
@@ -118,6 +120,12 @@ Check(math.abs(east.x - 50) < 1e-6 and math.abs(east.y) < 1e-6 and east.shown, "
 Check(not north.shown, "200 yards north is out of range")
 Check(math.abs(south.y + 50) < 1e-6 and south.shown, "50 yards south, below the player")
 Check(mini.scripts.OnUpdate == nil, "standing still nothing runs")
+Check(math.abs(east.size - 18) < 1e-6 and math.abs(south.size - 18) < 1e-6, "Town Pin Size 20 is 18 on the minimap")
+settings.townPinSize = 30
+boot.scripts.OnEvent()
+Check(math.abs(east.size - 27) < 1e-6 and math.abs(south.size - 27) < 1e-6, "the minimap pins follow Town Pin Size")
+settings.townPinSize = 20
+boot.scripts.OnEvent()
 
 mini.scripts.OnEvent(mini, "PLAYER_STARTED_MOVING")
 Check(mini.scripts.OnUpdate ~= nil, "placed while moving")
@@ -148,6 +156,18 @@ walking = false
 settings.townMinimap, settings.townMinimapSpirit = true, true
 boot.scripts.OnEvent()
 Check(mini.scripts.OnUpdate == nil, "back on while standing still, nothing runs")
+
+ns.TownMailboxes[2521], ns.TownSpiritHealers[2521] = ns.TownMailboxes[1], ns.TownSpiritHealers[1]
+bestMap = 2665
+boot.scripts.OnEvent()
+Check(Shown() == "mailbox healer", "on Zephras Isle's second map, the pins of its first (2521)")
+bestMap = 2521
+boot.scripts.OnEvent()
+Check(Shown() == "mailbox healer", "and on 2521 itself")
+bestMap = 7
+boot.scripts.OnEvent()
+Check(Shown() == "", "a map with no data has no pins")
+bestMap = 1
 settings.townMinimap = false
 boot.scripts.OnEvent()
 

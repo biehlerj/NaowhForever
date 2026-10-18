@@ -19,6 +19,8 @@ Shared/
                      client loads it (Shared.ItemFacts), from Tools/build/journal.py: the Journal's loot,
                      the BiS List's levels and the Naowh Score's best read it
     FactionItems.lua the same for the factions' rewards, added to it, from Tools/build/factions.py
+    SameMaps.lua     the maps the game has under two IDs, each to the one whose data it reads
+                     (Shared.SameMaps), from Tools/build/same_maps.py
   Decode.lua       a pasted import string read back as plain data, with size, depth and bomb caps, and
                    outside text cleaned for display (Decode.String, Decode.Text)
   Game/Items.lua   item helpers: an ID from a link or URL, its name and quality color, In Bag and In Bank,
@@ -26,7 +28,7 @@ Shared/
   Game/Gear.lua    gear helpers on Shared.Items: gear slots, what fits where, what you wear, weapons in
                    short ("1h Sword"), what a class can use (ns.ClassCanUse)
   Game/Bags.lua    the item buttons in your bags, the game's, EllesmereUI's and Baganator's, for
-                   the marks painted on them (Bag Marks, Scrap Marker)
+                   the marks painted on them (Bag Marks, Junk Marker)
   Game/Consumables.lua your best food and drink in your bags (ns.BestFoodAndDrink), the healthstones,
                    healing and mana potions, best first (ns.HEALTHSTONES, ns.HEALING_POTIONS,
                    ns.MANA_POTIONS), the food spells and Well Fed buffs (ns.FOOD_SPELLS, ns.WELL_FED),
@@ -35,12 +37,13 @@ Shared/
   Game/ActionKeys.lua the keys on action buttons: the game's bars, LibActionButton bars and EllesmereUI's
                    (Shared.ActionKeys): the Consumable Bar's and the Food & Drink Bar's Show Keybinds
   Game/Roster.lua  our part of a player's tooltip in the Guild & Communities and Friends lists (Badges, Naowh Score)
-  Game/Places.lua  zones by name, and showing one on the world map
+  Game/Places.lua  zones by name, the map whose data a map reads (Places.SameMap), and showing one on the
+                   world map
   Game/Towns.lua   town service NPCs by world map (ns.TownNPCs) and the capitals (ns.TownCapitals), by hand:
                    QoL's town pins, the Training Planner's trainers and Professions' rank alerts read it
   Game/Played.lua  the character's /played time, asked for once with the chat print muted (XP Bar, XP per Hour)
   UI/Parts.lua     the small parts: icons in text (Parts.Inline), smooth textures, hover cards (Parts.Tip,
-                   Parts.TipLines), the chevron, links, icon buttons, the game's hover glow and pressed look
+                   Parts.TipLines), the chevron, links, icon buttons, the flat hover and pressed look
                    on a bar button (Parts.Press: the item bars, Blessings, Gear Set and Trinket bars, Group
                    Buttons), a short label in a pill of its color
                    (Parts.Pill, Parts.SetPill: Group Inspect's "NF"), the worn bar, the Wowhead copy card
@@ -56,6 +59,8 @@ Shared/
                    soft drop shadow (Parts.Shadow), and a progress line that holds still (Parts.ProgressLine)
   UI/Timer.lua     a timer line the client runs down by itself (Parts.TimerLine), its short time text
                    (Parts.ShortTime), and stopping any timer bar (Parts.StopTimer)
+  UI/Thresholds.lua a proportional four-band line with numeric boundaries and a clamped current-value marker
+                   (Parts.ThresholdLine), composed from ProgressLine; an empty band has no label, close labels use extra rows
   UI/Share.lua     sharing a line in chat or on a copy card (Parts.ShareMenu), and a spot on the map with
                    its pin link (Parts.SharePlace)
   UI/CopyCard.lua  the copy cards: an ID with its Wowhead links (ns.ShowCopyCard), or any line
@@ -241,7 +246,7 @@ Each file uses only the ones above it in `Shared.xml`. Every part sits on `ns.Sh
   defaults stay in the module's `UI.ModuleSettings`, at today's look (`outline = "OUTLINE"` for
   outlined text, `""` for the rest). To draw it, `Parts.HudFont(fs, font, size, outline,
   background)` sets the font (a SharedMedia name, `""` for the Addon Font), size and outline (one
-  of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`) and gives
+  of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`, `"OUTLINE, SLUG"`) and gives
   Shadow the HUD shadow for its `background` mode. Text set by hand takes its flags from
   `Parts.HudFlags(outline)`, never the raw choice: the game rejects `"NONE"` as a font flag.
   A bar's texture is `ns.UI.TexturePath(name, own)`: the
@@ -282,6 +287,9 @@ Colors and sizes come from `ns.THEME` and `Style.lua`, never written as numbers 
 
 ## Why
 
+- `ConsumableLevelAllowed` checks the fifth `C_Item.GetItemInfo` return (minimum level), not item level. Unknown or secret requirements are skipped until item data is available. Food and drink keep their existing ranking among eligible items.
+
+
 What a comment in the code used to say, in short. The house rules behind it are in
 [CONTRIBUTING.md](../.github/CONTRIBUTING.md) and [STYLE.md](../.github/STYLE.md).
 
@@ -315,7 +323,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - Naowh's house style is a 1px black edge round cards, badges, chips, icons, buttons and
   panels; the accent (Naowh blue) marks what is picked.
 - Your BiS is legendary orange so it stands apart from blue item names, your second pick
-  silver; new looks are cyan, clear of the BiS orange for color-blind eyes too.
+  silver and your third copper (`THIRD_RGB`, a0522d): the usual bronze, cd7f32, is too close to the BiS
+  orange on a tooltip-sized star. Picks past the third show their number. New looks are cyan, clear
+  of the BiS orange for color-blind eyes too.
 - `PICKED_RGB` (a boss picked on a dungeon map) is the game's quest gold until the player picks
   an Accent of their own. `GUIDE_RGB` (the HUD Editor's guides) is amber so it never reads as
   the accent's selection.
@@ -373,6 +383,15 @@ What a comment in the code used to say, in short. The house rules behind it are 
   the Friends tooltip stops showing that row. List rows are hooked with `HookScript`, after the
   game's own, once each. A GUID is used only when it is a readable string, never a secret value.
 - `Places.ShowMap` opens the world map only out of combat, where addon code may open it.
+- Forever has Zephras Isle twice: map 2521 (under Azeroth) and map 2665 (no parent), with the
+  same name, continent (2991) and bounds in the game's UiMapAssignment, so a map percentage is
+  the same spot on both; the game puts players on 2665 too (the Nightclaw Druids' Wowhead data
+  lists both). The addon's map data is keyed by 2521, so a lookup by the player's or the world
+  map's ID goes through `Places.SameMap`, which turns 2665 into 2521. The player's position is
+  still read on the game's own ID; the Flight Point Reminder asks for 2521's flight points.
+  Unexplored Areas does not alias: 2665 has its own map art, which 2521's
+  overlays do not fit. `Tools/build/same_maps.py` finds such pairs in the game's tables, so a
+  new one is caught when the build moves on.
 - /played is asked for with `TIME_PLAYED_MSG` unregistered from the chat frames for our request
   only. They get it back on the next frame after the answer, so they do not print it, or after
   `MUTE_LIMIT` seconds if no answer comes. A ding starts the level's time again; a /played the
@@ -438,8 +457,15 @@ What a comment in the code used to say, in short. The house rules behind it are 
 
 ### Item bars (`UI/ItemBar.lua`, `UI/Anchor.lua`, `Game/ActionKeys.lua`)
 
+- `ActionKeys.Text` writes a mouse button as its modifiers' letters and M with its number (SM5), as
+  action bar addons show it: the game's short text still spells out "s-Mouse Button 5". Every other key
+  keeps the game's short text.
 - A bar's icons are cropped (`ItemBar.CropIcon`, `Style.ICON_CROP`) like the addon's other item
-  icons, cutting off the rounded border the game draws into the item art.
+  icons, cutting off the rounded border the game draws into the item art. A rectangular button
+  (`ItemBar.Shape`) crops its art further along its longer side, so the art keeps its shape.
+- `ItemBar.Place` and `ItemBar.Size` take an optional icon height (square without one) and
+  `Place` an optional flip that starts each new row on the other side of the first; a bar that
+  passes neither lays out as it always has.
 - A bar's settings share one prefix (`consumableBar`, `foodBar`): its count and key text, its
   anchor and where it was dragged are `<prefix>Font`, `<prefix>Anchor`, `<prefix>Pos` and so on, so
   one set of rows and one placement serve every bar.
@@ -490,8 +516,30 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - A hidden row is set on the card's preview instead; it is still searched, counted and reset. A
   search match on a hidden row shows the card whole, and part of a card shows no reset, which
   would reset what is left out too.
+- The Naowh skin uses solid charcoal surfaces and outlined settings cards. Windows and side
+  panels paint one background color at both ends of their backdrop; the optional Forever
+  skin and its onboarding preview keep their stone and shading. Settings cards reuse the
+  row engine's pooled card frame, with the theme's line color around each section. Their
+  heights follow the visible rows, including folded and filtered cards.
+- Naowh settings have dividers at category boundaries rather than between related rows.
+  Paired controls keep a center divider; an unpaired control has none. Open card headings
+  and group titles keep their rules. The optional Forever skin retains its row dividers.
+- The sidebar is shaded by `SIDEBAR_SHADE`, and preview stages by `PREVIEW_SHADE`, over the
+  chosen background so custom palettes retain their colors. Both are flat fills.
+- Naowh tabs share a recessed rail, a filled accent selection with a complete outline and a
+  small diamond. The diamond's room is reserved in every tab so labels do not shift on a pick.
+  `Parts.Tabs` keeps its sixth `plain` input for callers; all Naowh strips use the same segments,
+  including preview states and module windows. The Forever skin keeps its own art and fitting.
+- Tab labels shorten only when their strip has no room, and show the full label on hover.
+  Changing the tab list repaints reused buttons so a previous selection cannot stay lit.
+- `Settings.Reset` and `Settings.ResetRow` retain one session-only undo, exposed through
+  `CanUndoReset(card)` and `UndoReset(card)`. Undo copies raw values back through each store,
+  once per key. A different profile or a subsequent edit to any affected key invalidates it.
+- `Settings.Dependency(row)` resolves declared dependencies to their controlling row or card;
+  computed conditions keep their explanation without a guessed destination.
 - A slider being dragged holds the settings redraw until it is let go (`DRAG_WAIT`): the redraw
-  hides and shows the rows, and hiding the slider ended its drag after one step.
+  hides and shows the rows, and hiding the slider ended its drag after one step. Visible studio
+  previews repaint during that wait without rebuilding the slider.
 - A preview is drawn by the module's own drawing code on plain frames, never on its real
   (secure) frames. An edit zone runs nothing per frame except while it is dragged.
 - A row's icons (its cog first) are made once per declared row, so drawing them makes no tables.

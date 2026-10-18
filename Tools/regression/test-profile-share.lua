@@ -15,6 +15,12 @@ settingsStyle()
 local count = 0
 local function Case(name, fn) fn(); count = count + 1; print("PASS " .. name) end
 
+local function Copy(t)
+    local out = {}
+    for k, v in pairs(t) do out[k] = type(v) == "table" and Copy(v) or v end
+    return out
+end
+
 local DEFAULTS = {
     qol = { enabled = true, fastLoot = false, bisSlots = {} },
     macros = { enabled = true, classMacros = {}, foodBar = false },
@@ -75,12 +81,14 @@ local function World()
         end,
         SwitchProfile = function(name) w.switched, w.active = name, name end,
         RefreshRuntime = function() w.refreshed = w.refreshed + 1 end,
+        ModuleOn = function(addon) return w.off[addon] ~= true end,
     }
+    w.off = {}
     w.ns = ns
     local env = setmetatable({ _G = { NaowhForever = ns }, UnitName = function() return "Glyadin" end,
-        date = os.date }, { __index = _G })
+        date = os.date, CopyTable = Copy }, { __index = _G })
     ns.Shared = { Decode = dofile("Tools/regression/load_decode.lua")(env), Settings = settingsShared.Settings }
-    for _, path in ipairs({ "Core/Profiles/ProfileShare.lua", "Core/Profiles/ProfileDialogs.lua",
+    for _, path in ipairs({ "Core/Profiles/Positions.lua", "Core/Profiles/ProfileShare.lua", "Core/Profiles/ProfileDialogs.lua",
         "Core/Options/ProfilesPage.lua" }) do
         local chunk = assert(loadfile(path))
         setfenv(chunk, env)
@@ -330,6 +338,28 @@ Case("Consumables replace only the list, never the rest of the reminders' store"
     assert(fresh.tankReminder.utilityReminders.consumables[1].itemID == 13931)
 end)
 
+Case("import: Keep My Positions keeps where your frames sit, and only that", function()
+    local w = World()
+    local mine = w.db.profiles.Default
+    mine.unlockMode = { layouts = { Mine = { spots = {} } }, hidden = { ["XP Bar"] = true } }
+    local payload = assert(w.ns.DecodeProfile((w.ns.ExportProfile())))
+    local theirs = payload.parts.settings.qol
+    theirs.lootFeedPos, theirs.alertsPos, theirs.fastLoot = { "BOTTOM", 1, 2 }, { "TOP", 3, 4 }, true
+    w.ns.ImportProfile(payload, { settings = true, keepPositions = true }, "Kept")
+    local p = w.db.profiles.Kept
+    assert(p.qol.fastLoot == true, "their settings come in")
+    assert(p.qol.lootFeedPos[1] == "TOP" and p.qol.lootFeedPos[2] == 10, "your frame stays where it was")
+    assert(p.qol.alertsPos == nil, "a frame you never moved keeps its default, not theirs")
+    assert(p.qol.lootFeedPos ~= mine.qol.lootFeedPos, "copied, so the two profiles never share a table")
+    assert(p.unlockMode.layouts.Mine and p.unlockMode.hidden["XP Bar"] == true, "your HUD Editor layouts and hidden elements")
+    w.ns.ImportProfile(payload, { settings = true }, "Theirs")
+    assert(w.db.profiles.Theirs.qol.lootFeedPos[1] == "BOTTOM", "unticked, their positions come in")
+    w.db.profiles.Main, w.active = Copy(mine), "Main"
+    w.ns.ImportProfile(payload, { settings = true, keepPositions = true }, "Main", true)
+    assert(w.db.profiles.Main.qol.lootFeedPos[2] == 10 and w.db.profiles.Main.unlockMode.layouts.Mine,
+        "an overwrite of the profile you are on keeps them through the wipe")
+end)
+
 Case("overwrite: a rerun empties the named profile and lands there", function()
     local w = World()
     local payload = assert(w.ns.DecodeProfile((w.ns.ExportProfile())))
@@ -377,6 +407,15 @@ Case("Library macros join yours; a name you have, or one that is no macro, stays
     assert(mine.PALADIN[1].body == "/cast Seal", "yours kept")
     assert(mine.PALADIN[3].name == "Wingsr" and mine.PALADIN[3].icon == nil and mine.PALADIN[3].pack == nil)
     assert(mine.MAGE[1].name == "Blink" and #mine.PALADIN == 3)
+end)
+
+Case("with Macros switched off, though its addon is loaded, no library macro is added", function()
+    local w = World()
+    local payload = Payload(w)
+    payload.parts.library.MAGE = { { name = "Blink", body = "/cast Blink" } }
+    w.off.NaowhForever_Macros = true
+    local _, added = w.ns.ImportProfile(payload, { library = true }, "L")
+    assert(added.library == 0 and w.db.account.libraryMacros.MAGE == nil, "nothing joins a switched-off Macros")
 end)
 
 Case("talent builds join yours when they can be taken; a class with no tree stays out", function()
@@ -604,7 +643,7 @@ Case("the dialogs: export shows the string, import ticks parts and lands what is
     assert(import.shown == false, "nothing to import yet")
     paste.text = text
     paste.scripts.OnTextChanged(paste, true)
-    assert(import.shown and import.label == "Import" and #toggles == 6, #toggles)
+    assert(import.shown and import.label == "Import" and #toggles == 7, #toggles)
     for _, t in ipairs(toggles) do assert(t._get() == true, "every part ticked to start") end
     toggles[6]._set(false)   -- Look
     paste.scripts.OnTextChanged(paste, true)
@@ -630,12 +669,22 @@ Case("the dialogs: export shows the string, import ticks parts and lands what is
     import.click()
     assert(opened == "  !NFB1!abc\n", "a build goes to the Training Planner's import")
 
+    ns.ImportActionBarString = function(t) opened = t end
+    ns.ShowProfileImport()
+    paste.text = "!NFA1!abc"
+    paste.scripts.OnTextChanged(paste, true)
+    assert(import.label == "Add Bar Set" and import.shown)
+    import.click()
+    assert(opened == "!NFA1!abc", "a bar layout goes to the Action Bars import")
+    ns.ImportActionBarString = nil
+
     w.active = "Default"
     w.db.profiles.Default.qol.sellJunk = true
     ns.ShowProfileImport()
     paste.text = ns.ExportProfile()
     paste.scripts.OnTextChanged(paste, true)
-    assert(#toggles == 7 and toggles[7]._get() == false, "Also Import is a row of its own, left unticked")
+    assert(#toggles == 8 and toggles[7]._get() == true and toggles[8]._get() == false,
+        "Keep My Positions starts ticked; Also Import is a row of its own, left unticked")
     assert(fonts.preview.text:find("act for you: Auto Sell Junk;", 1, true), fonts.preview.text)
     import.click()
     assert(w.db.profiles[w.switched].qol.sellJunk == nil, "left unticked, Auto Sell Junk stays off")
@@ -643,7 +692,7 @@ Case("the dialogs: export shows the string, import ticks parts and lands what is
     ns.ShowProfileImport()
     paste.text = ns.ExportProfile()
     paste.scripts.OnTextChanged(paste, true)
-    toggles[7]._set(true)
+    toggles[8]._set(true)
     import.click()
     assert(w.db.profiles[w.switched].qol.sellJunk == true, "ticked, it comes along")
 end)

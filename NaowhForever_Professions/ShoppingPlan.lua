@@ -24,7 +24,7 @@ local shopPlan = { cost = {}, make = {}, craft = {}, busy = {}, planned = {}, sa
 local demand, nextDemand, toMake, buy, had = {}, {}, {}, {}, {}
 local trials = {}
 for depth = 0, MAX_DEPTH do trials[depth] = { left = {}, made = {} } end
-local materialList, materialPool = {}, {}
+local materialList, materialPool, vendorList, vendorPool = {}, {}, {}, {}
 local listeners = {}
 
 local Shopping = { waiting = waiting }
@@ -99,13 +99,33 @@ local function Trim()
     Changed()
 end
 
-local function BuyPrice(item)
-    local scan = ns.AuctionPrice and ns.AuctionPrice(item)
+local function VendorOn()
+    return P.Settings.Get("shoppingVendor")
+end
+
+local function SkipVendor(item)
+    local api = ns.ProfWindowAPI
+    return not VendorOn() and api and api.IsVendorItem(item)
+end
+
+local function VendorPrice(item)
     local api = ns.ProfWindowAPI
     local vendor = api and api.IsVendorItem(item) and ns.AccountSettings().profVendorPrices
-    vendor = vendor and vendor[item]
+    return vendor and vendor[item]
+end
+
+local function BuyPrice(item)
+    local scan = ns.AuctionPrice and ns.AuctionPrice(item)
+    local vendor = VendorPrice(item)
     if scan and vendor then return math.min(scan, vendor) end
     return scan or vendor
+end
+
+local function BuyFromVendor(item)
+    local api = ns.ProfWindowAPI
+    if not (VendorOn() and api and api.IsVendorItem(item)) then return false end
+    local auction, vendor = ns.AuctionPrice and ns.AuctionPrice(item), VendorPrice(item)
+    return not (auction and vendor and auction < vendor)
 end
 
 local Cheapest
@@ -141,8 +161,7 @@ local function ByName(a, b)
 end
 
 local function Listed(part)
-    local api = ns.ProfWindowAPI
-    return not shopPlan.owned[part] and not (api and api.IsVendorItem(part))
+    return not shopPlan.owned[part] and not SkipVendor(part)
 end
 
 local function Supply(item, want, from, into, depth)
@@ -220,17 +239,31 @@ local function Materials()
         if got > 0 then had[item] = had[item] - got end
         if qty > got then buy[item] = (buy[item] or 0) + qty - got end
     end
-    local n = 0
+    local n, vn = 0, 0
     for item, qty in pairs(buy) do
-        n = n + 1
-        local m = materialPool[n] or {}
-        materialPool[n] = m
+        local list, pool, index
+        if BuyFromVendor(item) then
+            vn = vn + 1
+            list, pool, index = vendorList, vendorPool, vn
+        else
+            n = n + 1
+            list, pool, index = materialList, materialPool, n
+        end
+        local m = pool[index] or {}
+        pool[index] = m
         m.item, m.qty, m.name = item, qty, ItemName(item) or ""
-        materialList[n] = m
+        list[index] = m
     end
     for i = n + 1, #materialList do materialList[i] = nil end
+    for i = vn + 1, #vendorList do vendorList[i] = nil end
     table.sort(materialList, ByName)
-    return materialList, toMake, shopPlan
+    table.sort(vendorList, ByName)
+    return materialList, toMake, shopPlan, vendorList
+end
+
+local function VendorMaterials()
+    local _, _, _, materials = Materials()
+    return materials
 end
 
 local function Drop(item, qty)
@@ -288,12 +321,19 @@ local function Learn()
     ForgetDropped(makes, prof, seen)
 end
 
-local function Estimate(materials, unpriced)
+local function EstimateList(materials, price)
     local est, missing = 0, 0
     for _, m in ipairs(materials) do
-        local price = BuyPrice(m.item)
-        if price then est = est + price * m.qty else missing = missing + 1 end
+        local each = price(m.item)
+        if each then est = est + each * m.qty else missing = missing + 1 end
     end
+    return est, missing
+end
+
+local function Estimate(materials, unpriced, vendorMaterials)
+    local est, missing = EstimateList(materials, BuyPrice)
+    local vendorEst, vendorMissing = EstimateList(vendorMaterials or EMPTY, VendorPrice)
+    est, missing = est + vendorEst, missing + vendorMissing
     local at = ns.AuctionScanTime and ns.AuctionScanTime()
     return TEXT_ESTIMATE:format(Text.Short(est),
         at and ns.AuctionAge and (", " .. ns.AuctionAge(time() - at) .. TEXT_AGO) or TEXT_NO_SCAN,
@@ -305,7 +345,7 @@ local function Needs(recipeID)
     local out, owned = {}, api.Owned()
     local ok, reagents = pcall(api.Reagents, recipeID)
     for _, r in ipairs(ok and reagents or EMPTY) do
-        if not owned[r.itemID] and not api.IsVendorItem(r.itemID) then out[r.itemID] = r.need end
+        if not owned[r.itemID] and not SkipVendor(r.itemID) then out[r.itemID] = r.need end
     end
     return out
 end
@@ -316,7 +356,7 @@ local function HasNeeds(recipeID)
     local ok, reagents = pcall(api.Reagents, recipeID)
     if not ok then return false end
     for _, r in ipairs(reagents) do
-        if not owned[r.itemID] and not api.IsVendorItem(r.itemID) then return true end
+        if not owned[r.itemID] and not SkipVendor(r.itemID) then return true end
     end
     return false
 end
@@ -326,40 +366,66 @@ local function Redraw()
     Changed()
 end
 
+local function Bought(item, qty)
+    Drop(item, qty)
+    local materials, _, _, vendorMaterials = Materials()
+    if #materials == 0 and #vendorMaterials == 0 then
+        wipe(List())
+        wipe(Manual())
+        Trim()
+    end
+end
+
 local function OnChange(fn)
     listeners[#listeners + 1] = fn
 end
 
-local function Add(info, crafts)
+local function Add(info, crafts, got, quiet, fromQueue, defer)
     local need = Needs(info.recipeID)
-    if next(need) == nil then return end
+    if next(need) == nil then return false end
     local list = List()
     local craft = list[info.recipeID]
     if craft then
         craft.count = craft.count + crafts
+        if fromQueue then craft.queueCount = (tonumber(craft.queueCount) or 0) + crafts end
         craft.icon = craft.icon or info.icon
         for item, per in pairs(need) do craft.need[item] = per end
+        if got then
+            craft.got = craft.got or {}
+            for item, qty in pairs(got) do craft.got[item] = (craft.got[item] or 0) + qty end
+        end
+        craft.fromQueue = craft.queueCount ~= nil and craft.queueCount == craft.count
     else
-        list[info.recipeID] = { name = info.name, icon = info.icon, count = crafts, need = need }
+        list[info.recipeID] = { name = info.name, icon = info.icon, count = crafts, need = need, got = got,
+            fromQueue = fromQueue and true or false, queueCount = fromQueue and crafts or nil }
     end
     local parts = {}
     for item, per in pairs(need) do
         parts[#parts + 1] = TEXT_PART:format(per * crafts, ItemName(item) or (TEXT_ITEM .. item))
     end
-    ns.Print(TEXT_ADDED:format(info.name, crafts, crafts == 1 and TEXT_CRAFT or TEXT_CRAFTS, table.concat(parts, ", ")))
-    Redraw()
+    if not quiet then
+        ns.Print(TEXT_ADDED:format(info.name, crafts, crafts == 1 and TEXT_CRAFT or TEXT_CRAFTS,
+            table.concat(parts, ", ")))
+    end
+    if not defer then Redraw() end
+    return true
 end
 
 local function Step(recipeID, by)
     local craft = recipeID and List()[recipeID]
     if not craft then return end
-    craft.count = math.max(1, math.min(C.MAX_CRAFTS, craft.count + by))
+    local queued = craft.queueCount or 0
+    local own = math.max(queued > 0 and 0 or 1, math.min(C.MAX_CRAFTS, craft.count - queued + by))
+    craft.count = queued + own
+    if queued > 0 then craft.fromQueue = own == 0 end
     Trim()
     Redraw()
 end
 
 local function Remove(recipeID)
+    local craft = recipeID and List()[recipeID]
     List()[recipeID] = nil
+    if craft and craft.queueCount then return P.CraftQueue.RemoveCraft(recipeID) end
     Trim()
     Redraw()
 end
@@ -391,6 +457,8 @@ local function RemoveItem(item)
 end
 
 local function Clear()
+    local queue = P.Settings and P.Settings.Get("craftQueue") and P.CraftQueue
+    if queue then queue.Clear() end
     wipe(List())
     wipe(Manual())
     Trim()
@@ -409,9 +477,13 @@ Shopping.SetItem = SetItem
 Shopping.RemoveItem = RemoveItem
 Shopping.Trim = Trim
 Shopping.BuyPrice = BuyPrice
+Shopping.VendorPrice = VendorPrice
+Shopping.BuyFromVendor = BuyFromVendor
 Shopping.Cheapest = Cheapest
 Shopping.Materials = Materials
+Shopping.VendorMaterials = VendorMaterials
 Shopping.Drop = Drop
+Shopping.Bought = Bought
 Shopping.Learn = Learn
 Shopping.Estimate = Estimate
 Shopping.HasNeeds = HasNeeds

@@ -61,7 +61,7 @@ D.SCROLLS = {
 }
 
 D.DEFAULT_GROUPS = { food = { items = {}, auras = {}, wellFed = true }, flask = { items = D.FLASKS.items, auras = D.FLASKS.auras },
-    battle = { items = {}, auras = {} } }
+    battle = { items = {}, auras = {} }, scroll = { items = {}, auras = {}, carried = true } }
 for _, elixir in ipairs(D.ELIXIRS) do
     for _, id in ipairs(elixir.items) do table.insert(D.DEFAULT_GROUPS.battle.items, id) end
     for _, id in ipairs(elixir.auras) do table.insert(D.DEFAULT_GROUPS.battle.auras, id) end
@@ -83,6 +83,19 @@ D.RAID = {
             20217, 25898, 1038, 25895, 19979, 19978, 19977, 25890 } },
 }
 
+local raidSpells = {}
+for _, family in ipairs(D.RAID) do raidSpells[family.key] = family.spells end
+D.SCROLL_AURAS = {}
+for _, scroll in ipairs(D.SCROLLS) do
+    local auras = {}
+    for _, id in ipairs(scroll.auras) do auras[#auras + 1] = id end
+    for _, id in ipairs(raidSpells[scroll.raid] or {}) do auras[#auras + 1] = id end
+    for _, id in ipairs(scroll.items) do
+        D.SCROLL_AURAS[id] = auras
+        table.insert(D.DEFAULT_GROUPS.scroll.items, id)
+    end
+end
+
 D.PERSONAL = {
     { key = "demonArmor", name = "Demon Armor", class = "WARLOCK",
         spells = { 11735, 11734, 11733, 1086, 706, 696, 687, 403619 } },
@@ -94,6 +107,10 @@ D.PERSONAL = {
     { key = "innerFire", name = "Inner Fire", class = "PRIEST",
         spells = { 10952, 10951, 1006, 602, 7128, 588 } },
     { key = "shadowform", name = "Shadowform", class = "PRIEST", spells = { 15473 } },
+    { key = "aspect", name = "Aspect", class = "HUNTER", own = true,
+        help = "Any aspect you cast yourself; another hunter's Pack or Wild does not count.",
+        spells = { 25296, 14322, 14321, 14320, 14319, 14318, 13165, 13163, 5118, 13159,
+            1299447, 1299446, 1299445, 13161, 20190, 20043 } },
     { key = "trueshot", name = "Trueshot Aura", class = "HUNTER",
         spells = { 20906, 20905, 19506, 1299348, 1299346 } },
     { key = "huntersMark", name = "Hunter's Mark on Elites", class = "HUNTER", target = true,

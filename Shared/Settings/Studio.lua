@@ -42,6 +42,9 @@ local function NewStudio(view)
     row.stage:SetPoint("BOTTOMLEFT", PAD, PAD)
     row.stage:SetPoint("BOTTOMRIGHT", -PAD, PAD)
     ns.Solid(row.stage, "BACKGROUND", T.bg, 1):SetAllPoints()
+    if not ns.foreverSkin then
+        ns.Solid(row.stage, "BACKGROUND", BORDER_RGB, SS.PREVIEW_SHADE):SetAllPoints()
+    end
     ns.Border(row.stage, BORDER_RGB)
     row.stage:SetClipsChildren(true)
     row.previews = {}
@@ -79,7 +82,7 @@ end
 local function PaintTabs(row, states, state)
     local many = #states > 1
     if many and not row.tabs then
-        row.tabs = Parts.Tabs(row, TABS_WIDTH, states, function(key) TabPicked(row, key) end, true)
+        row.tabs = Parts.Tabs(row, TABS_WIDTH, states, function(key) TabPicked(row, key) end, true, true)
         if ns.foreverSkin then
             row.tabs:SetPoint("BOTTOMRIGHT", row.stage, "TOPRIGHT", -FOREVER_TABS_IN, 0)
         else
@@ -105,8 +108,17 @@ local function SetStudio(row, card)
     local state = StateOf(card, states)
     local tabsH = PaintTabs(row, states, state)
     row.stage:SetHeight(height)
+    row.preview, row.previewState = preview, state
     studio.paint(preview, state)
     return TOP + tabsH + height + PAD
+end
+
+function Settings.PaintPreviews(view)
+    local pool = view.pools.studio
+    for i = 1, pool and pool.used or 0 do
+        local row = pool[i]
+        if row.preview and row:IsVisible() then row.card.studio.paint(row.preview, row.previewState) end
+    end
 end
 
 Settings.kinds.studio = { New = NewStudio, Set = SetStudio }

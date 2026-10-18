@@ -1,8 +1,9 @@
 -- Bar sets against a small fake of the action bars, spellbook, macros and cursor, driven
 -- through the /nf bars command the way a player would.
 -- The module's rules as ActionBars.xml lists them, and the saved sets page; not its window.
+rawset(_G, "C_AddOns", { DoesAddOnExist = function() return false end, GetAddOnEnableState = function() return 0 end })
 local FILES = { "Core/Features.lua" }
-for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_ActionBars/.*%.lua$")) do
+for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_Utilities/ActionBars/.*%.lua$")) do
     if not path:find("/View/") and (not path:find("/UI/") or path:find("/UI/SetsPage%.lua$")) then
         FILES[#FILES + 1] = path
     end
@@ -370,6 +371,28 @@ Case("a #showtooltip macro is made with the question mark so it follows its spel
     w.charMacros = {}
     w.run("import M")
     assert(w.charMacros[1].icon == 134400, tostring(w.charMacros[1].icon))
+end)
+
+Case("a website layout makes every macro it lists, placed or not, each once", function()
+    local w = World({})
+    local pull = { kind = "macro", name = "Pull", body = "/say pull", icon = 134400, perCharacter = true }
+    w.ns.Shared.Decode = { String = function()
+        return { v = 1, class = 5, name = "Web", slots = { [1] = pull }, macros = {
+            { name = "Pull", body = "/say pull", icon = 134400, perCharacter = true },
+            { name = "Shout", body = "/yell hi", icon = 132333, perCharacter = false },
+            { name = "Tip", body = "#showtooltip\n/cast Heal", icon = 132333 },
+        } }
+    end }
+    w.ns.ImportActionBarString("!NFA1!x")
+    assert(w.opened == "import Web", tostring(w.opened))
+    local fates = w.ns.ActionBarSets.Preview("Web").macros
+    assert(#fates == 3 and fates[2].name == "Shout" and fates[2].fate == "new", "the preview lists the unplaced ones")
+    w.run("import Web")
+    assert(Bars(w) == "1=Pull", Bars(w))
+    assert(#w.macros == 1 and w.macros[1].name == "Shout" and w.macros[1].icon == 132333, "an account macro, with its icon")
+    assert(#w.charMacros == 2 and w.charMacros[1].name == "Pull" and w.charMacros[2].name == "Tip",
+        "the placed macro is made once, and character macros are the default")
+    assert(w.charMacros[2].icon == 134400, "a #showtooltip macro still gets the question mark")
 end)
 Case("keybinds are saved and imported, keys the set leaves free keep theirs", function()
     local w = World({})

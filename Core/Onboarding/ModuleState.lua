@@ -54,9 +54,12 @@ local function Prompt()
 end
 
 function ns.ModuleListed(addon)
-    local m, me = byAddon[addon], UnitGUID("player")
-    if m then return Listed(m, me) end
-    return C_AddOns.GetAddOnEnableState(addon, me) > 0
+    local me = UnitGUID("player")
+    for _, name in ipairs(ns.LinkedAddons(addon, true)) do
+        local m = byAddon[name]
+        if m and not Listed(m, me) or not m and C_AddOns.GetAddOnEnableState(name, me) == 0 then return false end
+    end
+    return true
 end
 
 function ns.SetModuleState(addon, on)
@@ -78,12 +81,15 @@ function ns.ReconcileModules(quiet)
     if not account.onboardingSeen or not me then return 0 end
     if type(account.moduleList) ~= "table" then account.moduleList = {} end
     local was = account.moduleList[me]
-    local present, listed, want = {}, {}, {}
+    local present, listed, want, woke = {}, {}, {}, {}
     for _, m in ipairs(modules) do
         if C_AddOns.DoesAddOnExist(m.host or m.addon) then
             present[#present + 1] = m
             local on = Listed(m, me)
             local profile, before = Explicit(m), was and was[m.addon]
+            if m.host and was and was[m.host] == false and C_AddOns.GetAddOnEnableState(m.host, me) > 0 then
+                woke[m.host] = true
+            end
             listed[m.addon] = on
             if before == nil then
                 want[m.id] = on and profile ~= false
@@ -93,6 +99,17 @@ function ns.ReconcileModules(quiet)
                 want[m.id] = profile
             else
                 want[m.id] = on
+            end
+        end
+    end
+    for host in pairs(woke) do
+        local any = false
+        for _, m in ipairs(present) do
+            if m.host == host then any = any or listed[m.addon] end
+        end
+        if not any then
+            for _, m in ipairs(present) do
+                if m.host == host and ns.FEATURES[m.db][m.key] then want[m.id] = true end
             end
         end
     end
@@ -120,6 +137,7 @@ function ns.ReconcileModules(quiet)
             changed = changed + 1
         end
     end
+    for host, on in pairs(hosts) do now[host] = on end
     account.moduleList[me] = now
     if changed > 0 and not quiet then Prompt() end
     return changed

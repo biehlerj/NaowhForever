@@ -4,7 +4,7 @@ local Shared = ns.Shared
 local Settings, View, Parts = Shared.Settings, Shared.View, Shared.Parts
 local SS = Settings.Style
 
-local BORDER_RGB, CARD_GAP, CONTROL_GAP = SS.BORDER_RGB, SS.CARD_GAP, SS.CONTROL_GAP
+local CARD_GAP, CONTROL_GAP = SS.CARD_GAP, SS.CONTROL_GAP
 local PANEL_HEADER, PANEL_PAD = SS.PANEL_HEADER, SS.PANEL_PAD
 local COG_W = 380
 local TWO_COLUMNS_W = SS.TWO_COLUMNS_W
@@ -47,7 +47,7 @@ local function AddPair(view, row, second, w)
     local top = view.cursor
     local pair = second and second.kind ~= "group" and not second.wide
     view.width = half
-    view:Add("setting", row, true)
+    view:Add("setting", row, pair == true)
     if not pair then return 1 end
     view.cursor = top
     view.left, view.width = half, w - half
@@ -71,13 +71,15 @@ local function OpenCardFrame(view)
     view.left, view.width = 0, view:GetWidth()
     local frame = view:Acquire("card")
     frame:SetFrameLevel(view:GetFrameLevel())
-    frame.edge:SetColor(BORDER_RGB.r, BORDER_RGB.g, BORDER_RGB.b, 1)
+    local edge = ns.THEME.line
+    frame.edge:SetColor(edge.r, edge.g, edge.b, 1)
     frame.note:Hide()
     return frame
 end
 
 local function FlushSettings(view)
     if ns.UI.sliderDrag then
+        if view:IsVisible() and Settings.PaintPreviews then Settings.PaintPreviews(view) end
         C_Timer.After(DRAG_WAIT, view.settingsRedrawFn)
         return
     end
@@ -215,7 +217,7 @@ function Draw:CardBody(card, found)
     self:Settings(card, only)
     if cogOwner then self:OpenCogOn(card, cogOwner) end
     local changed = Settings.ChangedCount(card)
-    if changed > 0 and not only then self:Add("cardFoot", card, changed) end
+    if (changed > 0 or Settings.CanUndoReset(card)) and not only then self:Add("cardFoot", card, changed) end
 end
 
 local function BarCard(view, card, found, isOpen)

@@ -9,8 +9,10 @@ local checks = 0
 local function Check(ok, label) assert(ok, label); checks = checks + 1 end
 
 local W, H = 1920, 1080
+local EDGE_ROOM = 250
 local NOOP = function() end
 local made = {}
+local GLYPH_W = 6
 local Frame = {}
 local FrameMeta = { __index = function(_, k)
     if Frame[k] then return Frame[k] end
@@ -39,6 +41,10 @@ function Frame:SetPoint(...)
 end
 function Frame:SetText(t) self.text = t end
 function Frame:GetText() return self.text end
+function Frame:GetStringHeight() return 13 * (select(2, (self.text or ""):gsub("\n", "")) + 1) end
+function Frame:UnregisterEvent(e) self.events[e] = nil end
+function Frame:GetStringWidth() return #(self.text or "") * GLYPH_W end
+function Frame:SetJustifyH(j) self.justify = j end
 function Frame:SetRotation(r) self.rotation = r end
 function Frame:SetTexture(t) self.texture = t end
 function Frame:SetHeight(h) self.height = h end
@@ -68,6 +74,7 @@ local parents = { [1500] = 88 }   -- a leaf zone inside the waypoint's map
 local timers, played, printed = {}, {}, {}
 local speed = 0
 local now = 0
+local questObjectives = {}
 local tracking = 1   -- Enum.SuperTrackingType.UserWaypoint
 
 local gameMarker = {}
@@ -96,6 +103,7 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.up
         SoundPathFor = function(key) if key ~= "none" then return "sound:" .. key end end,
     },
     Shared = {
+        Places = dofile("Tools/regression/shared_places.lua"),
         Style = setmetatable({ ROUND = "round", PLACE_DOT = " . " },
             { __index = dofile("Tools/regression/shared_style.lua") }),
         Parts = {
@@ -112,6 +120,7 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.up
 
 local env = setmetatable({
     NaowhForever = ns,
+    wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
     UIParent = UIParent,
     CreateFrame = function(kind, _, parent) return NewFrame(kind, parent) end,
     C_Navigation = {
@@ -136,7 +145,8 @@ local env = setmetatable({
         ClearUserWaypoint = function() userWaypoint = nil; cleared = cleared + 1 end,
         GetMapInfo = function(id) return { name = "Thunder Bluff", parentMapID = parents[id] or 0 } end,
     },
-    C_QuestLog = { GetTitleForQuestID = function() return "The Barrens Oases" end },
+    C_QuestLog = { GetTitleForQuestID = function() return "The Barrens Oases" end,
+        GetQuestObjectives = function() return questObjectives end },
     C_Timer = { After = function(delay, fn) timers[#timers + 1] = { delay = delay, fn = fn } end },
     Enum = { SuperTrackingType = { Quest = 0, UserWaypoint = 1, Corpse = 2 } },
     SuperTrackedFrame = gameMarker,
@@ -202,6 +212,13 @@ Check(pin.point[2] == navFrame and pin.point[5] == 0, "with no line it sits on t
 S.Set("waypointBeam", nil)
 Check(pin.card.name.text == "Mage Trainer" and pin.card.dist.text == "312 yd", "named as placed, with its distance")
 Check(pin.card.time.text == "about 0:45", "standing still, the walking time is at running pace")
+local function Centred(card)
+    local row = #card.dist.text * GLYPH_W + (card.time.text ~= "" and 8 + #card.time.text * GLYPH_W or 0)
+    local left = card.icon.shown and 8 + 35 + 8 or 8
+    return card.name.justify == "CENTER" and card.note.justify == "CENTER"
+        and card.dist.point[4] == math.floor(math.max(180 - left - 8 - row, 0) / 2 + 0.5)
+end
+Check(Centred(pin.card), "the name, and the distance with its time, sit centred on the card")
 speed = 14
 driver.scripts.OnUpdate(driver, 0)
 Check(pin.card.time.text == "about 0:22", "moving, at your own speed")
@@ -250,6 +267,12 @@ driver.scripts.OnUpdate(driver, 0)
 Check(pin.card.note.shown and pin.card.note.text == "Weapon Master" and pin.card.height > plainH,
     "the note on its own line, the card taller")
 Check(pin.card.icon.shown and pin.card.icon.texture == 132 and pin.card.name.points[1][2] == pin.card.icon, "the icon beside the name")
+Check(Centred(pin.card), "with an icon, the text centres in the room beside it")
+nav.distance = 23456
+driver.scripts.OnUpdate(driver, 0)
+Check(pin.card.dist.point[4] == 0, "a row too long to centre starts at the column's edge, never over the icon")
+nav.distance = 312
+driver.scripts.OnUpdate(driver, 0)
 Check(navBar.sub.text == "Weapon Master . Thunder Bluff" and navBar.icon.shown and navBar.icon.texture == 132
     and not navBar.fill.shown, "the navigator: note and zone, the icon in place of the shape")
 ns.placedWaypoint.note, ns.placedWaypoint.icon = nil, nil
@@ -266,12 +289,20 @@ Check(pin.card.dist.text == "1,240 yd", "long distances read with a comma")
 -- Off screen to the right: at the edge, the arrow pointing right, the card toward the middle.
 nav.clamped, nav.x, nav.y = true, 2400, 540
 driver.scripts.OnUpdate(driver, 0)
-Check(pin.point[2] == UIParent and pin.point[4] == W / 2 - 70 and pin.point[5] == 0, "clamped right, it sits at the edge")
+Check(pin.point[2] == UIParent and math.abs(pin.point[4] - W * 0.3) < 0.01 and pin.point[5] == 0,
+    "clamped right, it sits on the ring around the middle, not at the screen's edge")
 Check(pin.arrow.shown and pin.arrow.rotation == 0 and not pin.beam.shown, "with the arrow out and no line down")
 Check(pin.card.point[1] == "RIGHT" and pin.card.point[3] == "LEFT", "the card on the screen's side of it")
 S.Set("waypointScale", 1.5)
 driver.scripts.OnUpdate(driver, 0)
-Check(math.abs(pin.point[4] * pin.scale - (W / 2 - 70)) < 0.01, "a bigger pin still sits on the edge")
+Check(math.abs(pin.point[4] * pin.scale - W * 0.3) < 0.01, "a bigger pin still sits on the ring")
+-- Up and to the right, toward the minimap's corner: still on the ring, well inside the screen.
+nav.x, nav.y = 960 + 3000, 540 + 3000
+driver.scripts.OnUpdate(driver, 0)
+local px, py = pin.point[4] * pin.scale, pin.point[5] * pin.scale
+Check(math.abs((px / (W * 0.3)) ^ 2 + (py / (H * 0.3)) ^ 2 - 1) < 0.001, "toward a corner it sits on the ring")
+Check(W / 2 - px > EDGE_ROOM and H / 2 - py > EDGE_ROOM,
+    "and stays " .. EDGE_ROOM .. " px clear of both edges, off the minimap")
 S.Set("waypointScale", nil)
 -- Off the bottom edge, but not behind: the card goes above the pin, on screen.
 nav.x, nav.y = 960 + 1000 * math.cos(math.rad(-50)), 540 + 1000 * math.sin(math.rad(-50))
@@ -292,6 +323,40 @@ S.Set("waypointEdge", nil)
 nav.clamped, nav.x, nav.y = false, 1100, 700
 driver.scripts.OnUpdate(driver, 0)
 Check(pin:IsShown() and pin.point[2] == navFrame, "back on screen, back on the navigation frame")
+-- On screen but out past the ring, up by the minimap: on the ring with the arrow, never on the corner.
+nav.x, nav.y = W - 60, H - 60
+driver.scripts.OnUpdate(driver, 0)
+Check(pin:IsShown() and pin.point[2] == UIParent and pin.arrow.shown
+    and W / 2 - pin.point[4] * pin.scale > EDGE_ROOM and H / 2 - pin.point[5] * pin.scale > EDGE_ROOM,
+    "a spot on screen in the corner gets the arrow on the ring, not a pin on the minimap")
+-- Just inside the ring after being past it: it stays on the ring, so it never flickers on the line.
+nav.x, nav.y = 960 + 0.95 * W * 0.3, 540
+driver.scripts.OnUpdate(driver, 0)
+Check(pin.point[2] == UIParent and pin.arrow.shown, "a little inside the ring it holds on the ring")
+nav.x = 960 + 0.85 * W * 0.3
+driver.scripts.OnUpdate(driver, 0)
+Check(pin.point[2] == navFrame, "well inside, back on its spot")
+-- Low on screen past the ring is in front of you, not behind: on the ring, no cue.
+nav.x, nav.y = 960, 60
+driver.scripts.OnUpdate(driver, 0)
+Check(pin:IsShown() and pin.point[2] == UIParent and not cue:IsShown(), "a spot low on screen is not behind you")
+nav.clamped = true
+driver.scripts.OnUpdate(driver, 0)
+Check(not pin:IsShown() and cue:IsShown(), "clamped straight down is behind you")
+nav.clamped = false
+-- Close by, the spot keeps its pin wherever it is on screen, so you can walk onto it.
+nav.distance = 20
+driver.scripts.OnUpdate(driver, 0)
+Check(pin:IsShown() and pin.point[2] == navFrame and pin.alpha < 1, "within 40 yards it stays on its spot, fading up close")
+nav.distance = 1240
+-- With Edge Arrow off, a spot on screen keeps its pin on the spot, wherever it is.
+S.Set("waypointEdge", false)
+nav.x, nav.y = W - 60, H - 60
+driver.scripts.OnUpdate(driver, 0)
+Check(pin:IsShown() and pin.point[2] == navFrame, "Edge Arrow off: the pin stays on the spot")
+S.Set("waypointEdge", nil)
+nav.x, nav.y = 1100, 700
+driver.scripts.OnUpdate(driver, 0)
 
 -- A stop on the way there (a zone's exit) is not the arrival.
 S.Set("waypointSound", "naowh")
@@ -526,5 +591,71 @@ S.Set("waypoints", false)
 Check(next(events.events) == nil and not pin:IsShown() and driver.scripts.OnUpdate == nil, "off, it stops listening")
 Check(gameMarker.Icon.alpha == 1 and gameMarker.IconBorder.alpha == 1, "and the game's marker is back")
 Check(#printed == 0, "nothing printed")
+
+-- Optional objectives and downward arrows use the existing pin and update on quest progress.
+tracking, nav.frame, nav.distance = 0, navFrame, 20
+questObjectives = { { text = "0/10 Highlands Bandit slain", finished = false },
+    { text = "0/1 Bennic slain", finished = false }, { text = "Done", finished = true } }
+S.Set("waypoints", true)
+Check(pin.objectives == nil and pin.down == nil, "new presentation switches default off without extra frames/textures")
+S.Set("waypointObjectives", true)
+S.Set("waypointDownArrows", true)
+driver.scripts.OnUpdate()
+Check(pin:IsShown() and pin.objectives.shown, "objectives keep the quest pin visible inside its area")
+Check(pin.objectives.text.text == "0/10 Highlands Bandit slain\n0/1 Bennic slain", "only unfinished objectives shown")
+Check(pin.down[1].shown and pin.down[3].shown and pin.down[1].rotation == -math.pi / 2, "three downward chevrons")
+Check(pin.card.point[5] > 8, "title card makes room above the arrows")
+questObjectives[1].text = "1/10 Highlands Bandit slain"
+events.scripts.OnEvent(events, "QUEST_LOG_UPDATE")
+driver.scripts.OnUpdate()
+Check(pin.objectives.text.text:find("1/10", 1, true), "quest progress updates in place")
+questObjectives[1].text = "secret"
+events.scripts.OnEvent(events, "QUEST_LOG_UPDATE")
+driver.scripts.OnUpdate()
+Check(pin.objectives.text.text == "0/1 Bennic slain", "restricted objective text is skipped")
+questObjectives[1].text = "1/10 Highlands Bandit slain"
+questObjectives[1].finished, questObjectives[2].finished = true, true
+events.scripts.OnEvent(events, "QUEST_LOG_UPDATE")
+driver.scripts.OnUpdate()
+Check(not pin.objectives.shown, "completed objectives do not leave a stale panel")
+questObjectives[1].finished, questObjectives[2].finished = false, false
+events.scripts.OnEvent(events, "QUEST_LOG_UPDATE")
+driver.scripts.OnUpdate()
+events.scripts.OnEvent(events, "NAVIGATION_DESTINATION_REACHED", false)
+Check(driver.scripts.OnUpdate ~= nil and pin:IsShown(), "arrival does not hide unfinished quest objectives")
+nav.distance, nav.clamped, nav.x, nav.y = 300, true, 1900, 700
+driver.scripts.OnUpdate()
+Check(not pin.objectives.shown and not pin.down[1].shown, "off-screen direction does not show downward arrows or objective panel")
+nav.clamped, nav.x, nav.y = false, 1100, 700
+S.Set("waypointCard", false)
+driver.scripts.OnUpdate()
+Check(pin.objectives.shown and not pin.card.shown and pin.objectives.point[5] > 8,
+    "objectives work without the name card and leave room for chevrons")
+S.Set("waypointObjectives", false)
+driver.scripts.OnUpdate()
+Check(not pin.objectives.shown and not events.events.QUEST_LOG_UPDATE, "objectives off releases its event")
+S.Set("waypoints", false)
+Check(next(events.events) == nil and driver.scripts.OnUpdate == nil, "all waypoint features stop while off")
+
+questObjectives = {}
+tracking, nav.distance = 1, 3
+userWaypoint = { uiMapID = 88, position = { x = 0.45, y = 0.60 } }
+ns.placedWaypoint = { title = "Guide step", map = 88, x = 45, y = 60,
+    details = { guide = true, quest = 7, title = "The Criminal Element", objectives = "0/10 Bandits" } }
+S.Set("waypoints", true)
+S.Set("waypointObjectives", true)
+S.Set("waypointCard", true)
+driver.scripts.OnUpdate()
+Check(pin.card.name.text == "The Criminal Element" and pin.objectives.text.text == "0/10 Bandits",
+    "guide title and objective context reach the world pin")
+local guideClears = cleared
+nav.distance = 100
+driver.scripts.OnUpdate()
+nav.distance = 3
+driver.scripts.OnUpdate()
+Check(cleared == guideClears and pin:IsShown(), "guide pin skips manual distance auto-clear")
+events.scripts.OnEvent(events, "NAVIGATION_DESTINATION_REACHED", false)
+Check(driver.scripts.OnUpdate ~= nil, "guide arrival leaves guide advancement in charge")
+S.Set("waypoints", false)
 
 print(("test-waypoints: %d checks passed"):format(checks))

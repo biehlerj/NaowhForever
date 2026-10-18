@@ -762,6 +762,14 @@ Check(confirmText == nil and reloadText == nil and ns.SwingTimerSettings.Get("en
 switch.scripts.OnClick(); Flush()
 Check(ns.SwingTimerSettings.Get("enabled") == swingWas and confirmText == nil and reloadText == nil
     and not disabled.NaowhForever_Combat, "and back the same way, with Combat left on for the others")
+Click(Button("Action Bars")); Flush()
+local barsWas = ns.ActionBarSettings.Get("enabled")
+switch.scripts.OnClick(); Flush()
+Check(confirmText == nil and reloadText == nil and ns.ActionBarSettings.Get("enabled") == not barsWas,
+    "a Utilities module switches at once too")
+switch.scripts.OnClick(); Flush()
+Check(ns.ActionBarSettings.Get("enabled") == barsWas and confirmText == nil and reloadText == nil
+    and not disabled.NaowhForever_Utilities, "and back, with Utilities left on for the others")
 confirmText = nil
 Click(Button("Professions")); Flush()
 switch.scripts.OnClick(); Flush()
@@ -778,12 +786,12 @@ ns.OpenOptionsWindow("Professions/Settings"); Flush()
 Check(Text("MODULES") ~= nil, "a link to a module that is off lands on Settings, where it is turned back on")
 missingAddOns.NaowhForever_Professions = nil
 
-missingAddOns.NaowhForever_InstanceTracker = true
+missingAddOns.NaowhForever_Utilities = true
 for _, page in ipairs(UI.SearchPages()) do
     Check(not (page.module and page.module.name == "Instance Tracker"),
-        "Instance Tracker is not searched while its addon is not loaded")
+        "Instance Tracker is not searched while the Utilities addon it ships in is not loaded")
 end
-missingAddOns.NaowhForever_InstanceTracker = nil
+missingAddOns.NaowhForever_Utilities = nil
 
 -- The core owns Unlock Mode.
 ns.ShowUnlockMode(); Flush()
@@ -891,27 +899,30 @@ for key, page in pairs(Settings.pages) do
         end
     end
 end
--- With Consumable Bar, Gear & Trinkets and Blessings off (the last two ship in NaowhForever_Combat, so
--- their switch is what turns them off), AuraBuffs is the first COMBAT module; the group still sits
--- above UTILITIES.
-missingAddOns.NaowhForever_ConsumableBar = true
+-- With Consumable Bar, Gear & Trinkets and Blessings off (they ship in NaowhForever_Combat, so their
+-- switch is what turns them off), AuraBuffs is the first COMBAT module; the group still sits above
+-- UTILITIES. Group Inspect ships in NaowhForever_Utilities but needs the BiS List, so it is left out
+-- while that is not loaded.
+local barWas = ns.QoLSettings.Get("consumableBar")
+ns.QoLSettings.Set("consumableBar", false)
 ns.QoLSettings.Set("gearSets", false)
 ns.QoLSettings.Set("blessings", false)
-missingAddOns.NaowhForever_InstanceTracker = true
+missingAddOns.NaowhForever_BiS = true
 local built = #frames
 LoadWindow()
 ns.OpenOptionsWindow(); Flush()
-local headY, trackerNav = {}, false
+local headY, inspectNav = {}, false
 for i = built + 1, #frames do
     local f = frames[i]
     if (f.text == "COMBAT" or f.text == "UTILITIES") and f.points.TOPLEFT then headY[f.text] = f.points.TOPLEFT[4] end
-    if f.text == "Instance Tracker" and f:IsShown() then trackerNav = true end
+    if f.text == "Group Inspect" and f:IsShown() then inspectNav = true end
 end
 Check(headY.COMBAT and headY.UTILITIES and headY.COMBAT > headY.UTILITIES, "COMBAT stays above UTILITIES with its first modules off")
-Check(not trackerNav, "Instance Tracker is left out of the sidebar while its addon is not loaded")
+Check(not inspectNav, "Group Inspect is left out of the sidebar while the BiS List it needs is not loaded")
+ns.QoLSettings.Set("consumableBar", barWas)
 ns.QoLSettings.Set("gearSets", true)
 ns.QoLSettings.Set("blessings", true)
-missingAddOns.NaowhForever_ConsumableBar, missingAddOns.NaowhForever_InstanceTracker = nil, nil
+missingAddOns.NaowhForever_BiS = nil
 
 -- Quality of Life is its own addon, with the Top Bar inside it (its card sits on QoL > Interface);
 -- while QoL is not loaded, the sidebar drops it and its pages land on Settings.
@@ -980,6 +991,45 @@ Check(TextHas("Auto Repair"), "a letter left out still finds the setting")
 input:SetText(""); Flush()
 Check(not Text("TURNED OFF") and Text("MODULES"), "cleared, the group hides and the page goes back to Settings")
 missingAddOns.NaowhForever_QoL = nil
+
+do
+    ns.BuildProfileSettings = function(parent, y)
+        return y - ns.Shared.Settings.Render(parent, "Profiles/Setups", function() end, ns.UI.Search.Narrowed("Profiles"))
+    end
+    input:SetText("onboarding"); Flush()
+    local result
+    for _, frame in ipairs(frames) do
+        if frame.entry and frame.entry.label == "Onboarding" and frame:IsShown() then result = frame break end
+    end
+    Check(result ~= nil, "search offers a direct Onboarding result")
+    Click(result)
+    Check(not ns.UI.SearchTyped() and not result:IsShown(), "choosing a result clears search and closes the popup")
+    Check(Text("Start") ~= nil, "carried setting results open the actual Profiles setting")
+    input:SetText("clock"); Flush()
+    input.scripts.OnArrowPressed(input, "DOWN")
+    local selected
+    for _, frame in ipairs(frames) do
+        if frame.entry and frame:IsShown() and frame.fill and frame.fill:IsShown() then selected = frame break end
+    end
+    Check(selected and selected.index == 2, "Down selects the next search result")
+    input.scripts.OnEditFocusLost(input)
+    Check(not selected:IsShown(), "leaving search closes its popup")
+    input.scripts.OnEditFocusGained(input)
+    Check(selected:IsShown(), "refocusing search restores its results")
+    input.scripts.OnEnterPressed(input)
+    Check(not ns.UI.SearchTyped(), "Enter navigates to the selected result")
+    input:SetText("zzzzzzzzzzzzzz"); Flush()
+    Check(Text("No matching settings.") ~= nil, "an empty result list explains that nothing matched")
+    input.scripts.OnEscapePressed(input)
+    Check(not ns.UI.SearchTyped(), "Escape clears the search")
+    ns.BuildProfileSettings = nil
+    ns.MarkReloadRequired("Changed the skin")
+    Check(Text("Reload UI *") ~= nil, "reload-required feedback persists in the window button")
+    local reload = ns.ReloadButton(env.UIParent, "Reload UI", 110, 26)
+    Check(reload.label.text == "Reload UI *" and reload._tipBody() == "Changed the skin",
+        "new reload buttons inherit the pending reason")
+    reload:Hide()
+end
 
 print(cases .. " navigation checks passed")
 -- Available only to an offline renderer that loads this test environment.

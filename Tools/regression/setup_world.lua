@@ -149,6 +149,7 @@ return function(opts)
     Load("Core/Profiles/Presets.lua", env)
     ns.QoLSettings = Store(w, ns, "qol")
     Load("Core/Options/Modules.lua", env)
+    Load("Core/Profiles/Positions.lua", env)
     Load("Core/Profiles/Setups.lua", env)
     Load("Core/Onboarding/Setup.lua", env)
     ns.ConfirmReload = ns.ConfirmReload or function(text) w.reloads[#w.reloads + 1] = text end
@@ -186,7 +187,9 @@ return function(opts)
         for _, mod in ipairs(MODULES) do
             local addon = mod.host or mod.addon
             local ok = w.enabled[addon]
-            for _, need in ipairs(mod.needs or {}) do ok = ok and w.enabled[need] end
+            if not mod.host then
+                for _, need in ipairs(mod.needs or {}) do ok = ok and w.enabled[need] end
+            end
             w.loaded[addon] = ok == true
         end
         w.Session()

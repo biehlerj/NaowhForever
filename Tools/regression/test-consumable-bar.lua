@@ -1,6 +1,7 @@
--- Offline behavior checks for the Consumable Bar (NaowhForever_ConsumableBar, on Shared/UI/ItemBar.lua
+-- Offline behavior checks for the Consumable Bar (NaowhForever_Combat/ConsumableBar, on Shared/UI/ItemBar.lua
 -- and Shared/UI/Anchor.lua); these do not emulate client taint, secure clicks, state drivers' secure
 -- side or rendering. Run from the repo root: lua Tools/regression/test-consumable-bar.lua
+rawset(_G, "C_AddOns", { DoesAddOnExist = function() return false end, GetAddOnEnableState = function() return 0 end })
 
 -- The Consumable Bar's defaults, as Core/Settings.lua declares them.
 local DEFAULTS = (function()
@@ -47,12 +48,12 @@ KNOWN[1179] = { 132794, 0, 430, 5 }    -- Ice Cold Milk
 KNOWN[13444] = { 134854, 0, 17531, 1 } -- Major Mana Potion
 
 local function fixture(settings, noMacros, class)
-    local s = { frames = {}, combat = false, counts = {}, cooldowns = {}, auras = {},
+    local s = { level = 60, levels = {}, missing = {}, frames = {}, combat = false, counts = {}, cooldowns = {}, auras = {},
         settings = settings or {}, built = 0, blocked = 0, now = 100, timers = {},
         secretAuras = false, auraReads = 0, bags = {}, focus = {}, mouseDown = false,
         enchant = {}, actions = {}, actionButtons = {}, bindings = {}, macros = {}, labButtons = nil,
         refreshes = 0, registers = 0, cards = {}, actionText = {}, macroBodies = {}, macroSettings = {},
-        macroUpdates = 0, writes = {}, panels = {}, stores = {}, windows = {}, renders = {}, sides = {}, hud = { anchoredTo = {} } }
+        macroUpdates = 0, macroListeners = {}, writes = {}, panels = {}, stores = {}, windows = {}, renders = {}, sides = {}, hud = { anchoredTo = {} } }
     local G = {}
     local function Evaluate(f)
         local rule = rawget(f, 'driver')
@@ -268,8 +269,16 @@ local function fixture(settings, noMacros, class)
         },
         MacroSettings = {
             Get = function(k) return s.macroSettings[k] end,
-            Set = function(k, v) s.macroSettings[k] = v end,
+            Set = function(k, v)
+                s.macroSettings[k] = v
+                for _, fn in ipairs(s.macroListeners) do fn(k, v) end
+            end,
+            OnChange = function(fn) s.macroListeners[#s.macroListeners + 1] = fn end,
         },
+        -- The Macros module on: the core's ns.ModuleOn, read from its switch here.
+        ModuleOn = function(addon)
+            return addon == 'NaowhForever_Macros' and not noMacros and s.macroSettings.enabled ~= false
+        end,
         UpdateManagedMacros = function() s.macroUpdates = s.macroUpdates + 1 end,
         HealthOrderChoices = { values = { stone = 'Healthstone First', potion = 'Potion First' },
             order = { 'stone', 'potion' } },
@@ -318,6 +327,7 @@ local function fixture(settings, noMacros, class)
         wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
         C_Spell = { GetSpellName = function(id) return id == 430 and 'Drink' or id == 433 and 'Food' or 'Spell' end },
         UnitClass = function() return 'Class', class or 'MAGE' end,
+        UnitLevel = function() return s.level end,
         GetBindingKey = function(command) return s.bindings[command] end,
         GetBindingText = function(key, short) return short and ('*' .. key) or key end,
         GetMacroInfo = function(index) return s.macros[index] end,
@@ -347,7 +357,10 @@ local function fixture(settings, noMacros, class)
                 local k = KNOWN[id]
                 if k and k[3] then return SPELL_NAMES[id] or 'Spell', k[3] end
             end,
-            GetItemInfo = function() end,
+            GetItemInfo = function(id)
+                if s.missing[id] then return end
+                return 'Item', nil, nil, nil, s.levels[id] or 0
+            end,
             RequestLoadItemDataByID = function() end,
             GetItemCount = function(id) return s.counts[id] or 0 end },
         C_Container = {
@@ -371,9 +384,9 @@ local function fixture(settings, noMacros, class)
     -- XML's order.
     local paths = { 'Core/Features.lua', 'Shared/Game/Consumables.lua', 'Shared/Game/ActionKeys.lua',
         'Shared/UI/ItemBar.lua', 'Shared/UI/Anchor.lua' }
-    local xml = assert(io.open('NaowhForever_ConsumableBar/ConsumableBar.xml', 'rb'))
+    local xml = assert(io.open('NaowhForever_Combat/ConsumableBar/ConsumableBar.xml', 'rb'))
     for file in xml:read('*a'):gmatch('<Script file="([^"]+)"') do
-        paths[#paths + 1] = 'NaowhForever_ConsumableBar/' .. file:gsub('\\', '/')
+        paths[#paths + 1] = 'NaowhForever_Combat/ConsumableBar/' .. file:gsub('\\', '/')
     end
     xml:close()
     for _, path in ipairs(paths) do
@@ -736,9 +749,47 @@ do
     check('a column bar is as wide as its columns', s.bar.w == 3 * 32 - 2 and s.bar.h == 3 * 32 - 2)
     s.set('consumableBarGrow', 'UP')
     check('growing up fills columns from the bottom', b[2].point[1] == 'BOTTOMLEFT' and b[2].point[5] == 32)
+    s.set('consumableBarGrow', 'LEFT')
+    check('Flip Row Direction is off by default', DEFAULTS.consumableBarFlipRows == false)
+    s.set('consumableBarFlipRows', true)
+    check('flipped, the first row sits at the bottom', b[1].point[1] == 'BOTTOMRIGHT' and b[1].point[5] == 0)
+    check('and the next row goes above it', b[4].point[1] == 'BOTTOMRIGHT' and b[4].point[4] == 0
+        and b[4].point[5] == 32)
+    check('flipping keeps the bar\'s size', s.bar.w == 3 * 32 - 2 and s.bar.h == 3 * 32 - 2)
+    check('the background reaches up toward the row above', b[1].bg.points.TOPLEFT[5] == 1
+        and b[1].bg.points.BOTTOMRIGHT[5] == -s.CB.C.BG_PAD)
+    s.set('consumableBarGrow', 'DOWN')
+    check('flipped columns go to the left', b[4].point[1] == 'TOPRIGHT' and b[4].point[4] == -32)
+    s.set('consumableBarGrow', 'RIGHT')
+    check('flipped right, the next row goes above from the left', b[4].point[1] == 'BOTTOMLEFT'
+        and b[4].point[4] == 0 and b[4].point[5] == 32 and b[2].point[4] == 32 and b[2].point[5] == 0)
+    s.set('consumableBarGrow', 'UP')
+    check('flipped up, the next column goes to the left from the bottom', b[4].point[1] == 'BOTTOMRIGHT'
+        and b[4].point[4] == -32 and b[4].point[5] == 0 and b[2].point[5] == 32)
+    s.set('consumableBarFlipRows', false)
     s.set('consumableBarPerRow', 12)
     s.set('consumableBarGrow', 'RIGHT')
     check('one row when they all fit', s.bar.h == 30 and s.bar.w == 7 * 32 - 2)
+    check('Rectangular Icons is off by default', DEFAULTS.consumableBarRect == false)
+    s.set('consumableBarHeight', 20)
+    check('Icon Height does nothing while it is off', b[1].w == 30 and b[1].h == 30)
+    s.set('consumableBarRect', true)
+    local crop = s.ns.Shared.Style.ICON_CROP
+    check('rectangular icons take their own height', b[1].w == 30 and b[1].h == 20 and s.bar.h == 20)
+    local tc = b[1].icon.texCoord
+    check('a wide icon crops its art top and bottom, not stretched',
+        math.abs((tc[2] - tc[1]) / (tc[4] - tc[3]) - 28 / 18) < 1e-9)
+    s.set('consumableBarHeight', 40)
+    tc = b[1].icon.texCoord
+    check('a tall icon crops its art at the sides', b[1].h == 40
+        and math.abs((tc[2] - tc[1]) / (tc[4] - tc[3]) - 28 / 38) < 1e-9 and math.abs(tc[3] - crop) < 1e-9)
+    s.set('consumableBarHeight', 20)
+    s.set('consumableBarGrow', 'DOWN')
+    check('a column steps by the icon height', b[2].point[5] == -22 and s.bar.h == 7 * 22 - 2 and s.bar.w == 30)
+    s.set('consumableBarRect', false)
+    s.set('consumableBarGrow', 'RIGHT')
+    check('square again, the usual crop', b[1].h == 30 and b[1].icon.texCoord[1] == crop
+        and b[1].icon.texCoord[3] == crop)
 end
 
 -- Show Keybinds
@@ -1113,6 +1164,13 @@ do
     s.cursor = { 'item', 8932 }
     cells[1].scripts.OnDragStart(cells[1])
     check('nor does an icon while an item is on the cursor', not ghost.shown)
+    s.cursor = nil
+    s.set('consumableBarRect', true)
+    s.set('consumableBarHeight', 20)
+    cells[1].scripts.OnDragStart(cells[1])
+    local tc = ghost.icon.texCoord
+    check('the copy of a rectangular icon is cropped to its shape', ghost.h == 20
+        and math.abs((tc[2] - tc[1]) / (tc[4] - tc[3]) - cells[1].w / 20) < 1e-9)
 end
 
 -- Edit Items draws the bar at its real size
@@ -1496,9 +1554,9 @@ do
     end
     local qol = Read('Core/Settings.lua')
     local seen = {}
-    local xml = Read('NaowhForever_ConsumableBar/ConsumableBar.xml')
+    local xml = Read('NaowhForever_Combat/ConsumableBar/ConsumableBar.xml')
     for file in xml:gmatch('<Script file="([^"]+)"') do
-        local path = 'NaowhForever_ConsumableBar/' .. file:gsub('\\', '/')
+        local path = 'NaowhForever_Combat/ConsumableBar/' .. file:gsub('\\', '/')
         for key in Read(path):gmatch('"(consumableBar%w+)"') do
             -- Where it was dragged has none (it starts at its spot); the window's place is account-wide.
             if not seen[key] and key ~= 'consumableBarPos' and key ~= 'consumableBarWindow' then
@@ -1808,6 +1866,28 @@ do
     s.set('consumableBarItems', { 'macro:mana' })
     s.set('consumableBar', false)
     check('a bar switched off uses no macro', not s.ns.ConsumableBarUsesMacro('mana'))
+end
+
+-- Macros ships in NaowhForever_Utilities, so its files stay loaded while its switch is off: the bar
+-- then carries no Smart Macro, as when the Macros addon was not loaded, and takes them back when it
+-- is switched on again.
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 'macro:mana', 13446, 'macro:health' } })
+    local function MacroRows()
+        local n = 0
+        for _, row in ipairs(s.cards['Consumable Bar/Settings:adding'].rows) do
+            if row.label == 'NF Mana' and not (row.hidden and row.hidden()) then n = n + 1 end
+        end
+        return n
+    end
+    check('Macros on: its macros on the bar and offered', #s.buttons() == 3 and MacroRows() == 1)
+    s.ns.MacroSettings.Set('enabled', false)
+    check('Macros switched off: only the item stays, nothing of Macros is used or offered', #s.buttons() == 1
+        and s.buttons()[1].entry == 13446 and not s.ns.ConsumableBarUsesMacro('mana') and MacroRows() == 0
+        and not s.listens('UPDATE_MACROS'))
+    s.ns.MacroSettings.Set('enabled', true)
+    check('switched back on: the macros come back in their places', #s.buttons() == 3
+        and s.buttons()[1].entry == 'macro:mana' and s.ns.ConsumableBarUsesMacro('health') and MacroRows() == 1)
 end
 
 -- A macro's key: on an action bar, known by the macro's name on the slot, or its own button's
@@ -2140,6 +2220,29 @@ do
     mage.CB.ScanBags()
     check('the buttons cover food and drink', table.concat(mage.settings.consumableBarItems, ',')
         == 'smart:food,smart:drink,14530')
+end
+
+-- Smart food/drink follows player levels and cache completion, including combat deferral.
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 'smart:drink' } })
+    s.level, s.levels[8766], s.levels[1179] = 12, 45, 5
+    s.bags[0], s.counts[8766], s.counts[1179] = { 8766, 1179 }, 1, 1
+    s.fire('BAG_UPDATE_DELAYED')
+    check('smart drink chooses an eligible lower rank', s.CB.Resolve('smart:drink') == 1179)
+    s.level = 45
+    s.fire('UNIT_LEVEL', 'target')
+    check('another unit leveling leaves smart drink alone', s.CB.Resolve('smart:drink') == 1179)
+    s.fight(true)
+    s.fire('UNIT_LEVEL', 'player')
+    check('smart drink level refresh waits in combat', s.CB.Resolve('smart:drink') == 1179)
+    s.fight(false)
+    check('smart drink upgrades after combat', s.CB.Resolve('smart:drink') == 8766)
+    s.missing[8766] = true
+    s.fire('BAG_UPDATE_DELAYED')
+    check('smart drink skips unknown requirements', s.CB.Resolve('smart:drink') == 1179)
+    s.missing[8766] = nil
+    s.fire('GET_ITEM_INFO_RECEIVED', 8766, true)
+    check('smart drink upgrades when item data arrives', s.CB.Resolve('smart:drink') == 8766)
 end
 
 -- One button left alone: either one is the Food & Drink buttons being on the bar, and each covers

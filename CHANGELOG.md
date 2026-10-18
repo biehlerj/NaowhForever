@@ -2,6 +2,246 @@
 
 ## Unreleased
 
+### Changed
+- Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70450.
+- Naowh Score: refitted to the latest Forever items.
+
+## 1.1.28
+
+### Changed
+- Daily Word #3 is out (QoL > Travel, or /nf word).
+
+## 1.1.27
+
+### Fixed
+- Training Planner: the Warrior, Priest, Shaman, Mage, Paladin and Warlock talent trees match the
+  game again, so builds from naowh.gg import for every class.
+- Training Planner: a saved build with a talent the game removed no longer errors; that talent is
+  dropped and the rest of the build is kept.
+
+## 1.1.26
+
+### Fixed
+- BiS List: opening a list from the dropdown no longer lands on an empty spec tab when its picks are
+  under another spec.
+- BiS List: hovering a gear slot on the Quests tab no longer errors.
+
+## 1.1.25
+
+### Added
+- German: the Crafting Queue, the Class Buff Tracker, the Trainable tab and the other new parts up
+  to 1.1.23 now show in German on German clients.
+- Healer Mana: Growth Direction (Centred, Down or Up) under Size, so the list can grow down or up
+  from where you placed it.
+- Professions: optional gold stars mark favorite unlearned recipes at open trainers and merchants.
+- Professions: drag Crafting Queue rows to choose their order within each section.
+- Professions: Favorite Patterns now highlights recipes the current character can learn immediately.
+- BiS List: your third pick has a copper star, next to your BiS's orange and your second pick's
+  silver.
+- Action Bars: Import Website Code brings in a bar layout from naowh.gg, with its macros and
+  keybinds; the Profiles Import box takes it too.
+- Fonts: a new Slug Outline choice in every Outline setting, for a smoother outline than Outline.
+- Flight Games that open by themselves have an eye icon by their close button to stop them opening
+  on flights, without going to the settings.
+- Zone Info in QoL > Map & Pins, with pinned zone details, Journal and waypoint shortcuts,
+  profession requirements and an optional current-zone panel.
+- An optional On-map Summary layout and Map Text Only preset for zone information directly on the
+  map.
+
+### Changed
+- Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70425: 5 faction rewards changed
+  (quality, item levels, required levels).
+- Naowh Score: refitted to the latest Forever items.
+- Dungeon Journal: drop chances updated from Wowhead's latest kill counts.
+- Naowh skin: compact segmented tabs highlight the selected page with a blue outline, fill and
+  diamond.
+- Naowh skin: settings and windows use dark solid charcoal backgrounds with darker sidebar and
+  preview areas.
+- Settings cards: restored outlines and dividers between sections, rows and paired controls.
+- Naowh settings: removed lines between related options while keeping category and card dividers.
+- AuraBuffs: the Class Buff Tracker shows only the buffs you are missing, so a buff's icon goes away
+  once it is up and comes back when it drops (out of combat; in combat the row stays as it was).
+
+### Fixed
+- German: the settings search, Undo reset, Keep My Positions in the profile import and a few help
+  texts no longer stay English.
+- Professions: changing characters no longer carries over the previous character's Crafting Queue,
+  Shopping List demand, or recipe favorites.
+- Professions: the Crafting Queue now names missing recipe tools and locations instead of
+  incorrectly reporting missing materials.
+- Trainer Popup automatically checks for lower ranks after a trainer visit without requiring Check
+  Bars.
+- Consumable Bar, Food & Drink Bar and Action Bars: keys bound to a mouse button show short, like M4
+  or SM5, instead of "Mouse Button 4".
+- The addon's keybind fields now take the middle mouse button and mouse buttons 4 and 5, with Shift,
+  Ctrl or Alt.
+- Flight Point Reminder: on Zephras Isle it no longer keeps asking you to open a flight master's map
+  after you have.
+- BiS List: an item's tooltip no longer repeats its rank ("#3 #3 on your BiS list").
+- Restock Reminder no longer asks rogues and warriors to restock permanent, non-stackable thrown
+  weapons.
+- Modules: ticking the Combat or Utilities addon in the AddOns list with all of its modules off
+  turns its default modules on instead of switching it back off after a reload.
+
+## 1.1.24
+
+### Added
+- Daily Word (QoL > Travel, or /nf word): guess the day's five-letter word in six tries. Everyone
+  gets the same word, which changes at the daily reset, and you can share your result in chat.
+- Waypoint Pin: optional RestedXP guide destinations, live quest objectives and downward arrows.
+
+### Changed
+- Flight Timer: the Land and Games buttons are now icon buttons, one per game (Quiz, Gridshot,
+  Hexakill, Reflex, Daily Word), so a game opens in one click.
+- The default Naowh theme is a little lighter: the window background, panels and borders. Theme
+  presets and your own custom colors are unchanged.
+
+### Fixed
+- Quiz and Flight Timer windows appear above reminder overlays.
+- Smart consumable macros and food/drink buttons skip items above your level.
+
+## 1.1.23
+
+### Added
+- AuraBuffs: an optional Class Buff Tracker with clickable self-buffs, short labels, full spell
+  tooltips and missing-buff glow outside combat.
+- AuraBuffs: adjust Gold Glow thickness under Class Buff Tracker.
+- Training Planner: a Spellbook Tab setting (Settings > Window) puts a Trainable tab under your
+  spellbook, listing the spells you can train now and in the next two levels, with their cost and a
+  waypoint to your trainer.
+
+### Changed
+- Training Planner: a build's Spells tab lists every rank of a spell, so a build can skip only some
+  ranks (say Rank 3) and still train the others.
+- Boat and Zeppelin Timers (QoL > Travel) now shows on the minimap: hover a dock's boat or zeppelin
+  pin for its countdown, left-click when it arrives and right-click when it leaves. The timer window
+  is gone.
+
+### Fixed
+- Skyborne Spots: the new ley lines and Elemental Convergences Forever added across Eastern Kingdoms
+  and Kalimdor are on the world map (76 ley lines, 56 convergences).
+- Training Planner: talent tooltips in the build editor show the text of the rank you have and the
+  next rank, instead of always the full rank.
+- Boat and Zeppelin Timers: each zeppelin at a shared Horde tower keeps its own timer, and the
+  Orgrimmar-Undercity and Undercity-Grom'gol zeppelins use their published cycle times.
+- Glimmer: with Find Herbs or Find Minerals on, minimap icons leave the game's tracking dot visible
+  inside the ring, so you can see which nodes are up. Only My Professions now shows nothing on a
+  character with neither Herbalism nor Mining.
+- Zephras Isle: zeppelin docks, town pins, quest givers, rares and herb and ore spots show on the
+  island whichever of its two map IDs the game puts you on.
+
+## 1.1.22
+
+### Changed
+- Instance Tracker, Journeys, Macros, Group Inspect and Action Bars are now one line in the AddOns
+  list, Naowh Forever: Utilities, and the Consumable Bar is part of Naowh Forever: Combat. Turn each
+  one on or off under Settings > Modules, and it takes effect without a reload. Restart the game
+  once after updating so the new Naowh Forever: Utilities entry is found.
+
+## 1.1.21
+
+### Added
+- RestedXP: the Naowh window's list of steps scrolls with the mouse wheel through the whole guide,
+  the steps done above and the ones to come below, and a click goes back to any of them.
+- RestedXP: a Show Scroll Bar setting, off to start, for the thin bar beside the Naowh window's list
+  of steps; the wheel scrolls the list without it.
+- RestedXP: the Naowh window's step box and progress bars have a border with a size and a color of
+  their own, themed and black in the Naowh theme, and the bars a Bar Color and a background color,
+  in Window Look, in any Window Theme.
+- Settings > Minimap Icons: a minimap button for the Professions Shopping List, which the Top Bar
+  can show once it's on.
+- Consumable Bar: Flip Row Direction, in Settings > Bar > Layout, starts new rows above the first
+  (or to its left), so a bar under your unit frame can grow upward.
+- Consumable Bar: Rectangular Icons, in Settings > Bar > Layout, gives the icons their own Icon
+  Height, with the art cropped to fit instead of stretched.
+- Import (Profiles): Keep My Positions, ticked to start, keeps your frames where you put them when
+  you import someone's profile.
+- Profiles > Setups: Keep My Positions leaves your frames where they are when you apply one of
+  Naowh's setups.
+- AuraBuffs: Personal Buff Reminders remind a hunter with no aspect of their own up (Buffs &
+  Consumables card, Aspect).
+- Discovery: Rares: Skull on Click, off by default: clicking the Rare Alert card also puts a skull
+  on the rare.
+- Boat and Zeppelin Timers in QoL > Travel estimate the next arrival or departure at a dock from one
+  recorded sighting, kept for your realm until the weekly reset.
+- Professions: optional Skill-up Thresholds bar beneath the selected recipe, showing its difficulty
+  boundaries and your current skill.
+- German: Gamble, the RestedXP Naowh window, the Simple macro form, crafting ROI and the other new
+  parts up to 1.1.20 now show in German on German clients.
+- Professions: optional recipe markers for your active auctions and a Not Selling filter.
+- Professions: an optional standalone Crafting Queue for prerequisites, missing materials and
+  click-confirmed batches.
+- QoL > Combat > Default Damage Meter: a Theme row to paint the meter in the game's own look, your
+  current theme or any theme, with every color, font and texture still yours to change.
+- Default Damage Meter: every row of the card now also works with Reskin off, on the game's own
+  look.
+- Default Damage Meter: switches to show or hide each part of the title bar, Title and Timer X
+  Offsets, and an optional right-click menu on the title bar.
+- Default Damage Meter: a preview at the top of the card that shows every pick as it is made.
+- A Naowh Reverse Gradient bar texture.
+- Professions: Vendor Items on Shopping List (off by default) puts vendor materials in a Buy from
+  Vendor section of the Shopping List, with Buy and Buy All beside matching merchants.
+
+### Changed
+- RestedXP: Upcoming Steps is now Listed Steps, the number of steps the Naowh window's list shows at
+  once.
+- RestedXP: the Naowh window's step box and bars have a black border in the Naowh theme, in place of
+  the window's border color.
+- RestedXP: the Naowh window's Window Theme starts with Current Theme, in place of Same as the
+  Addon.
+- Restock Reminder (QoL > Loot & Items): the ammo settings are grouped under Ammo: Rogue and Warrior
+  and Ammo: Hunter.
+- Scrap Marker and the Scrap List are now the Junk Marker and the Junk List (QoL > Loot & Items),
+  and /nf junk opens the list (/nf scrap still works).
+- Waypoint Pin: the card above the pin has no blue line on top, and its text is centred.
+- Dungeon Journal: drop chances updated from Wowhead's latest kill counts.
+
+### Fixed
+- RestedXP window: RestedXP's Active Targets and Active Items titles no longer throw a font error.
+- Town Pins: mailboxes and spirit healers on the minimap are as big as the game's own minimap icons,
+  and Town Pin Size (QoL > Map & Pins, or the map's Town Pins button) now sizes them too.
+- The Quest List and its map pins no longer show some Forever quests to the wrong faction (Hearts of
+  the Lost, Strahnbrad Mystery and others).
+- Waypoint Pin: when the spot is off screen or far to one side, the pin points the way from near the
+  middle of the screen instead of sitting on the minimap, quest tracker or bars.
+- Training: the trainer waypoint for a new Skyborne shaman goes to Windshaper Boro on Zephras Isle
+  instead of Thunder Bluff.
+- AuraBuffs: Low Health no longer shows when you carry no healthstone or healing potion; turn on
+  Show When Out on its card to keep the old warning.
+- Gamble: on a German client the Last call announcement no longer puts the German word for party
+  into the English chat line.
+- Professions: the Shopping List's subtitle and empty-list message are no longer cut off when the
+  window is narrow or in a longer language; the Consumables button shows only its icon when the
+  title bar has no room for its label.
+- Default Damage Meter: Themed buttons no longer change the color of the title.
+
+## 1.1.20
+
+### Added
+- Buffs & Consumables: a stat scroll in your bags now reminds you when its buff is missing, one stat
+  at a time, and counts Arcane Intellect, Fortitude and Divine Spirit as the matching scroll buff.
+
+### Changed
+- Performance: the HDR options are opt-in. Turn on HDR Settings on QoL > System > Performance to
+  change HDR or Peak Brightness from there.
+- Naowh Forever no longer ships LibGetFrame, which it did not use.
+
+### Fixed
+- Flight Point Reminder: no longer asks you to learn retired flight points like "zzOLDPowderfuse
+  Port".
+- Journeys: replanning while you walk makes far less memory garbage, so Naowh Forever's memory no
+  longer climbs so fast during a journey.
+
+## 1.1.19
+
+### Changed
+- Consumable Bar, Food Bar, Gear Sets, Trinkets, Group Buttons and the Finder role buttons hover and
+  press with the same flat look as the Blessings bar, without Blizzard's square border.
+
+### Fixed
+- Scrap Marker: the Razormane Backstabber, Charred Razormane Wand and Razormane War Shield, needed
+  for Weapons of Choice, are never marked as scrap or sold.
+
 ## 1.1.18
 
 ### Added

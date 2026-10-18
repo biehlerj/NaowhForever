@@ -5,6 +5,7 @@
     <Script file="Data\Forever.lua"/>
     <Script file="Data\ItemFacts.lua"/>
     <Script file="Data\FactionItems.lua"/>
+    <Script file="Data\SameMaps.lua"/>
     <Script file="Decode.lua"/>
     <Script file="Game\Items.lua"/>
     <Script file="Game\Gear.lua"/>
@@ -19,6 +20,7 @@
     <Script file="UI\Marks.lua"/>
     <Script file="UI\Text.lua"/>
     <Script file="UI\Hud.lua"/>
+    <Script file="UI\Thresholds.lua"/>
     <Script file="UI\Timer.lua"/>
     <Script file="UI\Share.lua"/>
     <Script file="UI\CopyCard.lua"/>

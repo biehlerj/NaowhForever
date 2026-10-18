@@ -45,7 +45,7 @@ local function Fixture(opts)
         now = 1000, secret = false, combat = false, resting = false,
         instance = opts.instance or "none",
         bags = opts.bags or {},                     -- flat list of item IDs
-        -- unit -> list of { spellID, seconds left at the start, duration }
+        -- unit -> list of { spellID, seconds left at the start, duration, caster (default player) }
         auras = opts.auras or { player = {} },
         group = opts.group,                         -- nil solo, "party" or "raid"
         units = opts.units or {},                   -- unit -> class; player included
@@ -207,7 +207,7 @@ local function Fixture(opts)
                 local a = (state.auras[unit] or {})[i]
                 if not a then return nil end
                 return { spellId = a[1], name = SPELL_NAMES[a[1]], duration = a[3] or 0,
-                    expirationTime = a[2] and 1000 + a[2] or 0 }
+                    expirationTime = a[2] and 1000 + a[2] or 0, sourceUnit = a[4] or "player" }
             end,
         },
         C_Container = {
@@ -546,7 +546,7 @@ do
     Check("after combat", t.Shown(), "")
 end
 
--- Only If I Carry One with nothing listed: a flask, elixir or buff food in your bags reminds you.
+-- Only If I Carry One with nothing listed: a flask, elixir, scroll or buff food in your bags reminds you.
 do
     local t = Fixture({ settings = { consumableEntries = {}, personalBuffs = false }, instance = "raid",
         bags = { 13510 } })
@@ -555,10 +555,10 @@ do
     Check("empty profile listens for auras", t.Listening("UNIT_AURA"), true)
     t.state.bags = { 13510, 13931, 13454, 10306 }
     t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
-    Check("buff food and elixir too, scrolls stay opt-in", t.Shown(), "item:13931 item:13510 item:13454")
+    Check("buff food, scroll and elixir too", t.Shown(), "item:13931 item:13510 item:10306 item:13454")
     t.state.auras.player = { { 17626, 7000, 7200 }, { 1249520, 1800, 3600 }, { 11334, 3000, 3600 } }
     t.Fire("UNIT_AURA", "player"); t.Advance(0.5)
-    Check("any flask, Well Fed and elixir counts", t.Shown(), "")
+    Check("any flask, Well Fed and elixir counts, the scroll still missing", t.Shown(), "item:10306")
     t.Set("consumableEntries", { { category = "scroll", itemID = 10306, auras = { 12176 } } })
     Check("manual scroll added", t.Shown(), "item:10306")
 end
@@ -566,9 +566,49 @@ end
 -- Nothing listed and nothing carried: no reminder.
 do
     local t = Fixture({ settings = { consumableEntries = {}, personalBuffs = false }, instance = "raid",
-        bags = { 2679, 10306 } })
+        bags = { 2679 } })
     t.Login()
     Check("empty profile, nothing carried", t.Shown(), "")
+end
+
+-- A carried scroll reminds one stat at a time, the class buff it does not stack with counts as
+-- its buff, and a scroll you do not carry never reminds, with Only If I Carry One on or off.
+do
+    local t = Fixture({ settings = { consumableEntries = {}, personalBuffs = false }, instance = "raid",
+        bags = { 1712 } })
+    t.Login()
+    Check("a carried Scroll of Spirit II reminds", t.Shown(), "item:1712")
+    t.state.bags = { 1711, 1712 }
+    t.state.auras.player = { { 8100, 1700, 1800 } }
+    t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
+    Check("Stamina up, Spirit still reminds", t.Shown(), "item:1712")
+    t.state.auras.player = { { 8100, 1700, 1800 }, { 27841, 1700, 1800 } }
+    t.Fire("UNIT_AURA", "player"); t.Advance(0.5)
+    Check("Divine Spirit counts for the Spirit scroll", t.Shown(), "")
+    t.state.auras.player = { { 10938, 1700, 1800 } }
+    t.Fire("UNIT_AURA", "player"); t.Advance(0.5)
+    Check("Fortitude counts for Stamina, Spirit reminds", t.Shown(), "item:1712")
+    t.Set("onlyIfCarried", false)
+    t.state.bags = {}
+    t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
+    Check("Only If I Carry One off: food, flask and elixir, no scroll", t.Shown(), "spell:1248406 item:13510 item:13452")
+end
+
+-- Of one stat's scrolls the highest level is offered, even when another stat's scroll is the best in the bags.
+do
+    local t = Fixture({ settings = { consumableEntries = {}, personalBuffs = false }, instance = "raid",
+        bags = { 10307, 1181, 1712 }, levels = { [10307] = 55, [1181] = 1, [1712] = 15 },
+        auras = { player = { { 12178, 1700, 1800 } } } })
+    t.Login()
+    Check("Stamina IV up, Spirit II offered over Spirit I", t.Shown(), "item:1712")
+end
+
+-- A listed scroll keeps its own rules: a carried scroll of another stat does not stand in for it.
+do
+    local t = Fixture({ instance = "raid", bags = { 1711 }, auras = { player = { { 12174, 1700, 1800 } } },
+        settings = { personalBuffs = false, consumableEntries = { { category = "scroll", itemID = 10309, auras = { 12174 } } } } })
+    t.Login()
+    Check("listed Agility scroll up, a Stamina scroll carried: no scroll reminder", t.Shown(), "")
 end
 
 -- A listed item is preferred; with none of it carried, a carried built-in one stands in.
@@ -1030,6 +1070,63 @@ do
     Check("trueshot missing", t.Shown(), "spell:19506")
 end
 
+-- Aspect: any aspect the hunter cast counts, one from another hunter does not, once one is known.
+do
+    local t = Fixture({ units = { player = "HUNTER" } })
+    t.Login()
+    Check("no aspect known", t.Shown(), "")
+    t.state.known[13163] = true
+    t.Fire("SPELLS_CHANGED")
+    t.Advance(0.5)
+    Check("monkey known, none up", t.Shown(), "spell:13163")
+    t.state.known[13165] = true
+    t.Fire("SPELLS_CHANGED")
+    t.Advance(0.5)
+    Check("the best known aspect is the icon", t.Shown(), "spell:13165")
+    t.state.auras.player = { { 5118 } }
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("own untimed cheetah counts", t.Shown(), "")
+    Check("an untimed aspect arms nothing", t.Pending(), 0)
+    t.state.auras.player = { { 13159, nil, nil, "party1" } }
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("another hunter's pack does not count", t.Shown(), "spell:13165")
+    t.state.auras.player = { { 13159, nil, nil, "party1" }, { 13165 } }
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("own hawk beside their pack counts", t.Shown(), "")
+    t.state.auras.player = {}
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    t.state.combat = true
+    t.state.auras.player = { { 13165 } }
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("combat: held", t.Shown(), "spell:13165")
+    t.state.combat = false
+    t.state.secret = true
+    t.Fire("PLAYER_REGEN_ENABLED")
+    t.Advance(0.5)
+    Check("secret auras: held", t.Shown(), "spell:13165")
+    t.state.secret = false
+    t.Fire("PLAYER_REGEN_ENABLED")
+    t.Advance(0.5)
+    Check("after combat, own hawk counts", t.Shown(), "")
+    t.state.auras.player = { { 13161, nil, nil, SECRET } }
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("a secret caster is not read and does not nag", t.Shown(), "")
+    t.Set("personalBuffPicks", { aspect = false })
+    t.state.auras.player = {}
+    t.Fire("UNIT_AURA", "player")
+    t.Advance(0.5)
+    Check("aspect picked off", t.Shown(), "")
+    local m = Fixture({ units = { player = "MAGE" }, known = { [13165] = true } })
+    m.Login()
+    Check("another class never gets it", m.Shown(), "")
+end
+
 -- The card lists every class's personal buffs, the player's first and the rest in grey.
 do
     local t = Fixture({ page = true, units = { player = "SHAMAN" } })
@@ -1039,7 +1136,7 @@ do
         if row.key == "personalBuffPicks" then fields[#fields + 1] = row.field end
     end
     Check("shaman picks come first, then every other class", table.concat(fields, " "),
-        "imbue shield demonArmor mageArmor poisons battleShout innerFire shadowform trueshot huntersMark thorns")
+        "imbue shield demonArmor mageArmor poisons battleShout innerFire shadowform aspect trueshot huntersMark thorns")
     local byField = {}
     for _, row in ipairs(card.rows) do
         if row.key == "personalBuffPicks" then byField[row.field] = row end

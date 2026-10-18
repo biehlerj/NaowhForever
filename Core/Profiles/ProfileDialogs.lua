@@ -4,7 +4,7 @@ local UI = ns.UI
 local Profiles = ns.Profiles
 
 local EXPORT_W, EXPORT_H, BOX_H = 560, 360, 180
-local IMPORT_W, IMPORT_H, PASTE_H = 600, 520, 110
+local IMPORT_W, IMPORT_H, PASTE_H = 600, 544, 110
 local PAD, ROW_H, BUTTON_W, BUTTON_H = 14, 24, 120, 26
 local BOX_RIGHT = 34
 local TITLE_SIZE, TEXT_SIZE, SMALL_SIZE = 14, 12, 11
@@ -15,18 +15,23 @@ local NAME_ROW_GAP, NAME_W, NAME_H, NAME_MAX, NAME_GAP = 10, 220, 22, 40, 12
 local BUTTON_GAP = 4
 local UNKNOWN = "?"
 local HANDOFFS = {
-    { prefix = "!NFM1!", button = "Add Macros", module = "Macros", needs = "ImportMacroString",
+    { prefix = "!NFM1!", button = "Add Macros", module = "Macros", addon = "NaowhForever_Macros", needs = "ImportMacroString",
       what = ns.L("These are Library macros. They are added as character macros on this character."),
       go = function(text) ns.ImportMacroString(text) end },
-    { prefix = "!NFB1!", button = "Add Build", module = "Training Planner", needs = "Training",
+    { prefix = "!NFB1!", button = "Add Build", module = "Training Planner", addon = "NaowhForever_Training", needs = "Training",
       what = ns.L("This is a talent build. It is added to your builds in the Training Planner."),
       go = function(text) ns.Training.ImportBuild(text, function() end) end },
-    { prefix = "!NBIS1!", button = "Add BiS List", module = "BiS List", needs = "ImportBisList",
+    { prefix = "!NBIS1!", button = "Add BiS List", module = "BiS List", addon = "NaowhForever_BiS", needs = "ImportBisList",
       what = ns.L("This is a BiS list. It is added next to your own lists."),
       go = function(text) ns.ImportBisList(text) end },
+    { prefix = "!NFA1!", button = "Add Bar Set", module = "Action Bars", needs = "ImportActionBarString",
+      what = ns.L("This is an action bar layout. It is saved as a new bar set for you to review."),
+      go = function(text) ns.ImportActionBarString(text) end },
 }
 local ACTING_LINE = ns.L("It also turns on settings that act for you: %s; they stay off unless you tick Also Import.")
 local ACTING_HELP = ns.L("Turns those settings on in the new profile")
+local TEXT_KEEP_POSITIONS = ns.L("Keep My Positions")
+local KEEP_POSITIONS_HELP = ns.L("Your frames stay where you put them")
 local TEXT_EXPORT_TITLE, TEXT_IMPORT_TITLE = ns.L("Export Profile"), ns.L("Import")
 local TEXT_PROFILE = ns.L("Profile: %s. %s.")
 local TEXT_EXPORTED = ns.L("%d characters. Click the text, then Ctrl+A and Ctrl+C.")
@@ -130,7 +135,7 @@ end
 local function ShowHandoff(handoff)
     import.payload = nil
     import.nameRow:Hide()
-    if handoff.needs and not ns[handoff.needs] then
+    if not (ns[handoff.needs] and ns.ModuleOn(handoff.addon)) then
         import.preview:SetText(TEXT_TURN_ON:format(ns.L(handoff.module)))
         import.go:Hide()
         return
@@ -182,6 +187,7 @@ local function ShowPayload(payload)
     local y = math.min(-(PASTE_Y + PASTE_H + PREVIEW_MIN_ROOM),
         -(PASTE_Y + PASTE_H + PREVIEW_TOP_GAP + import.preview:GetStringHeight() + PREVIEW_GAP))
     local list = ns.ProfileStringParts(payload)
+    list[#list + 1] = { key = "keepPositions", label = TEXT_KEEP_POSITIONS, help = KEEP_POSITIONS_HELP }
     if #acting > 0 then
         list[#list + 1] = { key = "acting", label = TEXT_ALSO_IMPORT, help = ACTING_HELP, off = true }
     end

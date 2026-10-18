@@ -7,7 +7,7 @@ minimap and Top Bar button). Its on/off switches and their defaults come from
 
 - **Buffs & Consumables:** a row of icons for missing food, flask and elixir buffs from the
   consumables you watch, class buffs missing in your group, and your own class buff (armor, Inner
-  Fire, Battle Shout, poisons, a weapon imbue) when it is missing. Click one to use the item it
+  Fire, Battle Shout, poisons, a weapon imbue, a hunter's aspect) when it is missing. Click one to use the item it
   shows, or hover it to pick another carried item.
   Worn Gear Reminder (off by default) adds an icon while you wear gear with a drawback where it
   matters (`D.WORN`): Cloak of Hermitic Bliss in Wailing Caverns. Its tooltip is the item's own.
@@ -23,7 +23,7 @@ minimap and Top Bar button). Its on/off switches and their defaults come from
   sized to what it says and stacked in the Alerts group (`ns.AlertStack`), with the camp's time
   left inline after a dot while it still runs.
 - **Low Health:** the best healing item in your bags, with a LOW HEALTH warning, while your health
-  is under the threshold.
+  is under the threshold. With no healing item it stays hidden, unless Show When Out is on.
 
 ## Layout
 
@@ -44,7 +44,7 @@ NaowhForever_Combat/AuraBuffs/
   LowHealth.lua                the item to offer and the curve that shows it (A.LowHealth)
   View/
     Style.lua                  its look (A.Style), on top of Shared/Style.lua
-    Glow.lua                   a reminder's glow, Pixel or Standard, from its glow settings (A.Glow)
+    Glow.lua                   a reminder's glow, with optional proc style, from its glow settings (A.Glow)
     BuffCell.lua               a buff reminder icon (A.BuffCell)
     CampIcon.lua               the campfire art and the Round look (A.CampIcon)
     CampBar.lua                the Simple bar (A.CampBar)
@@ -59,6 +59,7 @@ NaowhForever_Combat/AuraBuffs/
     LowHealthCard.lua          the Low Health card
     BuffMenu.lua               the carried items a buff reminder offers, as secure buttons
     BuffReminders.lua          the buff reminder row on screen
+    ClassBuffs.lua             secure self-buff buttons for missing buffs, and managed active icons
     BuffsCard.lua              the Buffs & Consumables card
     WindowPages.lua            the window's page: consumables, with list import and export, and
                                items dragged onto a section
@@ -142,7 +143,7 @@ NaowhForever_Combat/AuraBuffs/
   width changed.
 - With Only If I Carry One off, food, flasks and elixirs with no entries still get a reminder: any Well Fed, flask or elixir of the
   classic lists in `D.DEFAULT_GROUPS` (no battle/guardian split on Forever, so one elixir reminder, skipped when
-  guardian entries exist). Scrolls stay opt-in. Food's icon is the carried item's, else the last buff
+  guardian entries exist). Food's icon is the carried item's, else the last buff
   food eaten (`lastFoodIcon` in the account settings, taken on `UNIT_SPELLCAST_SUCCEEDED` from the bag item
   with that use spell, else the spell's own texture), else Well Fed's. Weapon Enhancement Reminder (off by default) asks for a stone or
   oil (`D.WEAPON_ITEMS`) on each equipped weapon, an off hand only when it is a weapon, and defers to a class's
@@ -161,6 +162,13 @@ NaowhForever_Combat/AuraBuffs/
   `BAG_UPDATE_DELAYED` or `PLAYER_ENTERING_WORLD`, not on every refresh. This replaced "an empty profile never
   invents reminders from bag items", so the row is on whenever the module is. Weapon Enhancement Reminder
   already worked this way on `D.WEAPON_ITEMS`.
+- A scroll you have not listed reminds only while you carry one, with Only If I Carry One on or off (`carried` on their
+  `D.DEFAULT_GROUPS` entry): Robin expected a carried scroll to remind like food, but a reminder for scrolls you
+  do not have would nag everyone. Each stat is its own buff, so `ScrollGroup` offers the first carried
+  scroll whose stat is missing, not any scroll. A scroll does not stack with the class buff of its
+  stat (`raid` on `D.SCROLLS`: Arcane Intellect, Power Word: Fortitude, Divine Spirit), so
+  `D.SCROLL_AURAS` counts that buff as the scroll's. Listing a scroll keeps the old rules for that kind: the
+  listed entries alone decide, and the built-in scroll group is not used.
 - Icon (Default or Last Used): Last Used shows the icon of the flask, elixir, scroll or weapon item
   used last (`lastIcons` in the account settings, food's is `lastFoodIcon`), taken from the item whose
   use spell `UNIT_SPELLCAST_SUCCEEDED` reports; a spell no listed or default item uses is ignored, and
@@ -185,6 +193,12 @@ NaowhForever_Combat/AuraBuffs/
   `ZONE_CHANGED_NEW_AREA` and `PLAYER_ENTERING_WORLD`, registered only while the switch is on.
 - Hunter's Mark is asked for only with a hostile elite, rare elite or boss targeted, read from the
   target's debuffs; like every reminder it holds what it showed once combat starts.
+- Aspect: any aspect counts, so Cheetah or Pack while travelling does not remind. Another hunter's
+  Pack or Wild lands on you too, so the family is `own`: only an aura whose `sourceUnit` is the
+  player counts. The IDs are every rank Forever has, from the Training data (game build
+  1.60.1.70178), names checked on Wowhead's Forever spells: Forever adds Aspect of the Beast ranks
+  2 to 4 (1299445 to 1299447), and 25296 is Hawk rank 7, from a book. The best Hawk comes first,
+  so the icon is Monkey below level 10. Mounted or not makes no difference, as for every reminder.
 - The buff menu holds secure buttons, so it can only be hidden outside combat. It uses
   `IsMouseOver` on the frame: the old `MouseIsOver` global is gone from the game.
 - The buff menu's icons are the row's Icon Size, centred under the icon you hover and spreading both
@@ -268,3 +282,49 @@ NaowhForever_Combat/AuraBuffs/
 - `lua Tools/regression/test-icon-look.lua`: Low Health's text.
 - `lua Tools/regression/test-robin-final.lua`: consumable entries and the Round campfire.
 - `lua Tools/regression/test-combat-perf.lua`: the buff reminders' cost in a raid.
+
+## Class Buff Tracker
+
+- Off by default, under AuraBuffs / Class Buff Tracker, with its own HUD Editor mover.
+  It shows known personal and raid buff families of your class, following the existing
+  personal and raid buff picks independently of the reminder switches.
+- Secure spell buttons target `player`; their configured spell and layout change only
+  outside combat. Enabling, disabling or changing picks in combat waits for
+  `PLAYER_REGEN_ENABLED`. Alternative-buff families cast their first known spell;
+  the full native spell tooltip describes that cast.
+- Blizzard's `CustomAuraContainerTemplate` overlays active icons during combat using
+  helpful spell-ID filters, and an own-caster filter for aspects. No code reads the
+  managed icon, its visibility or hidden aura data. Weapon enchants and target debuffs
+  are excluded. The existing consumable and group reminders are unchanged.
+- Missing-buff glow is off by default and updates only when aura data is readable.
+  It shares one bounded scan across all icons, reusing scratch tables. A secret ID,
+  unknown required caster or incomplete scan suppresses the warning. Combat entry
+  clears glows immediately, before lockdown may become true; combat end refreshes them.
+- Glow uses the shared Pixel/Standard wrapper plus an optional Gold style using the
+  embedded library's proc outline, without an opening flash. Other callers keep their
+  existing choices. Gold is the tracker's default style, with glow itself still off.
+- `HOME_Y` puts the tracker below the default reminder position. `ACTIVE_LEVEL` puts
+  the managed icon above its grey placeholder. The shared icon crop, one-pixel inset
+  and outlined short labels match the suite's bars. Labels fit the icon spacing.
+- No frames or events are created before first enable. Disabling unregisters events,
+  disables managed containers and stops glows. Construction failures hide the tracker,
+  print an unavailable message and retain the original error through the error handler.
+- Out of combat, a buff you have is left off the row and the rest close up, so the row is
+  only what is missing; one that drops comes back. The buttons are secure, so the row can
+  only be laid out out of combat: in combat it holds as it was, Blizzard's container still
+  showing the active icons on it, and combat end lays it out again. Aura data that cannot
+  be read keeps every button. Unlock Mode shows every button so the row can be placed.
+- An aura change reads the auras once; only one that changes which buffs are active lays
+  the row out again (a second read, by the layout).
+- Opening or closing settings updates only the mover overlay and missing-buff glow,
+  without hiding unchanged buttons. Tooltip ownership is cleared when its button hides.
+- User confirmed self-casting, labels, tooltips and settings/glow behavior in the Forever
+  client. Restricted-instance coverage and before/after in-game screenshots are missing.
+- Offline checks: `lua Tools/regression/test-class-buffs.lua` covers lifecycle, native
+  tooltip wiring, secure self-cast attributes, one shared scan, buff removal, unknown
+  data, combat deferral, feature disable and mover open/close.
+
+- Gold Glow's Thickness control widens the outline with up to six copies of its native
+  artwork, each half a UI unit farther out. The icon keeps its size. The shared glow
+  wrapper owns and stops every keyed layer; changing thickness replaces the old layers.
+  Pixel Glow retains its direct stroke-width control, and Standard Glow is unchanged.

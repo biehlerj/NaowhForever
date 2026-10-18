@@ -13,8 +13,8 @@ local function Check(ok, label) assert(ok, label); checks = checks + 1 end
 
 local ns = { Journeys = {} }
 local env = setmetatable({ _G = { NaowhForever = ns } }, { __index = _G })
-for _, path in ipairs({ "NaowhForever_Journeys/Constants.lua", "NaowhForever_Journeys/Data/Network.lua",
-        "NaowhForever_Journeys/Planner.lua" }) do
+for _, path in ipairs({ "NaowhForever_Utilities/Journeys/Constants.lua", "NaowhForever_Utilities/Journeys/Data/Network.lua",
+        "NaowhForever_Utilities/Journeys/Planner.lua" }) do
     local chunk = assert(loadstring(Read(path), path))
     setfenv(chunk, env)
     chunk()
@@ -56,6 +56,18 @@ Check(flown and flown.mode == "fly" and flown.name == "Darkshire, Duskwood", "Me
 local net = ns.JourneyNetwork.flights
 Check(flown.stops and #flown.stops == 4 and flown.stops[1] == net[6][3] and flown.stops[3] == net[2][3],
     "which knows the flight points it stops at, Ironforge then Stormwind")
+
+-- The flight points, docks and links are built once per faction and flight point version: learning a
+-- flight point bumps the version, and the next plan flies with it.
+local MENETHIL = { c = 0, x = -3793.4, y = -782.4 }
+local DARKSHIRE = { c = 0, x = -10560, y = -1170, name = "Darkshire" }
+local before = Plan({ known = {}, knownVersion = 1, from = MENETHIL, to = DARKSHIRE })
+Check(before and not Modes(before):find("fly", 1, true), "version 1, no flight points: no flight")
+local learnt = { known = { [2] = true, [6] = true, [7] = true, [12] = true }, knownVersion = 2, from = MENETHIL, to = DARKSHIRE }
+local after = Plan(learnt)
+Check(after and after.legs[1].mode == "fly", "version 2, flight points learned: it flies")
+local kept = Plan(learnt)
+Check(kept and Modes(kept) == Modes(after) and kept.seconds == after.seconds, "the kept network plans the same")
 
 local short = Plan({ to = { c = 0, x = -4900, y = -1100, name = "Bank" } })
 Check(short and Modes(short) == "walk", "a short trip is one walk: " .. (short and Modes(short) or "none"))
@@ -121,7 +133,7 @@ local ship = ns.JourneyNetwork.ships[3]
 Check(math.abs(P.Sail(nil, ship, 1, 2) + P.Sail(nil, ship, 2, 1) + ship[3][6] + ship[4][6] - P.Period(nil, ship)) < 0.01,
     "there and back again is one period")
 
-local planner = Read("NaowhForever_Journeys/Planner.lua")
+local planner = Read("NaowhForever_Utilities/Journeys/Planner.lua")
 Check(not planner:find("ship.docks", 1, true), "the shared network table is never written")
 
 print(("journeys planner: %d checks passed"):format(checks))

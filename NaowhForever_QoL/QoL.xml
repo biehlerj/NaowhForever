@@ -19,6 +19,7 @@
     <Script file="Questing\Invites.lua"/>
     <Script file="Questing\GroupButtons.lua"/>
     <Script file="Questing\FreeForAll.lua"/>
+    <Script file="Questing\LayerSwap.lua"/>
     <Script file="Questing\FinderRoles.lua"/>
     <Script file="Loot\LootConfirm.lua"/>
     <Script file="Cursor\CursorClip.lua"/>
@@ -38,6 +39,7 @@
     <Script file="Combat\GcdTracker.lua"/>
     <Script file="Combat\FocusCastBar.lua"/>
     <Script file="Combat\DamageMeterLayout.lua"/>
+    <Script file="Combat\DamageMeterPreview.lua"/>
     <Script file="Combat\DamageMeterSkin.lua"/>
     <Script file="System\Performance.lua"/>
     <Script file="Loot\LootFeed.lua"/>
@@ -66,15 +68,21 @@
     <Script file="Interface\ZoneLevelsData.lua"/>
     <Script file="Interface\FishingLevelsData.lua"/>
     <Script file="Interface\ZoneLevels.lua"/>
+    <Include file="Interface\ZoneInfo\ZoneInfo.xml"/>
     <Script file="Interface\SkyborneData.lua"/>
     <Include file="Interface\SkyborneSpots.xml"/>
     <Script file="Questing\Trainer.lua"/>
     <Script file="Travel\FlightData.lua"/>
     <Script file="Travel\Flight.lua"/>
     <Script file="Travel\FlightPoint.lua"/>
+    <Script file="Travel\TransportData.lua"/>
+    <Script file="Travel\TransportTimes.lua"/>
+    <Script file="Travel\Transport.lua"/>
     <Script file="Interface\Waypoints.lua"/>
     <Script file="Travel\QuizData.lua"/>
     <Script file="Travel\Quiz.lua"/>
+    <Script file="Travel\DailyWordData.lua"/>
+    <Script file="Travel\DailyWord.lua"/>
     <Script file="Travel\AimTrainer.lua"/>
     <Script file="Travel\AimBoard.lua"/>
     <Include file="TopBar\TopBar.xml"/>

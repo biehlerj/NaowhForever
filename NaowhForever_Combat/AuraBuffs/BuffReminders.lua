@@ -59,9 +59,10 @@ local function Buffs(unit)
     return buffs
 end
 
-local function Find(buffs, ids)
+local function Find(buffs, ids, own)
     for _, id in ipairs(ids) do
-        if buffs[id] then return buffs[id] end
+        local aura = buffs[id]
+        if aura and (not own or Secret(aura.sourceUnit) or aura.sourceUnit == "player") then return aura end
     end
 end
 
@@ -237,15 +238,40 @@ local function CarriedBuiltIn(category, group, builtIn)
     return { items = items, auras = auras, wellFed = builtIn.wellFed or group and group.wellFed }, items[1]
 end
 
+local function ScrollGroup(items, buffs)
+    local auras = D.SCROLL_AURAS[items[1]]
+    for _, id in ipairs(items) do
+        if not Find(buffs, D.SCROLL_AURAS[id]) then
+            auras = D.SCROLL_AURAS[id]
+            break
+        end
+    end
+    local same, best, bestNeed = {}, 1, -1
+    for _, id in ipairs(items) do
+        if D.SCROLL_AURAS[id] == auras then
+            same[#same + 1] = id
+            local need = select(REQUIRED_LEVEL, C_Item.GetItemInfo(id)) or 0
+            if need > bestNeed then best, bestNeed = #same, need end
+        end
+    end
+    same[1], same[best] = same[best], same[1]
+    return { items = same, auras = auras }, same[1]
+end
+
 local function Consumables(list, buffs)
     local groups = Groups()
     local onlyCarried = S.Get("onlyIfCarried")
     for _, category in ipairs(CATEGORY_ORDER) do
         local group = groups[category]
         local builtIn = not (category == "battle" and groups.guardian) and D.DEFAULT_GROUPS[category]
-        if not (group or onlyCarried) then group = builtIn end
+        if group and builtIn and builtIn.carried then builtIn = nil end
+        local carriedOnly = onlyCarried or builtIn and builtIn.carried
+        if not (group or carriedOnly) then group = builtIn end
         local item = group and FirstCarried(group.items)
-        if not item and onlyCarried and builtIn then group, item = CarriedBuiltIn(category, group, builtIn) end
+        if not item and carriedOnly and builtIn then
+            group, item = CarriedBuiltIn(category, group, builtIn)
+            if item and category == "scroll" then group, item = ScrollGroup(group.items, buffs) end
+        end
         if group then
             local before = #list
             local icon = group.items[1] and ItemIcon(group.items[1])
@@ -403,7 +429,7 @@ end
 local function Has(family, buffs, warn)
     if family.weapons then return Enchanted(family.weapons, warn) end
     if family.target then return not EliteTarget() or TargetHas(family.spells) end
-    local aura = Find(buffs, family.spells)
+    local aura = Find(buffs, family.spells, family.own)
     local duration = aura and not Secret(aura.duration) and aura.duration or nil
     return aura and Lasts(Left(aura), warn, duration), aura
 end

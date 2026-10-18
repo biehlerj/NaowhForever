@@ -49,8 +49,13 @@ end
 function Backdrop:Paint(alpha, colors)
     local palette = colors or T
     local top, bg = palette.panel, palette.bg
-    self.bottom:SetRGBA((top.r + bg.r) / 2, (top.g + bg.g) / 2, (top.b + bg.b) / 2, alpha)
-    self.top:SetRGBA(top.r, top.g, top.b, alpha)
+    if self.pattern then
+        self.bottom:SetRGBA((top.r + bg.r) / 2, (top.g + bg.g) / 2, (top.b + bg.b) / 2, alpha)
+        self.top:SetRGBA(top.r, top.g, top.b, alpha)
+    else
+        self.bottom:SetRGBA(bg.r, bg.g, bg.b, alpha)
+        self.top:SetRGBA(bg.r, bg.g, bg.b, alpha)
+    end
     self.gradient:SetGradient("VERTICAL", self.bottom, self.top)
     local pattern = self.pattern
     if pattern then
@@ -131,7 +136,7 @@ function Parts.Backdrop(frame, forever)
     return backdrop
 end
 
-function Parts.Panel(title, windowLook)
+function Parts.Panel(title, windowLook, opacity)
     local panel = CreateFrame("Frame", nil, UIParent)
     panel:SetWidth(PANEL_W)
     panel:SetClampedToScreen(true)
@@ -139,7 +144,7 @@ function Parts.Panel(title, windowLook)
     if windowLook then
         panel.backdrop = Parts.Backdrop(panel)
     else
-        ns.Solid(panel, "BACKGROUND", T.bg, PANEL_ALPHA):SetAllPoints()
+        ns.Solid(panel, "BACKGROUND", T.bg, opacity or PANEL_ALPHA):SetAllPoints()
     end
     ns.Border(panel, BORDER_RGB)
     panel.title = ns.Font(panel, St.TEXT_SIZE, nil, T.accent)

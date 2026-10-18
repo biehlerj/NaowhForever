@@ -3,6 +3,7 @@
 -- game's macros. Every tab is drawn and its controls used: My Macros with Simple's form and Advanced's
 -- Build and Simulate, the Smart Macros, the Library that starts empty and fills from the pack and from
 -- the player's own, and a share string that round-trips.
+rawset(_G, "C_AddOns", { DoesAddOnExist = function() return false end, GetAddOnEnableState = function() return 0 end })
 local Load = dofile("Tools/regression/load_files.lua")
 
 local checks = 0
@@ -268,10 +269,11 @@ local env = setmetatable({
     },
     GetMacroBody = function() return nil end,
     GetInventoryItemID = function() return 19949 end,
+    UnitLevel = function() return 60 end,
     NUM_BAG_SLOTS = 0,
     C_Container = { GetContainerNumSlots = function() return 0 end },
     C_Item = { GetItemCount = function(id) return id == 5509 and 1 or 0 end, GetItemIconByID = function() return 133939 end,
-        GetItemNameByID = function(id) return "Item " .. id end, GetItemSpell = NOTHING, GetItemInfo = NOTHING },
+        GetItemNameByID = function(id) return "Item " .. id end, GetItemSpell = NOTHING, GetItemInfo = function() return "Item", nil, nil, nil, 0 end },
     C_Spell = { GetSpellName = function(id) return "Spell " .. id end, GetSpellTexture = function() return 135846 end },
     LibStub = function()
         return {
@@ -290,7 +292,7 @@ env.issecurevariable = function(key) return key ~= "SLASH_DBM1" end
 
 -- The module's files as Macros.xml lists them, all but its settings page (no Shared Settings here).
 local MACRO_FILES = {}
-for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_Macros/.*%.lua$")) do
+for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_Utilities/Macros/.*%.lua$")) do
     if not path:find("SettingsPage%.lua$") then MACRO_FILES[#MACRO_FILES + 1] = path end
 end
 -- Shared as Shared.xml lists it, all but its settings pages and the item data the window never reads.

@@ -5,6 +5,7 @@ local MODULE_KEY = "NaowhForever"
 local MEDIA = "Interface\\AddOns\\NaowhForever\\Core\\Media\\"
 local NAOWH_FONT = MEDIA .. "Fonts\\Naowh.ttf"
 local NAOWH_GRADIENT = MEDIA .. "NaowhGradient.tga"
+local NAOWH_REVERSE_GRADIENT = MEDIA .. "NaowhReverseGradient.tga"
 local PRINT_LOGO_PATH = MEDIA .. "LogoAddon.tga"
 local PRINT_LOGO_DROP = 1
 local BYTE = 255
@@ -16,7 +17,7 @@ local WARNING = { r = 1, g = 0.35, b = 0.35 }
 local BLACK = { r = 0, g = 0, b = 0 }
 local NO_OPTS, BORDER_EDGES = {}, 4
 local LIBRARIES = { "CallbackHandler-1.0", "LibDataBroker-1.1", "LibDBIcon-1.0", "LibSharedMedia-3.0",
-    "LibCustomGlow-1.0", "LibGetFrame-1.0", "LibDeflate", "LibSerialize" }
+    "LibCustomGlow-1.0", "LibDeflate", "LibSerialize" }
 local RELOAD_GLOW_ALPHA = 0.08
 local STEM_INSET = 0.075
 local MAX_FRAME_LEVEL = 9999
@@ -57,12 +58,17 @@ local DAMAGE_METER_ADDON, GAME_METER_CVAR, GAME_METER_SAVED = "NaowhForever_Dama
 local GLIMMER_ADDON, GLIMMER_SAVED = "NaowhForever_QoL", { "glimmerSoftCVars", "glimmerSparkleCVars" }
 local RETIRED_ADDONS = { "NaowhForever_Glimmer", "NaowhForever_GlimmerData", "NaowhForever_TopBar", "NaowhForever_GearSets",
     "NaowhForever_Blessings", "NaowhForever_AuraBuffs", "NaowhForever_ThreatMeter", "NaowhForever_PvP", "NaowhForever_SwingTimer",
-    "NaowhForever_Language" }
+    "NaowhForever_Language", "NaowhForever_ConsumableBar", "NaowhForever_InstanceTracker", "NaowhForever_Journeys",
+    "NaowhForever_Macros", "NaowhForever_GroupInspect", "NaowhForever_ActionBars" }
 local TEXT_RETIRED = "%s is now part of Quality of Life: delete its old folder from your AddOns folder."
 local TEXT_RETIRED_COMBAT = "%s is now part of Naowh Forever: Combat: delete its old folder from your AddOns folder."
+local TEXT_RETIRED_UTILITIES = "%s is now part of Naowh Forever: Utilities: delete its old folder from your AddOns folder."
 local RETIRED_TEXT = { NaowhForever_GearSets = TEXT_RETIRED_COMBAT, NaowhForever_Blessings = TEXT_RETIRED_COMBAT,
     NaowhForever_AuraBuffs = TEXT_RETIRED_COMBAT, NaowhForever_ThreatMeter = TEXT_RETIRED_COMBAT,
     NaowhForever_PvP = TEXT_RETIRED_COMBAT, NaowhForever_SwingTimer = TEXT_RETIRED_COMBAT,
+    NaowhForever_ConsumableBar = TEXT_RETIRED_COMBAT, NaowhForever_InstanceTracker = TEXT_RETIRED_UTILITIES,
+    NaowhForever_Journeys = TEXT_RETIRED_UTILITIES, NaowhForever_Macros = TEXT_RETIRED_UTILITIES,
+    NaowhForever_GroupInspect = TEXT_RETIRED_UTILITIES, NaowhForever_ActionBars = TEXT_RETIRED_UTILITIES,
     NaowhForever_Language = "%s is now part of Naowh Forever: delete its old folder from your AddOns folder." }
 local TEXT_RETIRED_RELOAD = "Old Naowh Forever folders were switched off. Reload now to finish?"
 local ERR_NO_PROFILE = "no such profile"
@@ -132,15 +138,15 @@ function ns.Lower(text)
     return (text:lower():gsub(LATIN_CAPITAL, LatinLower))
 end
 
-ns.CODE_BUILD = "1.1.18"
+ns.CODE_BUILD = "1.1.28"
 
 ns.THEME = {
-    bg     = { r = 0x0e / 255, g = 0x0f / 255, b = 0x11 / 255 },
-    panel  = { r = 0x1a / 255, g = 0x1c / 255, b = 0x1f / 255 },
-    line   = { r = 0x2e / 255, g = 0x31 / 255, b = 0x36 / 255 },
+    bg     = { r = 0x19 / 255, g = 0x1b / 255, b = 0x1d / 255 },
+    panel  = { r = 0x1e / 255, g = 0x20 / 255, b = 0x22 / 255 },
+    line   = { r = 0x37 / 255, g = 0x3b / 255, b = 0x40 / 255 },
     fg     = { r = 0xf0 / 255, g = 0xf1 / 255, b = 0xf3 / 255 },
     muted  = { r = 0x9a / 255, g = 0x9e / 255, b = 0xa6 / 255 },
-    grey   = { r = 0x34 / 255, g = 0x37 / 255, b = 0x3d / 255 },
+    grey   = { r = 0x3d / 255, g = 0x41 / 255, b = 0x46 / 255 },
     accent     = { r = 0x00 / 255, g = 0x91 / 255, b = 0xed / 255 },
     accentSoft = { r = 0x4d / 255, g = 0xb5 / 255, b = 0xf5 / 255 },
 }
@@ -443,7 +449,12 @@ meterCheck:SetScript("OnEvent", function()
     RestoreGlimmerSettings()
 end)
 
+do
 local reloader
+local reloadButtons = {}
+local reloadReason
+local TEXT_RELOAD_REQUIRED = "Reload required"
+local TEXT_RELOAD_PENDING = "%s *"
 
 local function HideReloaderOnLeave(self)
     if not InCombatLockdown() then self:Hide() end
@@ -473,6 +484,7 @@ local function CoverWithReload(btn)
     cover:ClearAllPoints()
     cover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", btn:GetLeft() * scale, btn:GetBottom() * scale)
     cover:SetSize(btn:GetWidth() * scale, btn:GetHeight() * scale)
+    if reloadReason then ns.Tooltip(cover, TEXT_RELOAD_REQUIRED, function() return reloadReason end) end
     cover:Show()
 end
 
@@ -489,14 +501,33 @@ function ns.MakeReloadButton(btn)
     return btn
 end
 
+local function PaintReloadButton(btn)
+    if not reloadReason then return end
+    ns.AccentBorder(btn)
+    ns.SetButtonText(btn, ns.L(TEXT_RELOAD_PENDING, ns.L(btn._reloadText)))
+    ns.Tooltip(btn, TEXT_RELOAD_REQUIRED, function() return reloadReason end)
+end
+
+function ns.MarkReloadRequired(text)
+    reloadReason = ns.L(text)
+    for _, btn in ipairs(reloadButtons) do PaintReloadButton(btn) end
+end
+
 function ns.ReloadButton(parent, text, w, h)
-    return ns.MakeReloadButton(ns.Button(parent, text, w, h))
+    local btn = ns.MakeReloadButton(ns.Button(parent, text, w, h))
+    btn._reloadText = text
+    reloadButtons[#reloadButtons + 1] = btn
+    PaintReloadButton(btn)
+    return btn
+end
+
 end
 
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 if LSM then
     LSM:Register("font", "Naowh", NAOWH_FONT, LSM.LOCALE_BIT_ruRU + LSM.LOCALE_BIT_western)
     LSM:Register("statusbar", "Naowh Gradient", NAOWH_GRADIENT)
+    LSM:Register("statusbar", "Naowh Reverse Gradient", NAOWH_REVERSE_GRADIENT)
 end
 
 ns.BLIZZARD_FONT = "__blizzard"
@@ -661,16 +692,26 @@ function ns.Border(frame, color, alpha)
         t:SetColorTexture(c.r, c.g, c.b, a)
         edges[i] = t
     end
-    edges[1]:SetPoint("TOPLEFT"); edges[1]:SetPoint("TOPRIGHT"); ns.Hairline(edges[1], "h")
-    edges[2]:SetPoint("BOTTOMLEFT"); edges[2]:SetPoint("BOTTOMRIGHT"); ns.Hairline(edges[2], "h")
-    edges[3]:SetPoint("TOPLEFT"); edges[3]:SetPoint("BOTTOMLEFT"); ns.Hairline(edges[3], "v")
-    edges[4]:SetPoint("TOPRIGHT"); edges[4]:SetPoint("BOTTOMRIGHT"); ns.Hairline(edges[4], "v")
-    return {
-        _frame = bf,
-        SetColor = function(_, r, g, b, a2)
-            for i = 1, BORDER_EDGES do edges[i]:SetColorTexture(r, g, b, a2 or 1) end
-        end,
-    }
+    local border = { _frame = bf, pixels = 1 }
+    local function Fit(edge, axis)
+        Register(edge, function(px)
+            local size = border.pixels * px
+            if axis == "h" then edge:SetHeight(size) else edge:SetWidth(size) end
+        end)
+    end
+    edges[1]:SetPoint("TOPLEFT"); edges[1]:SetPoint("TOPRIGHT"); Fit(edges[1], "h")
+    edges[2]:SetPoint("BOTTOMLEFT"); edges[2]:SetPoint("BOTTOMRIGHT"); Fit(edges[2], "h")
+    edges[3]:SetPoint("TOPLEFT"); edges[3]:SetPoint("BOTTOMLEFT"); Fit(edges[3], "v")
+    edges[4]:SetPoint("TOPRIGHT"); edges[4]:SetPoint("BOTTOMRIGHT"); Fit(edges[4], "v")
+    function border.SetColor(_, r, g, b, a2)
+        for i = 1, BORDER_EDGES do edges[i]:SetColorTexture(r, g, b, a2 or 1) end
+    end
+    function border.SetPixels(self, pixels)
+        if self.pixels == pixels then return end
+        self.pixels = pixels
+        FitOwner(bf)
+    end
+    return border
 end
 
 function ns.Solid(parent, layer, color, alpha)
@@ -695,8 +736,9 @@ function ns.Button(parent, text, w, h, onClick, template)
     btn:SetSize(w, h)
     local bg = ns.Solid(btn, "BACKGROUND", T.panel, BUTTON_REST_ALPHA)
     bg:SetAllPoints()
-    local border = ns.Border(btn, BLACK)
-    btn._border, btn._rest = border, BLACK
+    local rest = ns.foreverSkin and BLACK or T.line
+    local border = ns.Border(btn, rest)
+    btn._border, btn._rest = border, rest
     btn._bg = bg
     local lbl = ns.Font(btn, BUTTON_TEXT_SIZE, nil, nil, true)
     lbl:SetPoint("CENTER")
@@ -709,11 +751,13 @@ function ns.Button(parent, text, w, h, onClick, template)
         return btn
     end
     btn:SetScript("OnEnter", function()
-        bg:SetColorTexture(T.panel.r, T.panel.g, T.panel.b, 1)
+        local fill = btn._primary and T.accentSoft or T.panel
+        bg:SetColorTexture(fill.r, fill.g, fill.b, 1)
         border:SetColor(T.accent.r, T.accent.g, T.accent.b, 1)
     end)
     btn:SetScript("OnLeave", function()
-        bg:SetColorTexture(T.panel.r, T.panel.g, T.panel.b, BUTTON_REST_ALPHA)
+        local fill = btn._primary and T.accent or T.panel
+        bg:SetColorTexture(fill.r, fill.g, fill.b, btn._primary and 1 or BUTTON_REST_ALPHA)
         border:SetColor(btn._rest.r, btn._rest.g, btn._rest.b, 1)
     end)
     return btn
@@ -726,6 +770,16 @@ function ns.AccentBorder(frame)
     frame._rest = accent
     frame._border:SetColor(accent.r, accent.g, accent.b, 1)
     return frame
+end
+
+function ns.PrimaryButton(btn)
+    if not btn or btn._forever then return btn end
+    ns.AccentBorder(btn)
+    btn._primary = true
+    local T = ns.THEME
+    btn._bg:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, 1)
+    btn.label:SetTextColor(T.bg.r, T.bg.g, T.bg.b, 1)
+    return btn
 end
 
 function ns.SetButtonText(btn, text)
@@ -997,6 +1051,7 @@ local function ConfirmHead(UI, panel, text)
 end
 
 function ns.ConfirmReload(text)
+    ns.MarkReloadRequired(text)
     local UI = ns.UI
     local dimmer, panel = ns.MakeModal(CONFIRM_PANEL_W, CONFIRM_H, "confirmReload")
     ConfirmHead(UI, panel, text)

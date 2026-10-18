@@ -6,6 +6,7 @@ local issecretvalue = issecretvalue
 local S = ns.QoLSettings
 local T = ns.THEME
 local Parts, St = ns.Shared.Parts, ns.Shared.Style
+local SameMap = ns.Shared.Places.SameMap
 
 local WIDTH, ROOM = 300, 10
 local STACK_ORDER = 6
@@ -25,6 +26,7 @@ local STORE = "flightPoints"
 local LEARN, ASK = "learn", "ask"
 local TEXT_ALERT = "Flight Point Reminder"
 local SAMPLE_PLACE = "Ratchet"
+local RETIRED = { "zzOLD", "Quest Path", "[DNT]", "DEPRECATED" }
 local TAXI_ICON = "Interface\\GossipFrame\\TaxiGossipIcon"
 
 local TEXT = ns.L("Learn the %s flight point")
@@ -76,6 +78,13 @@ local function OwnCity(place, zoneName)
     return place == zoneName or HasWord(zoneName, place) or HasWord(place, zoneName)
 end
 
+local function Retired(name)
+    for _, mark in ipairs(RETIRED) do
+        if name:find(mark, 1, true) then return true end
+    end
+    return false
+end
+
 local function Ours(faction)
     if faction == NEUTRAL then return true end
     local side = UnitFactionGroup(PLAYER)
@@ -89,7 +98,7 @@ local function Mine(create)
 end
 
 local function Kind(node, mine, seen)
-    if not (Ours(node.faction) and node.name) then return nil end
+    if not (Ours(node.faction) and node.name) or Retired(node.name) then return nil end
     if mine and node.nodeID and mine[node.nodeID] == true then return nil end
     if node.isUndiscovered then return LEARN end
     if seen then
@@ -109,7 +118,7 @@ end
 
 local function Seen(mine, zone)
     local maps = mine and mine.seenMaps
-    local continent = Up(zone, CONTINENT)
+    local continent = Up(zone, CONTINENT) or zone
     return maps and continent and (maps[continent] or maps[TAXI_MAPS[continent]])
 end
 
@@ -118,7 +127,8 @@ local function Learn()
     local taxi = mine and GetTaxiMapID()
     if not taxi then return end
     local taxiContinent = Up(taxi, CONTINENT)
-    local continent = Up(C_Map.GetBestMapForUnit(PLAYER), CONTINENT)
+    local here = C_Map.GetBestMapForUnit(PLAYER)
+    local continent = Up(here, CONTINENT) or Up(SameMap(here), ZONE)
     mine.seenMaps = mine.seenMaps or {}
     mine.seenMaps[taxi] = true
     if taxiContinent then mine.seenMaps[taxiContinent] = true end
@@ -231,7 +241,7 @@ end
 
 local function Nearest(zoneWide)
     if inCombat or UnitOnTaxi(PLAYER) then return nil end
-    local zone = Up(C_Map.GetBestMapForUnit(PLAYER), ZONE)
+    local zone = Up(SameMap(C_Map.GetBestMapForUnit(PLAYER)), ZONE)
     if not zone then return nil end
     local here = C_Map.GetBestMapForUnit(PLAYER)
     local player, secret = WorldOf(here, here and C_Map.GetPlayerMapPosition(here, PLAYER))
@@ -371,7 +381,7 @@ end
 
 function ns.FlightPointReminderForPin(map, npc)
     if not On() then return nil end
-    local zone = Up(map, ZONE)
+    local zone = Up(SameMap(map), ZONE)
     if not zone then return nil end
     local world, secret = WorldOf(map, CreateVector2D(npc[1] / PERCENT, npc[2] / PERCENT))
     if secret or not world then return nil end
@@ -379,7 +389,7 @@ function ns.FlightPointReminderForPin(map, npc)
     if blocked or not entries then return nil end
     local nearest, distance
     for _, entry in ipairs(entries) do
-        if Ours(entry.node.faction) and entry.world then
+        if Ours(entry.node.faction) and entry.node.name and not Retired(entry.node.name) and entry.world then
             local yards = Yards(world, entry.world)
             if yards <= TOWN_RANGE and (not distance or yards < distance) then
                 nearest, distance = entry.node, yards

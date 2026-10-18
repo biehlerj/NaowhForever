@@ -11,9 +11,10 @@ local MODULE_KEYS = { instance = true, discovery = true, gear = true, bless = tr
     buffs = true, threat = true, pvp = true }
 local NAMED_KEYS = { Journeys = "JOURNEYS", Professions = "PROFESSIONS", ["Consumable Bar"] = "CONSUMABLEBAR",
     ["Swing Timer"] = "SWINGTIMER" }
-local WINDOW_KEYS = { scrap = { "ToggleScrapList", "Scrap List", "Quality of Life" },
+local WINDOW_KEYS = { scrap = { "ToggleScrapList", "Junk List", "Quality of Life" },
     disenchant = { "ToggleDisenchant", "Disenchant", "Professions" }, quiz = { "ToggleQuiz", "Quiz", "Quality of Life" },
     aim = { "ToggleAimTrainer", "Aim Trainer", "Quality of Life" },
+    word = { "ToggleDailyWord", "Daily Word", "Quality of Life" },
     efficiency = { "ToggleSpellEfficiencyReport", "Mana Efficiency", "Quality of Life" } }
 local TIP_TITLE = { r = 1, g = 0.82, b = 0 }
 local TIP_TEXT = { r = 1, g = 1, b = 1 }
@@ -36,10 +37,11 @@ local HELP_LINES = {
     ns.L("/nf ranks: higher ranks to put on your bars"),
     ns.L("/nf trainer: a waypoint to your nearest class trainer"),
     "/nf profrank: your professions' next ranks",
-    ns.L("/nf scrap: the Scrap List"),
+    ns.L("/nf junk: the Junk List"),
     ns.L("/nf efficiency: Mana Efficiency, every rank of your mana spells"),
     ns.L("/nf shopping: the Professions Shopping List"),
     ns.L("/nf quiz: the WoW quiz"),
+    ns.L("/nf word: the Daily Word"),
     ns.L("/nf gamble: open Gamble"),
     "/nf setup: the onboarding",
     ns.L("/nfquests (or /nfcompleto): the Quest List, in Discovery"),
@@ -118,6 +120,8 @@ SlashCmdList["NAOWHFOREVER"] = function(msg)
         NaowhForever_ToggleHudEditor()
     elseif cmd == "quiz" and ns.ToggleQuiz then
         ns.ToggleQuiz()
+    elseif cmd == "word" and ns.ToggleDailyWord then
+        ns.ToggleDailyWord()
     elseif cmd == "xp" and ns.XPTickerCommand then
         ns.XPTickerCommand(arg)
     elseif cmd == "dungeon" and ns.ToggleJournalWindow then
@@ -150,7 +154,7 @@ SlashCmdList["NAOWHFOREVER"] = function(msg)
         ns.BadgesCommand(arg)
     elseif cmd == "disenchant" and ns.ToggleDisenchant then
         ns.ToggleDisenchant()
-    elseif cmd == "scrap" and ns.ToggleScrapList then
+    elseif (cmd == "junk" or cmd == "scrap") and ns.ToggleScrapList then
         ns.ToggleScrapList()
     elseif cmd == "gamble" and ns.ToggleGamble then
         ns.ToggleGamble()

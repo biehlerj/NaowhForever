@@ -2,9 +2,9 @@
 ## Title: |cff0091edNaowh|r Forever: Quality of Life
 ## Notes: Naowh's quality of life tweaks, trimmed to what Forever has.
 ## Author: Naowh
-## Version: 1.1.18
+## Version: 1.1.28
 ## Dependencies: NaowhForever
-## OptionalDeps: NaowhForever_ConsumableBar
+## OptionalDeps: NaowhForever_Combat
 ## Group: NaowhForever
 ## IconTexture: Interface\AddOns\NaowhForever\Core\Media\LogoAddon.tga
 
