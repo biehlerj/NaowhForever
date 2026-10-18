@@ -7,6 +7,8 @@ local IsSpellKnown = C_SpellBook.IsSpellKnown
 local GetSpellTexture = C_Spell.GetSpellTexture
 local GetSpellName = C_Spell.GetSpellName
 local SetTracking = C_Minimap.SetTracking
+local ShouldAurasBeSecret = C_Secrets.ShouldAurasBeSecret
+local GetPlayerAuraBySpellID = C_UnitAuras.GetPlayerAuraBySpellID
 
 local T = ns.THEME
 local UI = ns.UI
@@ -26,7 +28,7 @@ local HOME_X, HOME_Y = 260, 170
 local FRAME_NAME = "NaowhForeverTrackingReminder"
 local MOVER_LABEL = "Racial and Class Tracking"
 local CARD = TR.PAGE .. ":tracking"
-local EVENTS = { "MINIMAP_UPDATE_TRACKING", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
+local EVENTS = { "MINIMAP_UPDATE_TRACKING", "UNIT_AURA", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
     "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
     "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
 local RESUME = { PLAYER_ENTERING_WORLD = true, ZONE_CHANGED_NEW_AREA = true }
@@ -47,6 +49,11 @@ local events = CreateFrame("Frame")
 local Look = {}
 TR.Look = Look
 
+local function AuraOn(spellID)
+    if ShouldAurasBeSecret() then return false end
+    return GetPlayerAuraBySpellID(spellID) ~= nil
+end
+
 local function Slot(spellID)
     for i = 1, GetNumTrackingTypes() do
         local info, _, active, _, _, id = GetTrackingInfo(i)
@@ -58,12 +65,13 @@ local function Slot(spellID)
         end
         if spell == spellID then return i, on end
     end
+    return nil, AuraOn(spellID)
 end
 
 local function AddKnown(list, picks, token, field, includeActive)
     for i = 1, #list do
         local t = list[i]
-        if t[field] == token and picks[t.key] == true and IsSpellKnown(t.spell) then
+        if t[field] == token and picks[t.key] ~= false and IsSpellKnown(t.spell) then
             local index, on = Slot(t.spell)
             if includeActive or not on then
                 local n = #shown + 1
@@ -119,7 +127,8 @@ local function GetButton(i)
     local button = buttons[i]
     if button then return button end
     button = CreateFrame("Button", nil, row, "SecureActionButtonTemplate")
-    button:RegisterForClicks("AnyUp")
+    button:RegisterForClicks("AnyUp", "AnyDown")
+    button:SetAttribute("useOnKeyDown", false)
     Look.New(button)
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
     button.highlight:SetAllPoints()

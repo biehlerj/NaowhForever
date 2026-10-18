@@ -20,7 +20,8 @@ local function Has(list, spell)
 end
 
 local BEASTS, HUMANOIDS, UNDEAD, HIDDEN = 1494, 19883, 19884, 19885
-local SENSE_UNDEAD, FIND_TREASURE = 5502, 2481
+local SENSE_UNDEAD, SENSE_DEMONS, FIND_TREASURE = 5502, 5500, 2481
+local TRACK_DRUID_HUMANOIDS = 5225
 
 local function Load(opts)
     opts = opts or {}
@@ -91,6 +92,7 @@ local function Load(opts)
             end })
         end
         function f:SetAttribute(k, v) self.attrs[k] = v end
+        function f:RegisterForClicks(...) self.clicks = { ... } end
         function f:Show() self.shown = true end
         function f:Hide() self.shown = false end
         function f:IsShown() return self.shown == true end
@@ -131,6 +133,13 @@ local function Load(opts)
             GetSpellName = function(id) return "Spell " .. id end,
         },
         C_SpellBook = { IsSpellKnown = function(id) return known[id] == true end },
+        C_Secrets = { ShouldAurasBeSecret = function() return opts.secretAuras == true end },
+        C_UnitAuras = {
+            GetPlayerAuraBySpellID = function(id)
+                opts.auraReads = (opts.auraReads or 0) + 1
+                return opts.auras and opts.auras[id] or nil
+            end,
+        },
         C_Minimap = {
             GetNumTrackingTypes = function()
                 if opts.types then return #opts.types end
@@ -154,10 +163,10 @@ local function Load(opts)
     env._G = env
     for _, file in ipairs({
         "Core/Features.lua",
-        "NaowhForever_TrackingReminder/TrackingReminder.lua",
-        "NaowhForever_TrackingReminder/Data/Spells.lua",
-        "NaowhForever_TrackingReminder/UI/Reminder.lua",
-        "NaowhForever_TrackingReminder/UI/SettingsPage.lua",
+        "NaowhForever_Utilities/TrackingReminder/TrackingReminder.lua",
+        "NaowhForever_Utilities/TrackingReminder/Data/Spells.lua",
+        "NaowhForever_Utilities/TrackingReminder/UI/Reminder.lua",
+        "NaowhForever_Utilities/TrackingReminder/UI/SettingsPage.lua",
     }) do
         local chunk = assert(loadstring(Read(file), file))
         setfenv(chunk, env)
@@ -216,8 +225,8 @@ do
     assert(loadstring(Read("Core/Features.lua"), "Features"))()
     check("trackingReminder feature switches exist", ns.FEATURES.trackingReminder ~= nil)
     check("trackingReminder is off by default", ns.FEATURES.trackingReminder.enabled == false)
-    check("trackRacial is off by default", ns.FEATURES.trackingReminder.trackRacial == false)
-    check("trackClass is off by default", ns.FEATURES.trackingReminder.trackClass == false)
+    check("trackRacial is on by default", ns.FEATURES.trackingReminder.trackRacial == true)
+    check("trackClass is on by default", ns.FEATURES.trackingReminder.trackClass == true)
 end
 
 do
@@ -230,15 +239,20 @@ do
     check("Find Treasure ID is 2481", TR.Data.FIND_TREASURE == FIND_TREASURE)
     check("RACIAL contains Dwarf Find Treasure", #TR.Data.RACIAL == 1 and TR.Data.RACIAL[1].spell == FIND_TREASURE
         and TR.Data.RACIAL[1].race == "Dwarf")
-    local hunterSpells, paladinSpells, warlockSpells = 0, 0, 0
+    local hunterSpells, paladinSpells, warlockSpells, druidSpells = 0, 0, 0, 0
     for _, t in ipairs(TR.Data.CLASS) do
         if t.class == "HUNTER" then hunterSpells = hunterSpells + 1 end
         if t.class == "PALADIN" then paladinSpells = paladinSpells + 1 end
         if t.class == "WARLOCK" then warlockSpells = warlockSpells + 1 end
+        if t.class == "DRUID" then
+            druidSpells = druidSpells + 1
+            check("Druid Track Humanoids is 5225", t.spell == TRACK_DRUID_HUMANOIDS)
+        end
     end
     check("Hunter has 8 tracking spells", hunterSpells == 8)
     check("Paladin has Sense Undead", paladinSpells == 1)
     check("Warlock has Sense Demons", warlockSpells == 1)
+    check("Druid has Track Humanoids", druidSpells == 1)
     check("off: no tracking events", not TrackingOn(world))
     check("off: no reminder row", Named(world, "NaowhForeverTrackingReminder") == nil)
     check("off: no secure buttons", #Armed(world) == 0)
@@ -256,7 +270,11 @@ do
     check("a human hunter sees beast tracking", hunterFields.beasts == true)
     for i = 1, #rows do
         if rows[i].field == "beasts" then
-            check("a tracking spell starts off", rows[i].get() == false)
+            check("a tracking spell starts on", rows[i].get() == true)
+            rows[i].set(false)
+            check("turning a pick off stores false", world.S.Get("classPicks").beasts == false)
+            rows[i].set(true)
+            check("turning a pick back on clears the saved value", world.S.Get("classPicks").beasts == nil)
         end
     end
     check("a human hunter does not see Find Treasure", hunterFields.treasure ~= true)
@@ -281,6 +299,13 @@ do
         if rows[i].key == "trackRacial" or rows[i].key == "trackClass" or rows[i].field then mageTracking = true end
     end
     check("a mage has no racial or class rows", not mageTracking)
+    world.who.race, world.who.class = "NightElf", "DRUID"
+    rows = world.card.rows()
+    local druidFields = {}
+    for i = 1, #rows do
+        if rows[i].field then druidFields[rows[i].field] = true end
+    end
+    check("a druid sees Track Humanoids", druidFields.humanoids == true)
 end
 
 do
@@ -288,7 +313,7 @@ do
         known = { [BEASTS] = true, [HUMANOIDS] = true, [UNDEAD] = true, [HIDDEN] = true },
         settings = { enabled = true, trackClass = true, trackRacial = true },
     })
-    check("class tracking on with no picks shows nothing", #Armed(world) == 0)
+    check("class tracking on with no picks shows the known spells", #Armed(world) == 4)
 end
 
 do
@@ -307,15 +332,19 @@ do
     check("the four icons are those tracks", Has(spells, BEASTS) and Has(spells, HUMANOIDS)
         and Has(spells, UNDEAD) and Has(spells, HIDDEN))
     check("on: tracking events are registered", TrackingOn(world))
-    local learned, oldEvent = false, false
+    local learned, oldEvent, auraEvent = false, false, false
     for _, f in ipairs(world.frames) do
         if f.events.LEARNED_SPELL_IN_SKILL_LINE then learned = true end
         if f.events.LEARNED_SPELL_IN_TAB then oldEvent = true end
+        if f.events.UNIT_AURA then auraEvent = true end
     end
     check("learns spells on LEARNED_SPELL_IN_SKILL_LINE", learned and not oldEvent)
+    check("an aura change refreshes the row", auraEvent)
     local beasts = Button(world, BEASTS)
     check("left-click still casts that tracking", beasts.attrs.type1 == "spell"
         and beasts.attrs.spell1 == "Spell " .. BEASTS and beasts.attrs.type2 == nil)
+    check("the secure button takes presses and releases", beasts.clicks[1] == "AnyUp" and beasts.clicks[2] == "AnyDown")
+    check("the secure button waits for the release", beasts.attrs.useOnKeyDown == false)
     check("the icon label is Track plus its name", beasts.label.text == "Track Beasts")
     check("the tooltip title is Not Tracking", beasts._tipTitle == "Not Tracking")
     check("the tooltip is one sentence", beasts._tipBody
@@ -377,6 +406,40 @@ do
     treasure.scripts.PostClick(treasure, "LeftButton")
     check("left-click turns Find Treasure on", track.index == 1 and track.on == true)
     check("left-click does not hide the row", Named(world, "NaowhForeverTrackingReminder").shown == true)
+end
+
+do
+    local shown = Load({
+        race = "Human", class = "WARLOCK",
+        known = { [SENSE_DEMONS] = true },
+        settings = { enabled = true, trackClass = true },
+    })
+    local demons = Button(shown, SENSE_DEMONS)
+    check("a spell with no minimap slot is cast from the button", demons.trackIndex == nil
+        and demons.attrs.type1 == "spell" and demons.attrs.spell1 == "Spell " .. SENSE_DEMONS)
+end
+
+do
+    local opts = {
+        race = "Human", class = "WARLOCK",
+        known = { [SENSE_DEMONS] = true },
+        settings = { enabled = true, trackClass = true },
+        auras = { [SENSE_DEMONS] = true },
+    }
+    check("a slot-less tracking clears once its aura is up", #Armed(Load(opts)) == 0)
+    check("the aura was read", (opts.auraReads or 0) > 0)
+end
+
+do
+    local opts = {
+        race = "Human", class = "WARLOCK",
+        known = { [SENSE_DEMONS] = true },
+        settings = { enabled = true, trackClass = true },
+        secretAuras = true,
+        auras = { [SENSE_DEMONS] = true },
+    }
+    check("secret auras leave a slot-less reminder up", #Armed(Load(opts)) == 1)
+    check("secret auras are not read", opts.auraReads == nil)
 end
 
 print(("test-tracking-reminder: %d checks passed"):format(checks))

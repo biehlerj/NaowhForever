@@ -249,8 +249,8 @@ ns.FEATURES = {
     },
     trackingReminder = {
         enabled = false,
-        trackRacial = false,
-        trackClass = false,
+        trackRacial = true,
+        trackClass = true,
     },
     account = {
         gameMenuButton = true,

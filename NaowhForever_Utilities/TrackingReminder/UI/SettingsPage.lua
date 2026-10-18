@@ -78,13 +78,14 @@ local function PickRow(t, key, needs, why)
         key = key, field = t.key, label = t.label, toggle = true, needs = needs, why = why,
         help = TEXT_PICK,
         get = function()
-            return S.Get(key)[t.key] == true
+            return S.Get(key)[t.key] ~= false
         end,
         set = function(on)
             local picks = {}
             local cur = S.Get(key)
             for k, v in pairs(cur) do picks[k] = v end
-            picks[t.key] = on
+            picks[t.key] = nil
+            if not on then picks[t.key] = false end
             S.Set(key, picks)
         end,
     }
