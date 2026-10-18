@@ -18,7 +18,7 @@ local STATES = {
     { key = "untracked", label = "Not Tracking", tip = "What shows while you know a tracking but have not turned it on." },
 }
 
-local TEXT_OFF = "Tracking Reminder is off"
+local TEXT_OFF = "Racial and Class Tracking is off"
 local TEXT_NONE = "No tracking selected"
 local TEXT_HELP = "Shows an icon for each racial or class tracking you have not turned on."
 local TEXT_RACIAL = "Racial Tracking"
@@ -78,7 +78,7 @@ local function PickRow(t, key, needs, why)
         key = key, field = t.key, label = t.label, toggle = true, needs = needs, why = why,
         help = TEXT_PICK,
         get = function()
-            return S.Get(key)[t.key] ~= false
+            return S.Get(key)[t.key] == true
         end,
         set = function(on)
             local picks = {}
@@ -139,7 +139,7 @@ end
 local page = Settings.Page(TR.PAGE, S)
 
 page:Card({
-    id = "tracking", name = "Tracking Reminder", order = ORDER_TRACKING, switch = "enabled",
+    id = "tracking", name = "Racial and Class Tracking", order = ORDER_TRACKING, switch = "enabled",
     help = TEXT_HELP,
     summary = Summary,
     studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },

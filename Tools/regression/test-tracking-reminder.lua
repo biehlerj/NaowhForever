@@ -43,7 +43,10 @@ local function Load(opts)
     local ns = {
         L = dofile("Tools/regression/locale_stub.lua").L,
         Upper = string.upper, Lower = string.lower,
-        THEME = { accentSoft = {} },
+        THEME = { accentSoft = {}, fg = { r = 1, g = 1, b = 1 } },
+        Tooltip = function(frame, title, body)
+            frame._tipTitle, frame._tipBody = title, body
+        end,
         Border = function() end,
         Font = function()
             local font = {}
@@ -149,12 +152,6 @@ local function Load(opts)
         },
     }, { __index = _G })
     env._G = env
-    local gather
-    if opts.gather then
-        gather = Frame()
-        gather.shown = true
-        env.NaowhForeverGatherTracking = gather
-    end
     for _, file in ipairs({
         "Core/Features.lua",
         "NaowhForever_TrackingReminder/TrackingReminder.lua",
@@ -172,8 +169,7 @@ local function Load(opts)
     for _, f in ipairs(frames) do
         if f.scripts.OnEvent and f.events.PLAYER_LOGIN then f.scripts.OnEvent(f, "PLAYER_LOGIN") end
     end
-    return { ns = ns, S = S, frames = frames, card = card, who = who, pageKey = pageKey, tip = tip,
-        gather = gather }
+    return { ns = ns, S = S, frames = frames, card = card, who = who, pageKey = pageKey, tip = tip }
 end
 
 local function Armed(world)
@@ -230,7 +226,7 @@ do
     check("TrackingReminder module table exists", TR ~= nil)
     check("TrackingReminder.Enabled() is false", TR.Enabled() == false)
     check("TrackingReminder.On() is false", TR.On() == false)
-    check("settings page is Tracking Reminder/Settings", world.pageKey == "Tracking Reminder/Settings")
+    check("settings page is Racial and Class Tracking/Settings", world.pageKey == "Racial and Class Tracking/Settings")
     check("Find Treasure ID is 2481", TR.Data.FIND_TREASURE == FIND_TREASURE)
     check("RACIAL contains Dwarf Find Treasure", #TR.Data.RACIAL == 1 and TR.Data.RACIAL[1].spell == FIND_TREASURE
         and TR.Data.RACIAL[1].race == "Dwarf")
@@ -258,6 +254,11 @@ do
         if rows[i].field then hunterFields[rows[i].field] = true end
     end
     check("a human hunter sees beast tracking", hunterFields.beasts == true)
+    for i = 1, #rows do
+        if rows[i].field == "beasts" then
+            check("a tracking spell starts off", rows[i].get() == false)
+        end
+    end
     check("a human hunter does not see Find Treasure", hunterFields.treasure ~= true)
     check("a human hunter does not see Sense Undead", hunterFields.senseUndead ~= true)
     check("the preview has a state", world.card.studio.states[1].key == "untracked")
@@ -287,6 +288,17 @@ do
         known = { [BEASTS] = true, [HUMANOIDS] = true, [UNDEAD] = true, [HIDDEN] = true },
         settings = { enabled = true, trackClass = true, trackRacial = true },
     })
+    check("class tracking on with no picks shows nothing", #Armed(world) == 0)
+end
+
+do
+    local world = Load({
+        known = { [BEASTS] = true, [HUMANOIDS] = true, [UNDEAD] = true, [HIDDEN] = true },
+        settings = {
+            enabled = true, trackClass = true, trackRacial = true,
+            classPicks = { beasts = true, humanoids = true, undead = true, hidden = true },
+        },
+    })
     local spells = Armed(world)
     local home = Named(world, "NaowhForeverTrackingReminder").point
     check("it homes above the Find Herbs spot", home[1] == "CENTER" and home[3] == "CENTER"
@@ -305,11 +317,9 @@ do
     check("left-click still casts that tracking", beasts.attrs.type1 == "spell"
         and beasts.attrs.spell1 == "Spell " .. BEASTS and beasts.attrs.type2 == nil)
     check("the icon label is Track plus its name", beasts.label.text == "Track Beasts")
-    beasts.scripts.OnEnter(beasts)
-    check("the tooltip title is Not Tracking", world.tip.lines[1] == "Not Tracking")
-    check("the tooltip says which left-click casts", world.tip.lines[2] == "Left-click: Spell " .. BEASTS)
-    check("the tooltip says right-click hides it", world.tip.lines[3]
-        == "Right-click: hide until you change area")
+    check("the tooltip title is Not Tracking", beasts._tipTitle == "Not Tracking")
+    check("the tooltip is one sentence", beasts._tipBody
+        == "Left-click turns it on, and right-click hides it until you change area.")
     local row = Named(world, "NaowhForeverTrackingReminder")
     beasts.scripts.PostClick(beasts, "LeftButton")
     check("left-click leaves the row up", row.shown == true)
@@ -328,7 +338,7 @@ do
     beasts.scripts.PostClick(beasts, "RightButton")
     Fire(world, "PLAYER_ENTERING_WORLD")
     check("entering the world shows the row again", row.shown == true)
-    world.S.Set("classPicks", { beasts = false })
+    world.S.Set("classPicks", { beasts = false, humanoids = true, undead = true, hidden = true })
     spells = Armed(world)
     check("turning a pick off drops that icon", #spells == 3 and not Has(spells, BEASTS)
         and Has(spells, HUMANOIDS) and Has(spells, UNDEAD) and Has(spells, HIDDEN))
@@ -344,7 +354,7 @@ do
         active = { BEASTS },
         settings = {
             enabled = true, trackClass = true, trackRacial = true,
-            classPicks = { hidden = false },
+            classPicks = { humanoids = true, undead = true, hidden = false },
         },
     })
     local spells = Armed(world)
@@ -358,7 +368,7 @@ do
     local world = Load({
         race = "Dwarf", class = "WARRIOR",
         known = { [FIND_TREASURE] = true },
-        settings = { enabled = true, trackRacial = true },
+        settings = { enabled = true, trackRacial = true, racialPicks = { treasure = true } },
         types = { { spell = FIND_TREASURE, active = false, name = "Spell " .. FIND_TREASURE } },
         track = track,
     })
@@ -367,17 +377,6 @@ do
     treasure.scripts.PostClick(treasure, "LeftButton")
     check("left-click turns Find Treasure on", track.index == 1 and track.on == true)
     check("left-click does not hide the row", Named(world, "NaowhForeverTrackingReminder").shown == true)
-end
-
-do
-    local world = Load({
-        known = { [BEASTS] = true },
-        settings = { enabled = true, trackClass = true },
-        gather = true,
-    })
-    local point = Named(world, "NaowhForeverTrackingReminder").point
-    check("a shown gather icon leaves the row on its own spot", point[1] == "CENTER"
-        and point[3] == "CENTER" and point[4] == 260 and point[5] == 170)
 end
 
 print(("test-tracking-reminder: %d checks passed"):format(checks))

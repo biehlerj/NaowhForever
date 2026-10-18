@@ -179,7 +179,7 @@ local MODULES = {
       tabs = {
           { name = "Settings", reuse = true },
       } },
-    { name = "Tracking Reminder", group = "UTILITIES", navIcon = "search", settings = "TrackingReminderSettings",
+    { name = "Racial and Class Tracking", group = "UTILITIES", navIcon = "search", settings = "TrackingReminderSettings",
       addon = "NaowhForever_TrackingReminder",
       subtitle = "Shows an icon for each racial or class tracking you have not turned on.",
       tabs = {

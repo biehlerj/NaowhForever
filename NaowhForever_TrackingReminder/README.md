@@ -1,6 +1,6 @@
 # Tracking Reminder
 
-A row of icons for the racial and class tracking you know but have not turned on. Click an icon to start that tracking. Its settings page is Tracking Reminder/Settings, and its switches and defaults come from `ns.FEATURES.trackingReminder`.
+A row of icons for the racial and class tracking you know but have not turned on. Click an icon to start that tracking. Players see it as Racial and Class Tracking. Its settings page is Racial and Class Tracking/Settings, and its switches and defaults come from `ns.FEATURES.trackingReminder`.
 
 ## Layout
 
@@ -24,3 +24,6 @@ NaowhForever_TrackingReminder/
 - The buttons are built on first enable, and tracking events are registered only while the feature is on.
 - A tracking pick with no saved value is on, so turning the feature on reminds you of every tracking you know. Turn one off to opt out.
 - The spell IDs are Forever's classic-era IDs: Find Treasure, the hunter tracks, Sense Undead, and Sense Demons.
+- The row homes at 260, 170 so it sits above the Professions gather icon at 260, 120, without reading that addon.
+- A minimap slot is turned on with SetTracking, so Unlock Mode cannot toggle it off. A spell with no slot is cast from the secure button.
+- GetTrackingInfo is read as a table or as the older tuple.

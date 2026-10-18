@@ -24,54 +24,51 @@ local ICON_GAP = 4
 local HIGHLIGHT_ALPHA = 0.15
 local HOME_X, HOME_Y = 260, 170
 local FRAME_NAME = "NaowhForeverTrackingReminder"
-local MOVER_LABEL = "Tracking Reminder"
+local MOVER_LABEL = "Racial and Class Tracking"
 local CARD = TR.PAGE .. ":tracking"
 local EVENTS = { "MINIMAP_UPDATE_TRACKING", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
     "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
     "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
-local TEXT_TRACK = ns.L("Track ")
-local TEXT_NOT_TRACKING = ns.L("Not Tracking")
-local TEXT_LEFT = ns.L("Left-click: %s")
-local TEXT_HIDE = ns.L("Right-click: hide until you change area")
 local RESUME = { PLAYER_ENTERING_WORLD = true, ZONE_CHANGED_NEW_AREA = true }
 local REFRESH = {
     enabled = true, trackRacial = true, trackClass = true, racialPicks = true, classPicks = true,
     inInstances = true, iconSize = true, trackingFont = true, trackingFontSize = true, trackingOutline = true,
 }
+local TEXT_TRACK = ns.L("Track %s")
+local TEXT_NOT_TRACKING = ns.L("Not Tracking")
+local TEXT_TIP = ns.L("Left-click turns it on, and right-click hides it until you change area.")
 
 local row, unlocked, pending, snoozed
 local buttons = {}
 local shown = {}
+local slots = {}
 local events = CreateFrame("Frame")
 
 local Look = {}
 TR.Look = Look
 
 local function Slot(spellID)
-    local want = GetSpellName(spellID)
     for i = 1, GetNumTrackingTypes() do
         local info, _, active, _, _, id = GetTrackingInfo(i)
-        local spell, on, name
+        local spell, on
         if type(info) == "table" then
-            spell, on, name = info.spellID, info.active == true, info.name
+            spell, on = info.spellID, info.active == true
         else
-            spell, on, name = id, active == true, info
+            spell, on = id, active == true
         end
-        if spell == spellID or (want and name == want) then return i, on end
+        if spell == spellID then return i, on end
     end
-end
-
-local function Tracking(spellID)
-    local _, on = Slot(spellID)
-    return on == true
 end
 
 local function AddKnown(list, picks, token, field, includeActive)
     for i = 1, #list do
         local t = list[i]
-        if t[field] == token and picks[t.key] ~= false and IsSpellKnown(t.spell) then
-            if includeActive or not Tracking(t.spell) then
-                shown[#shown + 1] = t
+        if t[field] == token and picks[t.key] == true and IsSpellKnown(t.spell) then
+            local index, on = Slot(t.spell)
+            if includeActive or not on then
+                local n = #shown + 1
+                shown[n] = t
+                slots[n] = index
             end
         end
     end
@@ -79,6 +76,7 @@ end
 
 local function Collect(includeActive)
     wipe(shown)
+    wipe(slots)
     local _, race = UnitRace("player")
     local _, class = UnitClass("player")
     if S.Get("trackRacial") then AddKnown(D.RACIAL, S.Get("racialPicks"), race, "race", includeActive) end
@@ -89,17 +87,6 @@ end
 local function Suppressed()
     if UnitIsDeadOrGhost("player") or UnitOnTaxi("player") then return true end
     return IsInInstance() and not S.Get("inInstances")
-end
-
-local function OnEnter(self)
-    local spell = self.spell
-    if not spell then return end
-    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-    local gold = St.FOREVER_GOLD_RGB
-    GameTooltip:AddLine(TEXT_NOT_TRACKING, gold.r, gold.g, gold.b)
-    GameTooltip:AddLine(TEXT_LEFT:format(GetSpellName(spell) or self.trackName), 1, 1, 1)
-    GameTooltip:AddLine(TEXT_HIDE, 1, 1, 1)
-    GameTooltip:Show()
 end
 
 local function OnPostClick(self, mouseButton)
@@ -116,12 +103,7 @@ function Look.New(frame)
     frame.icon = frame:CreateTexture(nil, "ARTWORK")
     frame.icon:SetAllPoints()
     frame.icon:SetTexCoord(CROP, 1 - CROP, CROP, 1 - CROP)
-    local border = ns.Border(frame, St.BORDER_RGB)
-    local cover = border and border._frame
-    if cover then
-        cover:EnableMouse(false)
-        if cover.SetMouseClickEnabled then cover:SetMouseClickEnabled(false) end
-    end
+    ns.Border(frame, St.BORDER_RGB)
     frame.label = ns.Font(frame, LABEL_SIZE, "OUTLINE", T.accentSoft)
     frame.label:SetPoint("TOP", frame, "BOTTOM", 0, -LABEL_GAP)
 end
@@ -130,7 +112,7 @@ function Look.Fill(frame, size, texture, text)
     frame:SetSize(size, size)
     frame.icon:SetTexture(texture)
     Parts.HudFont(frame.label, S.Get("trackingFont"), S.Get("trackingFontSize"), S.Get("trackingOutline"))
-    frame.label:SetText(TEXT_TRACK .. text)
+    frame.label:SetText(TEXT_TRACK:format(text))
 end
 
 local function GetButton(i)
@@ -141,9 +123,8 @@ local function GetButton(i)
     Look.New(button)
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
     button.highlight:SetAllPoints()
-    button.highlight:SetColorTexture(1, 1, 1, HIGHLIGHT_ALPHA)
-    button:SetScript("OnEnter", OnEnter)
-    button:SetScript("OnLeave", GameTooltip_Hide)
+    button.highlight:SetColorTexture(T.fg.r, T.fg.g, T.fg.b, HIGHLIGHT_ALPHA)
+    ns.Tooltip(button, TEXT_NOT_TRACKING, TEXT_TIP)
     button:SetScript("PostClick", OnPostClick)
     buttons[i] = button
     return button
@@ -178,11 +159,10 @@ local function ShowRow(list)
     for i = 1, n do
         local t = list[i]
         local button = GetButton(i)
-        local index = Slot(t.spell)
+        local index = slots[i]
         button.spell = t.spell
-        button.trackName = t.label
-        button.trackIndex = index and SetTracking and index or nil
-        if button.trackIndex then
+        button.trackIndex = index
+        if index then
             button:SetAttribute("type1", nil)
             button:SetAttribute("spell1", nil)
         else
@@ -197,7 +177,6 @@ local function ShowRow(list)
     for i = n + 1, #buttons do
         local button = buttons[i]
         button.spell = nil
-        button.trackName = nil
         button.trackIndex = nil
         button:SetAttribute("type1", nil)
         button:SetAttribute("spell1", nil)
