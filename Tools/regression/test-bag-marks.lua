@@ -3,8 +3,8 @@
 -- bags, EllesmereUI's, and Baganator's. Checks that it is off and hooks nothing by default; on, gear shows its
 -- item level, your BiS its star, what is new in Forever its mark and an upgrade its arrow, in the game's bags and in
 -- EllesmereUI's (where ours stand in for its item level and make room for its BoE word and
--- Pawn's arrow) and in Baganator's (the corner frame it places stays hidden, and our marks cover
--- the icon); a new list paints the stars again; off again, ours hide and EllesmereUI's item
+-- Pawn's arrow) and in Baganator's (the corner frame it places stays shown while the slot has an
+-- item, and hiding that frame clears our marks); a new list paints the stars again; off again, ours hide and EllesmereUI's item
 -- level comes back; and painting a bag makes no garbage.
 local Load = dofile("Tools/regression/load_files.lua")
 local TocFiles = dofile("Tools/regression/toc_files.lua")
@@ -20,14 +20,34 @@ local function check(label, value) assert(value, label); checks = checks + 1 end
 local NOTHING = function() end
 local Frame
 local made = 0
+local function Show(f)
+    local hidden = rawget(f, "shown") == false
+    f.shown = true
+    local scripts = rawget(f, "scripts")
+    if hidden and scripts and scripts.OnShow then scripts.OnShow(f) end
+end
+local function Hide(f)
+    if rawget(f, "shown") == false then return end
+    f.shown = false
+    local scripts = rawget(f, "scripts")
+    if scripts and scripts.OnHide then scripts.OnHide(f) end
+end
 local METHODS = {
     GetParent = function(f) return rawget(f, "parent") end,
     SetText = function(f, text) f.text = text end,
     SetTextColor = function(f, r, g, b) f.cr, f.cg, f.cb = r, g, b end,
     GetText = function(f) return rawget(f, "text") end,
-    Show = function(f) f.shown = true end,
-    Hide = function(f) f.shown = false end,
-    SetShown = function(f, shown) f.shown = shown and true or false end,
+    Show = Show,
+    Hide = Hide,
+    SetShown = function(f, shown) if shown then Show(f) else Hide(f) end end,
+    SetScript = function(f, name, fn)
+        local scripts = rawget(f, "scripts")
+        if not scripts then
+            scripts = {}
+            f.scripts = scripts
+        end
+        scripts[name] = fn
+    end,
     IsShown = function(f) return rawget(f, "shown") ~= false end,
     SetAlpha = function(f, alpha) f.alpha = alpha end,
     GetFrameLevel = function() return 1 end,
@@ -304,9 +324,9 @@ check("the marks cover its button, and the corner frame is a separate one kept h
     and bHelmHold.parent == bHelm)
 local reads = state.powerReads
 state.now = 2
-check("its gear shows the level, the star and Forever's mark, and the corner frame stays hidden",
+check("its gear shows the level, the star and Forever's mark, and the corner frame stays shown",
     widget.onUpdate(bHelmHold, { itemID = 101, itemLink = "link1" }) == false
-    and bHelmHold.shown == false and bHelmSet.shown == true and bHelmSet.level.text == 30
+    and bHelmHold.shown == true and bHelmSet.shown == true and bHelmSet.level.text == 30
     and bHelmSet.rank.text ~= "" and bHelmSet.forever.shown == true and bHelmSet.up.shown == false)
 widget.onUpdate(bPotionHold, { itemID = 500, itemLink = "link3" })
 check("a potion has no level and no arrow", bPotionSet.level.text == "" and bPotionSet.up.shown == false
@@ -315,7 +335,13 @@ widget.onUpdate(bEmptyHold, {})
 check("an empty slot hides its marks", SetOn(bEmpty).shown == false)
 widget.onUpdate(bChestHold, { itemID = 102, itemLink = "link2" })
 check("the upgrade arrow on gear better than what you wear", SetOn(bChest).up.shown == true
-    and SetOn(bChest).level.text == 25)
+    and SetOn(bChest).level.text == 25 and bChestHold.shown == true)
+bChestHold:Hide()
+check("Baganator hiding the corner frame, without a paint, clears the level and the arrow",
+    SetOn(bChest).shown == false)
+widget.onUpdate(bChestHold, { itemID = 102, itemLink = "link2" })
+check("a later paint shows the level and the arrow again", SetOn(bChest).shown == true
+    and SetOn(bChest).up.shown == true and SetOn(bChest).level.text == 25 and bChestHold.shown == true)
 check("your gear's worth read once for that burst, not once a slot", state.powerReads == reads + 1)
 local bOther = Frame()
 local bOtherHold = widget.onInit(bOther)
