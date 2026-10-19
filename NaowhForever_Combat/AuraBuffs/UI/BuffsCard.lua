@@ -19,7 +19,6 @@ local PREVIEW = A.BuffPreview
 local RAID_SAMPLE = #PREVIEW
 local WHERE = { { always = "Everywhere", instance = "Dungeons & Raids", raid = "Raids Only" },
     { "always", "instance", "raid" } }
-local POLE_WHERE = { { always = "Everywhere", instance = "Dungeons & Raids" }, { "always", "instance" } }
 local STATES = {
     { key = "raid", label = "In a Raid", tip = "In a raid, where every Show In choice reminds you." },
     { key = "world", label = "Open World", tip = "Out in the world, where only Everywhere reminds you." },
@@ -31,11 +30,10 @@ local OFF = ns.L("Turn on AuraBuffs")
 local NEEDS_RAID = ns.L("Needs Raid Buff Reminders")
 local NEEDS_PERSONAL = ns.L("Needs Personal Buff Reminders")
 local NEEDS_WEAPON = ns.L("Needs Weapon Enhancement Reminder")
-local NEEDS_FISHING = ns.L("Needs Fishing Pole Reminder")
+local NEEDS_RANGE = ns.L("Needs Show Buff Range")
 local TEXT_WEAPON = "Weapon Enhancement"
 local TEXT_CARRIED = "Off: a reminder even with none in your bags, so you know to buy some."
 local TEXT_NOTHING = ns.L("Nothing to remind you of here.")
-local TEXT_SAMPLE = ns.L("Sample icons: add the consumables to watch in the AuraBuffs window.")
 local TEXT_BLESSINGS = ns.L("Off by default: the Blessings module covers them.")
 
 local PERSONAL, ALL_PERSONAL = {}, {}
@@ -52,7 +50,10 @@ local Enabled = A.Enabled
 local RaidBuffsOn = A.Needs("raidBuffs")
 local PersonalBuffsOn = A.Needs("personalBuffs")
 local WeaponOn = A.Needs("weaponEnhancements")
-local FishingOn = A.Needs("fishingPoleReminder")
+
+local function RangeOn()
+    return RaidBuffsOn() and S.Get("raidBuffRange") and true or false
+end
 
 local function OpenList()
     ns.OpenAuraBuffsWindow("consumables")
@@ -123,21 +124,16 @@ local function PaintPreview(shot, state)
     raidCell:SetShown(raid and true or false)
     Cell.Fit(shot.row, n, size)
     Fit(shot)
-    local note = ""
-    if n == 0 then
-        note = TEXT_NOTHING
-    elseif consumables and #(S.Get("consumableEntries") or {}) == 0 then
-        note = TEXT_SAMPLE
-    end
-    shot.note:SetText(note)
+    shot.note:SetText(n == 0 and TEXT_NOTHING or "")
 end
 
 local function Summary(store)
     local n = #(store.Get("consumableEntries") or {})
-    local parts = { n == 1 and ns.L("1 consumable") or ns.L("%d consumables"):format(n) }
+    local parts = {}
+    if n > 0 then parts[1] = n == 1 and ns.L("1 consumable") or ns.L("%d consumables"):format(n) end
     if store.Get("raidBuffs") then parts[#parts + 1] = ns.L("raid buffs") end
     if store.Get("personalBuffs") and #PERSONAL > 0 then parts[#parts + 1] = ns.L("personal buffs") end
-    return table.concat(parts, ", ")
+    return #parts > 0 and table.concat(parts, ", ") or nil
 end
 
 local function ClassRow(row, family)
@@ -215,6 +211,8 @@ rows[#rows + 1] = { key = "raidBuffsOwn", label = "Only Buffs I Can Cast", toggl
     why = NEEDS_RAID, help = "Off: every buff a class in your group can cast." }
 rows[#rows + 1] = { key = "raidBuffRange", label = "Show Buff Range", toggle = true, needs = RaidBuffsOn,
     why = NEEDS_RAID, help = "Shows how many missing buffs are in casting range and dims icons with none confirmed." }
+rows[#rows + 1] = { key = "raidBuffRangeHide", label = "Hide Out of Range", toggle = true, needs = RangeOn,
+    why = NEEDS_RANGE, help = "Hides a raid buff until someone missing it is in casting range." }
 for _, family in ipairs(D.RAID) do rows[#rows + 1] = PickRow(family) end
 rows[#rows + 1] = { key = "hideBlessingsOnPaladin", label = "Hide Blessings on Paladins", toggle = true,
     needs = RaidBuffsOn, why = NEEDS_RAID, hidden = function() return playerClass ~= "PALADIN" end,
@@ -223,13 +221,6 @@ rows[#rows + 1] = Group("Personal Buffs")
 rows[#rows + 1] = { key = "personalBuffs", label = "Personal Buff Reminders", toggle = true, needs = Enabled,
     why = OFF, help = "Your class buffs when they are missing or about to run out." }
 for _, family in ipairs(ALL_PERSONAL) do rows[#rows + 1] = PersonalRow(family) end
-rows[#rows + 1] = Group("Gear")
-rows[#rows + 1] = { key = "wornReminders", label = "Worn Gear Reminder", toggle = true, needs = Enabled, why = OFF,
-    help = "An icon while you wear Cloak of Hermitic Bliss in Wailing Caverns, so you remember to swap it." }
-rows[#rows + 1] = { key = "fishingPoleReminder", label = "Fishing Pole Reminder", toggle = true, needs = Enabled,
-    why = OFF, help = "An icon while you have a fishing pole equipped, so you remember to swap it." }
-rows[#rows + 1] = { key = "fishingPoleWhere", label = "Fishing Pole Shows In", choice = POLE_WHERE, needs = FishingOn,
-    why = NEEDS_FISHING }
 rows[#rows + 1] = Group("Glow")
 rows[#rows + 1] = { key = "buffGlow", label = "Glow", toggle = true, needs = Enabled, why = OFF,
     help = "A glow around each reminder icon, since each is a buff that is missing or running out." }

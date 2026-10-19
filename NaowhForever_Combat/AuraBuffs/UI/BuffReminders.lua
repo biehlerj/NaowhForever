@@ -16,14 +16,11 @@ local RANGE_INTERVAL = 0.5
 local HOME_Y = 220
 local CARD = A.PAGE .. ":buffs"
 local TEXT_MOVER = "Buff Reminders"
-local TEXT_WORN = ns.L("You are wearing this.")
-local TEXT_HIDE = ns.L("Ctrl-click to hide it until you take it off.")
 local KEYS = {
     consumableEntries = true, enabled = true, consumablesWhere = true, consumablesMinutes = true,
     onlyIfCarried = true, carriedPicks = true, hideResting = true, raidBuffs = true, raidBuffsOwn = true, raidBuffPicks = true, iconSize = true,
-    buffIconMode = true, raidBuffRange = true, hideBlessingsOnPaladin = true,
-    personalBuffs = true, personalBuffPicks = true, weaponEnhancements = true, wornReminders = true,
-    fishingPoleReminder = true, fishingPoleWhere = true,
+    buffIconMode = true, raidBuffRange = true, raidBuffRangeHide = true, hideBlessingsOnPaladin = true,
+    personalBuffs = true, personalBuffPicks = true, weaponEnhancements = true,
     buffsFont = true, buffsFontSize = true, buffsOutline = true, buffsBorderColor = true,
     buffGlow = true, buffGlowType = true, buffGlowColor = true, buffGlowLines = true, buffGlowThickness = true,
     buffGlowSpeed = true,
@@ -45,29 +42,14 @@ local function OnCellHide(cell)
 end
 
 local function OnCellEnter(cell)
-    if not cell.slot then return Menu.Open(cell) end
-    local tip = ns.THEME.accentSoft
-    GameTooltip:SetOwner(cell, "ANCHOR_RIGHT")
-    GameTooltip:SetInventoryItem("player", cell.slot)
-    GameTooltip:AddLine(TEXT_WORN, tip.r, tip.g, tip.b)
-    local muted = ns.THEME.muted
-    GameTooltip:AddLine(TEXT_HIDE, muted.r, muted.g, muted.b)
-    GameTooltip:Show()
+    Menu.Open(cell)
 end
 
-local function OnCellLeave(cell)
-    if not cell.slot then return Menu.Leave() end
-    GameTooltip:Hide()
+local function OnCellLeave()
+    Menu.Leave()
 end
 
 local function OnCellUsed(cell)
-    if cell.slot then
-        if IsControlKeyDown() then
-            R.Dismiss(cell.slot)
-            Queue()
-        end
-        return
-    end
     if cell.itemID then Glow.Press(cell, "buffGlow") end
 end
 
@@ -103,9 +85,12 @@ local function StopRange()
     rangeTicker, rangeList = nil, nil
 end
 
-local function PaintRange(cell, entry)
+local function Hides(entry, inRange)
+    return S.Get("raidBuffRangeHide") and inRange == 0 and entry.rangeSpell ~= nil or false
+end
+
+local function PaintRange(cell, entry, inRange)
     local missing = entry.rangeUnits and #entry.rangeUnits
-    local inRange = missing and R.InRange(entry)
     if missing or cell.rangeTracked then
         Cell.Range(cell, inRange, missing)
         cell.rangeTracked = missing ~= nil and true or nil
@@ -116,8 +101,12 @@ end
 local function OnRangeTick()
     if not R.On() or not S.Get("raidBuffRange") or not frame:IsShown() then return StopRange() end
     if InCombatLockdown() or C_Secrets.ShouldAurasBeSecret() then return end
-    for i, entry in ipairs(rangeList) do
-        if entry.rangeUnits then PaintRange(cells[i], entry) end
+    for _, entry in ipairs(rangeList) do
+        if entry.rangeUnits then
+            local inRange = R.InRange(entry)
+            if Hides(entry, inRange) ~= not entry.cell then return Queue() end
+            if entry.cell then PaintRange(entry.cell, entry, inRange) end
+        end
     end
 end
 
@@ -131,23 +120,28 @@ end
 
 local function Show(list)
     local size = S.Get("iconSize")
-    local moving = false
-    for i, entry in ipairs(list) do
-        local cell = GetCell(i)
-        Cell.Place(cell, frame, i, size, entry.icon, entry.count)
-        cell.rangeIn, cell.rangeMissing = nil, nil
-        cell.items, cell.slot = entry.items, entry.slot
-        ItemBar.SetItem(cell, entry.item)
-        ShowTimer(cell, entry.aura)
-        cell:Show()
-        PaintRange(cell, entry)
+    local moving, shown = false, 0
+    for _, entry in ipairs(list) do
+        local inRange = entry.rangeUnits and R.InRange(entry)
+        if not Hides(entry, inRange) then
+            shown = shown + 1
+            local cell = GetCell(shown)
+            Cell.Place(cell, frame, shown, size, entry.icon, entry.count)
+            cell.rangeIn, cell.rangeMissing = nil, nil
+            cell.items = entry.items
+            ItemBar.SetItem(cell, entry.item)
+            ShowTimer(cell, entry.aura)
+            cell:Show()
+            PaintRange(cell, entry, inRange)
+            entry.cell = cell
+        end
         if RangeMoves(entry) then moving = true end
     end
-    for i = #list + 1, #cells do
+    for i = shown + 1, #cells do
         Glow.Set(cells[i], false)
         cells[i]:Hide()
     end
-    Cell.Fit(frame, #list, size)
+    Cell.Fit(frame, shown, size)
     if moving then
         rangeList = list
         rangeTicker = C_Timer.NewTicker(RANGE_INTERVAL, OnRangeTick)
@@ -218,7 +212,6 @@ local function OnEvent(_, event, unit, arg2, spellID)
     end
     if event == "PLAYER_REGEN_ENABLED" and held then return Apply() end
     if event == "BAG_UPDATE_DELAYED" or event == "PLAYER_ENTERING_WORLD" then R.ForgetBags() end
-    if event == "PLAYER_EQUIPMENT_CHANGED" and not arg2 then R.Undismiss(unit) end
     if event == "ITEM_DATA_LOAD_RESULT" and not R.Requested(unit) then return end
     if event == "UNIT_SPELLCAST_SUCCEEDED" and (Secret(spellID)
         or not (R.NoteImbueCast(spellID) or R.NoteFoodCast(spellID) or R.NoteUseCast(spellID))) then return end
@@ -261,10 +254,6 @@ local function Listen()
     end
     if R.WatchesImbue() or not R.Carried("food") or S.Get("buffIconMode") == "last" then
         events:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
-    end
-    if S.Get("wornReminders") or S.Get("fishingPoleReminder") then
-        events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-        events:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     end
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_REGEN_ENABLED")
