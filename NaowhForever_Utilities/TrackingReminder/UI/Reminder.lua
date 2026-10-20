@@ -28,7 +28,7 @@ local HOME_X, HOME_Y = 260, 170
 local FRAME_NAME = "NaowhForeverTrackingReminder"
 local MOVER_LABEL = "Racial and Class Tracking"
 local CARD = TR.PAGE .. ":tracking"
-local EVENTS = { "MINIMAP_UPDATE_TRACKING", "UNIT_AURA", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
+local EVENTS = { "MINIMAP_UPDATE_TRACKING", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKILL_LINE",
     "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
     "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
 local RESUME = { PLAYER_ENTERING_WORLD = true, ZONE_CHANGED_NEW_AREA = true }
@@ -44,14 +44,15 @@ local row, unlocked, pending, snoozed
 local buttons = {}
 local shown = {}
 local slots = {}
+local auras = {}
 local events = CreateFrame("Frame")
 
 local Look = {}
 TR.Look = Look
 
 local function AuraOn(spellID)
-    if ShouldAurasBeSecret() then return false end
-    return GetPlayerAuraBySpellID(spellID) ~= nil
+    if not ShouldAurasBeSecret() then auras[spellID] = GetPlayerAuraBySpellID(spellID) ~= nil end
+    return auras[spellID] == true
 end
 
 local function Slot(spellID)
@@ -72,8 +73,9 @@ local function AddKnown(list, picks, token, field, includeActive)
     for i = 1, #list do
         local t = list[i]
         if t[field] == token and picks[t.key] ~= false and IsSpellKnown(t.spell) then
+            if t.form then events:RegisterEvent("UPDATE_SHAPESHIFT_FORM") end
             local index, on = Slot(t.spell)
-            if includeActive or not on then
+            if includeActive or (not on and (not t.form or GetShapeshiftFormID() == t.form)) then
                 local n = #shown + 1
                 shown[n] = t
                 slots[n] = index
@@ -226,6 +228,7 @@ local function Apply()
     Place()
     row.mover:SetShown(unlocked == true)
     for i = 1, #EVENTS do events:RegisterEvent(EVENTS[i]) end
+    events:RegisterUnitEvent("UNIT_AURA", "player")
     Update()
 end
 

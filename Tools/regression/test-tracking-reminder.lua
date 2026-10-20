@@ -85,6 +85,7 @@ local function Load(opts)
         local f = { scripts = {}, events = {}, attrs = {} }
         function f:SetScript(k, fn) self.scripts[k] = fn end
         function f:RegisterEvent(e) self.events[e] = true end
+        function f:RegisterUnitEvent(e, ...) self.events[e] = { ... } end
         function f:UnregisterAllEvents() self.events = {} end
         function f:CreateTexture()
             return setmetatable({}, { __index = function(_, key)
@@ -121,6 +122,7 @@ local function Load(opts)
             return t
         end,
         InCombatLockdown = function() return false end,
+        GetShapeshiftFormID = function() return opts.form end,
         UnitIsDeadOrGhost = function() return false end,
         UnitOnTaxi = function() return false end,
         IsInInstance = function() return false end,
@@ -305,7 +307,8 @@ do
     for i = 1, #rows do
         if rows[i].field then druidFields[rows[i].field] = true end
     end
-    check("a druid sees Track Humanoids", druidFields.humanoids == true)
+    check("a druid sees Track Humanoids", druidFields.druidHumanoids == true)
+    check("the druid pick has its own key", druidFields.humanoids ~= true)
 end
 
 do
@@ -336,10 +339,11 @@ do
     for _, f in ipairs(world.frames) do
         if f.events.LEARNED_SPELL_IN_SKILL_LINE then learned = true end
         if f.events.LEARNED_SPELL_IN_TAB then oldEvent = true end
-        if f.events.UNIT_AURA then auraEvent = true end
+        local units = f.events.UNIT_AURA
+        if units then auraEvent = type(units) == "table" and #units == 1 and units[1] == "player" end
     end
     check("learns spells on LEARNED_SPELL_IN_SKILL_LINE", learned and not oldEvent)
-    check("an aura change refreshes the row", auraEvent)
+    check("only the player's aura changes refresh the row", auraEvent)
     local beasts = Button(world, BEASTS)
     check("left-click still casts that tracking", beasts.attrs.type1 == "spell"
         and beasts.attrs.spell1 == "Spell " .. BEASTS and beasts.attrs.type2 == nil)
@@ -440,6 +444,53 @@ do
     }
     check("secret auras leave a slot-less reminder up", #Armed(Load(opts)) == 1)
     check("secret auras are not read", opts.auraReads == nil)
+end
+
+do
+    local opts = {
+        race = "Human", class = "WARLOCK",
+        known = { [SENSE_DEMONS] = true },
+        settings = { enabled = true, trackClass = true },
+        auras = { [SENSE_DEMONS] = true },
+    }
+    local world = Load(opts)
+    opts.secretAuras = true
+    opts.auras = nil
+    Fire(world, "UNIT_AURA")
+    check("secret auras keep the last aura state", #Armed(world) == 0)
+end
+
+do
+    local CAT_FORM = 1
+    local opts = {
+        race = "NightElf", class = "DRUID",
+        known = { [TRACK_DRUID_HUMANOIDS] = true },
+        settings = { enabled = true, trackClass = true },
+    }
+    local world = Load(opts)
+    local row = Named(world, "NaowhForeverTrackingReminder")
+    check("out of Cat Form there is no Track Humanoids icon", #Armed(world) == 0 and row.shown == false)
+    local shifts = false
+    for _, f in ipairs(world.frames) do
+        if f.events.UPDATE_SHAPESHIFT_FORM then shifts = true end
+    end
+    check("a druid who knows Track Humanoids watches shapeshifts", shifts)
+    opts.form = CAT_FORM
+    Fire(world, "UPDATE_SHAPESHIFT_FORM")
+    check("in Cat Form Track Humanoids gets an icon", Button(world, TRACK_DRUID_HUMANOIDS) ~= nil
+        and row.shown == true)
+end
+
+do
+    local world = Load({
+        known = { [BEASTS] = true },
+        settings = { enabled = true, trackClass = true },
+    })
+    local shifts = false
+    for _, f in ipairs(world.frames) do
+        if f.events.UPDATE_SHAPESHIFT_FORM then shifts = true end
+    end
+    check("a hunter does not watch shapeshifts", not shifts)
 end
 
 print(("test-tracking-reminder: %d checks passed"):format(checks))

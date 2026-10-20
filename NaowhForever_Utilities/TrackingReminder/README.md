@@ -23,6 +23,7 @@ NaowhForever_Utilities/TrackingReminder/
 - The buttons are built on first enable, and tracking events are registered only while the feature is on.
 - Racial and class tracking start on, and a pick with no saved value is on. Turning the module on reminds you of every tracking you know, until you turn that spell off.
 - The spell IDs are Forever's classic-era IDs: Find Treasure, the hunter tracks, Druid Track Humanoids, Sense Undead, and Sense Demons.
+- Druid Track Humanoids only works in Cat Form, so its icon shows only in Cat Form, and shapeshift events are watched only once a druid knows it.
 - The row homes at 260, 170 so it sits above the Professions gather icon at 260, 120, without reading that addon.
-- A minimap slot is turned on with SetTracking, so Unlock Mode cannot toggle it off. A spell with no slot is cast from the secure button, and the icon clears once that aura is on the player.
+- A minimap slot is turned on with SetTracking, so Unlock Mode cannot toggle it off. A spell with no slot is cast from the secure button, and the icon clears once that aura is on the player. While auras are secret, the last aura state read is kept.
 - GetTrackingInfo is read as a table or as the older tuple.
