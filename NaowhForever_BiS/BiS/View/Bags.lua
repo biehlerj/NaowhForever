@@ -122,10 +122,9 @@ local function EllesmereSlot(button, data)
 end
 
 local function BaganatorInit(button)
-    local set = Marks(button, button)
     local anchor = CreateFrame("Frame", nil, button)
     held[anchor] = button
-    anchor:SetScript("OnHide", function() set:Hide() end)
+    Marks(button, anchor):SetAllPoints(button)
     anchor:Hide()
     return anchor
 end
