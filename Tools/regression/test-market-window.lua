@@ -205,8 +205,8 @@ local body = win.DOCK_MIN_W - pad * 2
 check("at its narrowest, the window's three tabs fit along its bottom", win.TAB_W * 3 <= body)
 local priceRoom = body - prices.LIST_W - prices.PANE_GAP
 local moneyW = money.GOLD_W + (money.SMALL_W + money.BOX_GAP) * 2
-check("Price Graph's Watch row, Stop Watching included, fits beside its list",
-    moneyW + finder.WATCH_GAP + prices.BUTTON_W * 2 + finder.GAP <= priceRoom)
+check("Price Graph's Watch row, its x included, fits beside its list",
+    moneyW + finder.WATCH_GAP + prices.BUTTON_W + finder.GAP + prices.BUTTON_H <= priceRoom)
 local strip = farm.ROW_IN * 2 + farm.STRIP_ICON
 local map = body - farm.ZONES_W - farm.PANE_GAP
 check("Farm's strip drops its 14 days of prices there", map < farm.STRIP_FULL_W)

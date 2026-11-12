@@ -29,6 +29,7 @@ end
 
 local function Text(parent) return Frame("FontString", parent) end
 
+local asked, uncached = {}, {}
 local prices = { [101] = 500, [102] = 2000, [103] = 90, [104] = 70, [201] = 300, [202] = 400, [203] = 250 }
 local itemNames = { [101] = "Black Lotus", [102] = "Arcanite Bar", [103] = "Blue Lotus Petal", [104] = "Peacebloom",
     [201] = "Writ: Mana Potion", [202] = "Writ: Runecloth Bag", [203] = "Writ: Ogre Suit", [204] = "Writ: Elixir" }
@@ -82,7 +83,7 @@ local ns = {
 }
 ns.Shared = {
     Items = { Name = function(id) return itemNames[id] end, QualityColor = function() return nil end,
-        OnLoaded = function() end },
+        OnLoaded = function(ids, fn) asked[#asked + 1] = { ids = ids, fn = fn } end },
     Parts = {
         SearchBox = function(parent, _, onChange)
             local box = Frame("EditBox", parent)
@@ -140,7 +141,7 @@ ns.Market = {
 local env = setmetatable({
     _G = { NaowhForever = ns },
     CreateFrame = function(kind, _, parent) return Frame(kind, parent) end,
-    C_Item = { GetItemNameByID = function(id) return itemNames[id] end, IsItemDataCachedByID = function() return true end,
+    C_Item = { GetItemNameByID = function(id) return itemNames[id] end, IsItemDataCachedByID = function(id) return not uncached[id] end,
         GetItemIconByID = function() return 1 end, GetItemInfo = function() return nil end },
     C_TradeSkillUI = { GetTradeSkillDisplayName = function(id) return professionNames[id] end },
     GameTooltip = Frame("GameTooltip"),
@@ -222,9 +223,21 @@ stop.click()
 rows = RowsOf(root)
 check("which takes it off the list", Watch.Target(103) == nil and #rows == 1 and rows[1].itemID == 101)
 
+uncached[101] = true
+Buy.Draw()
+check("a listed item whose data the client has not loaded is asked for once",
+    #asked == 1 and #asked[1].ids == 1 and asked[1].ids[1] == 101)
+Buy.Draw()
+check("and not again on the next draw", #asked == 1)
+uncached[101] = nil
+asked[1].fn()
+check("its arrival draws the page again, with its name", RowsOf(root)[1].name.text == "Black Lotus")
+
 rows[1].scripts.OnClick(rows[1])
-Click("Stop Watching")
-check("Stop Watching takes the picked item off", Watch.Target(101) == nil and #RowsOf(root) == 0)
+local watchBox
+for _, b in ipairs(buttons) do if b.label == "Update" and b.shown then watchBox = b.parent end end
+Click("x", watchBox)
+check("the Watch box's x stops watching the picked item", Watch.Target(101) == nil and #RowsOf(root) == 0)
 
 local window = Frame("Frame")
 Prices.Build(window)

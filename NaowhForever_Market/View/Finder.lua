@@ -169,6 +169,17 @@ local function DrawRows(finder)
     list:SetHeight(math.max(1, #found * ROW_H))
 end
 
+local function AskNames(finder)
+    local ids = {}
+    for _, id in ipairs(finder.found) do
+        if not finder.asked[id] and not IsItemDataCachedByID(id) then
+            finder.asked[id] = true
+            ids[#ids + 1] = id
+        end
+    end
+    if ids[1] then Items.OnLoaded(ids, finder.redraw) end
+end
+
 function Finder.Draw(finder)
     local text = finder.search:GetText() or ""
     wipe(finder.names)
@@ -182,6 +193,7 @@ function Finder.Draw(finder)
     end
     if not finder.picked then finder.picked, finder.at = finder.found[1], 1 end
     DrawRows(finder)
+    AskNames(finder)
 end
 
 function Finder.Reset(finder)
@@ -190,7 +202,7 @@ function Finder.Reset(finder)
 end
 
 function Finder.New(parent, width, empty, redraw, stop)
-    local finder = { found = {}, names = {}, rows = {}, empty = empty, redraw = redraw, stop = stop }
+    local finder = { found = {}, names = {}, asked = {}, rows = {}, empty = empty, redraw = redraw, stop = stop }
     local names = finder.names
     finder.byName = function(a, b) return names[a] < names[b] end
     local frame = CreateFrame("Frame", nil, parent)
@@ -252,8 +264,9 @@ function Finder.Watch(parent, buttonW, buttonH, onChange)
     watch.money:SetPoint("TOPLEFT", 0, -WATCH_LABEL_H)
     watch.add = ns.PrimaryButton(ns.Button(watch, TEXT_WATCH, buttonW, buttonH, function() WatchClicked(watch) end))
     watch.add:SetPoint("LEFT", watch.money, "RIGHT", WATCH_GAP, 0)
-    watch.stop = ns.Button(watch, TEXT_STOP, buttonW, buttonH, function() StopWatchClicked(watch) end)
+    watch.stop = ns.Button(watch, TEXT_STOP_GLYPH, buttonH, buttonH, function() StopWatchClicked(watch) end)
     watch.stop:SetPoint("LEFT", watch.add, "RIGHT", GAP, 0)
+    ns.Tooltip(watch.stop, TEXT_STOP)
     return watch
 end
 
