@@ -10,6 +10,13 @@ scales on the BiS List's title bar), and only their changes are kept, for the ac
   in its name: "Fire: (arrow) +9% upgrade", and under it what the item is weighed against.
   Nothing on gear that is not one. A ring or trinket is weighed against the weaker of the two
   you wear, a two-hander against both hands.
+- **On (Upgrade Marks):** the arrow and percent on the item itself, no hover needed: quest rewards
+  (at the quest giver and in the quest log and map), merchants, the loot window, loot rolls and the
+  auction house's browse list. Among two or more reward choices, a gold coin marks the one that
+  sells for most.
+- **On (Healer Mana):** for a healer, Intellect and Spirit are worked out from your own mana instead
+  of typed: Spirit from your regen while casting, Intellect from its mana over the Fight Length you
+  pick and from its spell crit. Mana every 5 sec stays your number and prices both.
 
 Your spec is Automatic: the talent tree you spent the most points in (Forever keeps one spec
 per class, its three trees as the talent tree's groups, read as its own talent frame reads
@@ -21,17 +28,19 @@ uses, each a bar (how much it counts next to the others) and a number to type ov
 and weapon dps under their own title, a changed one marked with its own reset. 0 takes a stat
 off; Add a stat puts one on at 0 for your number. On the right, your BiS list's best upgrades
 by these weights, so a change shows what it does. Import, Export and Reset are on its title bar. Export copies your changes as a line (`NFSW1:spec:stat=value,...`, only
-what differs from the defaults); Import takes one, or a WoWSims EP export (Stat Weights, Copy to
-Current EP, Export), which replaces the spec's weights. An enchant's weapon damage is worth a
+what differs from the defaults); Import takes one, a WoWSims EP export (Stat Weights, Copy to
+Current EP, Export), or a Healer Stat Weights Pawn string (its Export or Pawn button), which replaces
+the spec's weights. An enchant's weapon damage is worth a
 point of dps over the weapon's speed, so it has no weight of its own.
 
-Forever's gear carries hit, crit, haste, dodge and block as ratings, read as their percent at
-60 (10 hit rating is 1%; `PER_PERCENT` in `StatWeights.lua`). Hit and crit are one rating each
+Forever's gear carries hit, crit, haste, expertise, dodge and block as ratings, read as their
+percent (10 hit rating is 1%; `PER_PERCENT` in `StatWeights.lua`). Hit and crit are one rating each
 for weapons and spells alike, so a hit item counts for Hit % and Spell Hit %, and a crit item
 for Crit % and Spell Crit %: a spec weighs the one it uses.
 
-The defaults are estimates for now (dated in the window's footer); simulated weights from WoWSims will
-replace them once its Forever sim is out.
+The damage and tank defaults are MythicSim's simmed Forever weights (dated in the window's footer).
+Healers keep hand-set defaults: there is no simmed healer data yet, so a healer imports the weights
+Healer Stat Weights measures from their own fights, or turns on Healer Mana.
 
 The percent is the item's weighted stats minus what you wear there, over what your stats are
 worth now (your five stats as the game sums them, the rest from your gear; a weapon's damage
@@ -43,14 +52,17 @@ estimate: it orders upgrades, it does not promise a number on a meter.
 ```
 StatWeights/
   StatWeights.xml      what loads, in order (the addon's BiS.xml includes it)
-  Data/Defaults.lua    each spec's default weights, by hand (ns.StatWeightDefaults)
+  Data/Defaults.lua    each spec's default weights, from MythicSim (ns.StatWeightDefaults)
+  Data/IntPerCrit.lua  a healer class's Intellect per 1% spell crit, by level (ns.StatWeightIntPerCrit)
   StatWeights.lua      its settings, the stats and the game's keys for them, specs, your talents' spec,
                        your changes (ns.StatWeights)
   Worth.lua            an item's stats and worth, your power, the gain and best gain (SW.Gain, SW.BestGain)
+  Healer.lua           Healer Mana: a healer's Intellect and Spirit from its own mana (SW.Healer)
   Sharing.lua          a spec's weights as a line, and back, or a simulator's export (SW.Export, SW.Import)
   Tooltip.lua          the tooltip line, installed the first time the module is turned on
+  UI/Marks.lua         Upgrade Marks on quest rewards, merchants, loot, rolls and the auction house
   UI/Window.lua        its window: your spec's stats as bars and numbers, your best upgrades, reset, share
-  UI/SettingsPage.lua  its card on the BiS List's settings page: the switch and your spec
+  UI/SettingsPage.lua  its card on the BiS List's settings page: the switches, your spec, the fight length
 ```
 
 ## I want to change...
@@ -91,8 +103,39 @@ StatWeights/
   A spell and a melee version of a stat count for the one we have, summed; keys we have no stat for
   are left out, and a hunter's weapon is its ranged one.
 
+- The defaults convert MythicSim's EP (per point, Attack Power, a main stat or Spell Damage at 1) to
+  ours: each over the spec's anchor, a rating times its points per 1%. Its pages give the same
+  ratings per 1% as `PER_PERCENT` (hit, spell hit, haste and expertise 10; crit and spell crit 14),
+  and Healer Stat Weights measured them the same at every level, so they do not scale with level.
+- A tank's MythicSim weights are its threat table; the sim does not score survival, so Stamina,
+  Armor, Defense, Dodge, Parry and Block keep ours, and the threat stats are scaled to meet them at
+  the spec's previous Strength (Agility for the bear).
+- Where MythicSim's reference build was at the hit cap (hit measured zero: Enhancement,
+  Retribution, Survival, the tanks), the previous hit weight stays, since a player under the cap
+  still gains from it. Spell penetration, Mana and Feral Attack Power have no stat here and are
+  left out; a negative weight (Fire's spell haste) is 0.
+- MythicSim's Weapon damage is a point of damage a swing: a weapon's dps weight is it times
+  `SPEED` (2.6), two thirds of it for a rogue's two weapons, since the off hand counts half.
+- Healer Mana's Spirit is 0.25 mana a second a point under 50 Spirit and 0.125 from 50, as
+  Healer Stat Weights measured on Forever, times the share of it you keep while casting
+  (`GetManaRegenFromSpirit`'s second value over its first), times 5 for Mana every 5 sec.
+  Its Intellect is 15 mana (`MANA_PER_INTELLECT`) spread over the fight, plus 1% spell crit per
+  `Data/IntPerCrit.lua`'s Intellect, between its levels in a straight line. Both read only while
+  your stats are not secret; in combat the last reading stands. An Intellect or Spirit you set or
+  import yourself is never worked out over.
+- A Healer Stat Weights export names its crit rating per point (`SpellCritRating`) where every
+  other import is per 1%; its `SpellHaste` key, which no simulator uses, tells it apart, and its
+  crit is read times 14.
+- Upgrade Marks hook the game's own painters once, on first enable: `QuestInfo_ShowRewards`,
+  `SetItemButtonQuality` (the quest and loot buttons, again when an item's data arrives late),
+  `MerchantFrameItem_UpdateQuality` and `GroupLootFrame_SetupItemDisplay`. The auction house's
+  `AuctionHouseTableCellItemDisplayMixin.UpdateDisplay` is hooked when its addon loads: a cell takes
+  the mixin when it is made, so one made before the hook (Upgrade Marks turned on with the auction
+  house already opened) is marked only after a reload. An auction row has only its item's ID, so a
+  random-stat item there is weighed without its suffix.
+
 ## Checking
 
 - `lua Tools/regression/test-stat-weights.lua`: the defaults (every spec, its anchor, ranges,
   ratings), your changes and new defaults, sharing, the gain math, the tooltip line and its
-  hook only once on, the window.
+  hook only once on, the window, Healer Mana and a healer's measured export.

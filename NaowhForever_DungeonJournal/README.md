@@ -493,7 +493,9 @@ in the pull request it opens.
   items with a slot count as wearable. The game has no appearance for some wearable items
   (Prison Shank on Forever 1.60.1): then whether you have the item's own look is all it can say.
 - An upgrade on your BiS list must be a higher pick than the list's piece you wear there; off
-  it, an item you can wear now with a higher item level, never over a piece of your list.
+  it, an item you can wear now that your stat weights (the BiS List's Stat Weights, when that addon
+  is loaded) make you stronger with, shown as its percent, else one with a higher item level,
+  never over a piece of your list.
 - The quest data's level is the guide's and often matches neither the quest log's nor the
   required level, so it is only the fallback until the client loads the quest (asked once;
   `QUEST_DATA_LOAD_RESULT` redraws).

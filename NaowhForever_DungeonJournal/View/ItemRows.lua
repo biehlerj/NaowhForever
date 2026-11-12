@@ -72,6 +72,7 @@ local TEXT_UNDER_ONE = "<1"
 local TEXT_NONE = "-"
 local TEXT_CODE_END = "|r"
 local TEXT_KIND = "%s, %s"
+local GAIN_TEXT = "+%d%%"
 local TAG_SPACE, MARK_SPACE = "   ", "  "
 
 local UPGRADE_ICON = ("|A:%s:0:0:0:%d|a"):format(UPGRADE_ATLAS, -INLINE_DROP)
@@ -89,6 +90,12 @@ local tiers = {}
 
 local function RankTag(rank)
     return rank and MARK_SPACE .. RankMark(rank, CARD_DROP) or ""
+end
+
+local function UpgradeTag(upgrade)
+    if not upgrade then return "" end
+    if upgrade == true then return UPGRADE_TAG end
+    return UPGRADE_TAG .. " " .. UPGRADE_CODE .. GAIN_TEXT:format(math.floor(upgrade + ROUND_HALF)) .. TEXT_CODE_END
 end
 
 local function Kept(itemID)
@@ -446,7 +453,7 @@ Kinds.item = {
         row.rank, row.upgrade, row.newLook = rank, upgrade, look == false
         row.forever = IsForever("items", itemID)
         row.name:SetText("|c" .. hex .. (name or (TEXT_ITEM .. itemID)) .. TEXT_CODE_END
-            .. RankTag(rank) .. (upgrade and UPGRADE_TAG or ""))
+            .. RankTag(rank) .. UpgradeTag(upgrade))
         SetMeta(row, itemID, facts, view, notYet, known, worn, look, icon)
         SetColumn(row, view, chance, price, dense)
         row.keep = rank ~= nil or upgrade

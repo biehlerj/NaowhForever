@@ -10,6 +10,7 @@ local IsDressableItemByID = C_Item.IsDressableItemByID
 local GetInventoryItemID = GetInventoryItemID
 local GetInventoryItemLink = GetInventoryItemLink
 local GetDetailedItemLevelInfo = C_Item.GetDetailedItemLevelInfo
+local GetTime = GetTime
 local Collection = C_TransmogCollection
 
 local J = ns.Journal
@@ -30,6 +31,7 @@ local RECIPE_SKILL = { [1] = 165, [2] = 197, [3] = 202, [4] = 164, [5] = 185, [6
 
 local _, playerClass = UnitClass("player")
 local lowerNames = {}
+local weights, power, weighedAt
 
 local function AddSkill(skills, index)
     if not index then return end
@@ -122,12 +124,28 @@ local function RankUpgrade(rank, slots)
     return false
 end
 
+local function WeightedGain(itemID)
+    local SW = ns.StatWeights
+    if not SW then return nil end
+    local now = GetTime()
+    if now ~= weighedAt then
+        weighedAt = now
+        local key = SW.ActiveSpec()
+        weights = key and SW.For(key)
+        power = weights and SW.Power(weights)
+    end
+    if not weights then return nil end
+    return SW.BestGain(itemID, nil, weights, power) or false
+end
+
 local function LevelUpgrade(itemID, slots)
     local facts = J.Items[itemID]
     local level = facts and facts[FACT.ITEM_LEVEL]
     if not level or (facts[FACT.REQUIRED] or 0) > UnitLevel("player") or not Loot.Usable(itemID) then
         return false
     end
+    local gain = WeightedGain(itemID)
+    if gain ~= nil then return gain end
     for i = 1, #slots do
         local worn = GetInventoryItemID("player", slots[i])
         if not worn then return true end

@@ -258,6 +258,7 @@ Shared.Style = {
     LOOK_CODE = "|cff66d9ef",
     LOOK_RGB = { r = 0x66 / 255, g = 0xd9 / 255, b = 0xef / 255 },
     UPGRADE_CODE = "|cff1eff00",
+    UPGRADE_RGB = { r = 0x1e / 255, g = 1, b = 0 },
     HAVE_RGB = { r = 0.3, g = 0.82, b = 0.48 },
     WORD_HIT_RGB = { r = 0x53 / 255, g = 0x8d / 255, b = 0x4e / 255 },
     WORD_NEAR_RGB = { r = 0xb5 / 255, g = 0x9f / 255, b = 0x3b / 255 },

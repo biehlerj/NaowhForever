@@ -73,7 +73,8 @@ local LIBRARIES = { "LibStub", "CallbackHandler-1.0", "LibDataBroker-1.1", "LibD
 local DATA = {
     { icon = "search", name = "Wowhead", line = ns.L("WoW Forever's items, quests and NPCs, and what is new in Forever.") },
     { icon = "trophy", name = "wowsrc.com", line = ns.L("The BiS rankings behind the BiS List.") },
-    { icon = "bars", name = "WoWSims", line = ns.L("The stat weights each spec starts with.") },
+    { icon = "bars", name = "MythicSim", line = ns.L("The simmed stat weights each damage and tank spec starts with.") },
+    { icon = "heart", name = "Healer Stat Weights", line = ns.L("rwisdom's Forever port of Bastas' addon: its healer weights import into Stat Weights, and its measured Spirit regen and Intellect crit behind Healer Mana.") },
     { icon = "map", name = "Santiago Reyes", line = ns.L("For his maps of the new Forever dungeons.") },
     { icon = "map", name = "tr0tsky", line = ns.L("Ley lines and Elemental Convergences behind Skyborne Spots, from the Skyborne Ley Line & Convergence Marker addon.") },
     { icon = "search", name = "CMaNGOS", line = ns.L("The classic creature database behind Scout's abilities, armor, immunities and tameable beasts.") },

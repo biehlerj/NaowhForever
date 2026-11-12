@@ -29,7 +29,13 @@ local SIM_KEYS = {
     spellpower = "spell", healing = "heal", mp5 = "mp5", armor = "armor", defenserating = "def",
     dodgerating = "dodge", blockrating = "block", firespelldamage = "fire", frostspelldamage = "frost",
     shadowspelldamage = "shadow", naturespelldamage = "nature", arcanespelldamage = "arcane",
-    holyspelldamage = "holy",
+    holyspelldamage = "holy", spellhaste = "haste", expertiserating = "exp", armorpenetrationrating = "arp",
+    blockvalue = "bv",
+}
+local PER_POINT_MARK = "spellhaste"
+local PER_POINT_RATINGS = {
+    critrating = "ITEM_MOD_CRIT_RATING_SHORT", spellcritrating = "ITEM_MOD_CRIT_SPELL_RATING_SHORT",
+    hitrating = "ITEM_MOD_HIT_RATING_SHORT", spellhitrating = "ITEM_MOD_HIT_SPELL_RATING_SHORT",
 }
 
 local function SimStat(stat, class)
@@ -37,8 +43,17 @@ local function SimStat(stat, class)
     return SIM_KEYS[stat]
 end
 
+local function PerPoint(body)
+    for part in body:gmatch("[^,]+") do
+        local stat = part:match(SIM_PART)
+        if stat and stat:lower() == PER_POINT_MARK then return true end
+    end
+    return false
+end
+
 local function ReadSim(body, class, read)
     local count = 0
+    local perPoint = PerPoint(body)
     for part in body:gmatch("[^,]+") do
         local stat, value = part:match(SIM_PART)
         stat = stat and stat:lower()
@@ -49,6 +64,8 @@ local function ReadSim(body, class, read)
         else
             local mine = SimStat(stat, class)
             local worth = tonumber(value)
+            local rating = perPoint and PER_POINT_RATINGS[stat]
+            if worth and rating then worth = worth * SW.PER_PERCENT[rating] end
             if mine and worth and worth > 0 and worth < MAX_WORTH then
                 read[mine] = (read[mine] or 0) + worth
                 count = count + 1
@@ -83,7 +100,7 @@ local function ReadLine(body)
 end
 
 function SW.Export(key)
-    local weights = SW.For(key)
+    local weights = key and SW.Own(key)
     if not weights then return "" end
     local parts = {}
     for _, stat in ipairs(SW.STATS) do

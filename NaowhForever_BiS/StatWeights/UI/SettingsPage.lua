@@ -12,6 +12,9 @@ local ORDER_STAT_WEIGHTS = 40
 local TEXT_AUTOMATIC = ns.L("Automatic")
 local TEXT_AUTOMATIC_FOR = ns.L("Automatic (%s)")
 local TEXT_ON_TOOLTIPS = ns.L(", upgrades on tooltips")
+local FIGHT_LENGTHS = {
+    { 60, ns.L("1 minute") }, { 120, ns.L("2 minutes") }, { 180, ns.L("3 minutes") }, { 300, ns.L("5 minutes") },
+}
 
 local function SpecChoices()
     local talents = SW.TalentSpec()
@@ -26,6 +29,19 @@ end
 
 local function SpecGet() return S.Get("spec") or AUTO end
 local function SpecSet(key) S.Set("spec", key ~= AUTO and key or nil) end
+
+local function LengthChoices()
+    local values, order = {}, {}
+    for _, length in ipairs(FIGHT_LENGTHS) do
+        local key = tostring(length[1])
+        values[key] = length[2]
+        order[#order + 1] = key
+    end
+    return values, order
+end
+
+local function LengthGet() return tostring(S.Get("fightLength")) end
+local function LengthSet(key) S.Set("fightLength", tonumber(key)) end
 
 local function Summary(store)
     local spec = SW.Spec(SW.ActiveSpec())
@@ -42,6 +58,12 @@ Settings.Page("BiS List/Settings"):Card({
         { key = "enabled", label = "Upgrades on Tooltips", toggle = true,
           help = "On gear that is an upgrade for your spec, a line saying by how much (\"+9% upgrade\"). The "
               .. "BiS List uses these weights either way." },
+        { key = "upgradeMarks", label = "Upgrade Marks", toggle = true,
+          help = "An upgrade arrow and percent on quest rewards, merchants, loot and the auction house." },
+        { key = "healerMana", label = "Healer Mana", toggle = true,
+          help = "For a healer, works out Intellect and Spirit from your own mana regen and pool." },
+        { label = "Fight Length", choice = LengthChoices, get = LengthGet, set = LengthSet,
+          help = "How long a healer's mana must last: longer fights favour regen over Intellect." },
         { label = "Your Spec", choice = SpecChoices, get = SpecGet, set = SpecSet,
           help = "The spec your gear is weighed for. Automatic follows your talents: the tree with the most "
               .. "points (a druid's Feral is weighed for damage; pick Feral Tank for a bear)." },

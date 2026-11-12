@@ -149,6 +149,8 @@ ns.FEATURES = {
     },
     statWeights = {
         enabled = false,
+        healerMana = false,
+        upgradeMarks = false,
     },
     journeys = {
         enabled = false,

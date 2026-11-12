@@ -48,7 +48,8 @@ end
 local function Stats(item)
     local stats = statsOf[item]
     if stats then return stats end
-    if type(item) == "number" and not IsItemDataCachedByID(item) then return nil end
+    local id = type(item) == "number" and item or GetItemInfoInstant(item)
+    if id and not IsItemDataCachedByID(id) then return nil end
     stats = GetItemStats(type(item) == "number" and "item:" .. item or item) or {}
     if cached >= CACHE_MAX then
         wipe(statsOf)

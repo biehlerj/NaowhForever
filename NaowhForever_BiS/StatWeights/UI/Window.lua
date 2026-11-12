@@ -25,6 +25,7 @@ local TITLE_SIZE, LABEL_SIZE, SMALL_SIZE = 13, 12, 11
 local MAX_WORTH = SW.MAX_WORTH
 local SAMPLE_GAIN = 9
 local ROUND = 0.5
+local DERIVED_PLACES = 100
 local ANY_LENGTH = 0
 local NO_TAB_W = 1
 local FILTER = "TRILINEAR"
@@ -36,9 +37,10 @@ local WEIGHT = "%g"
 local SPEC_SHORT = "^(.-)%s+%S+$"
 local TEXT_WORTH = ns.L("1 %s is worth %g to %s.")
 local TEXT_DEFAULT = ns.L("Default %g. Type a new number, or 0 to leave it out.")
+local TEXT_DERIVED = ns.L("Worked out from your own mana by Healer Mana, from your Mana every 5 sec weight.")
 local TEXT_RESET_STAT = ns.L("Back to the default")
 local TEXT_IMPORT_FOR = ns.L("Import weights for %s\n%s")
-local TEXT_IMPORT_HELP = ns.L("A Naowh weights line, or a WoWSims EP export (in WoWSims: Stat Weights, Copy to Current EP, Export)")
+local TEXT_IMPORT_HELP = ns.L("A Naowh weights line, a WoWSims EP export, or a Healer Stat Weights Pawn string")
 local TEXT_YOUR_WEIGHTS = ns.L("Your %s weights")
 local TEXT_RESET_ASK = ns.L("Put every %s weight back to the defaults?")
 local TEXT_ADD_TITLE = ns.L("Add a stat")
@@ -53,10 +55,10 @@ local TEXT_DEFAULTS = ns.L("Default weights") .. DOT
 local TEXT_TITLE, TEXT_ABOUT = ns.L("Stat Weights"), ns.L("What a point of each stat is worth to your spec.")
 local TEXT_RESET, TEXT_RESET_TIP = ns.L("Reset to Default"), ns.L("Puts every weight of this spec back to the defaults. Asks first.")
 local TEXT_EXPORT, TEXT_EXPORT_TIP = ns.L("Export these weights"), ns.L("A line to share them with.")
-local TEXT_IMPORT, TEXT_IMPORT_TIP = ns.L("Import weights"), ns.L("A Naowh weights line, or a WoWSims EP export.")
+local TEXT_IMPORT, TEXT_IMPORT_TIP = ns.L("Import weights"), ns.L("A Naowh weights line, a simulator's export, or a healer's measured weights.")
 local TEXT_WEIGHTS_CARD, TEXT_UPGRADES_CARD = ns.L("Weights"), ns.L("Best Upgrades")
 local BIG = { hit = true, shit = true, crit = true, haste = true, scrit = true, dodge = true, block = true,
-    threat = true, dps = true, dmg = true }
+    threat = true, dps = true, dmg = true, exp = true }
 local GROUP_TITLES = { ns.L("PER POINT"), ns.L("PER 1% OR WEAPON DPS") }
 local UPGRADE_RGB = { r = 0.12, g = 1, b = 0 }
 local TITLE_RGB = ns.Shared.Style.TIP_TITLE_RGB
@@ -96,7 +98,8 @@ local function RowEnter(row)
     if not ns.Shared.Parts.Tip(row, "ANCHOR_RIGHT") then return end
     local w = TITLE_RGB
     GameTooltip:SetText(TEXT_WORTH:format(byStat[row.stat][2], row.value, spec.name), w.r, w.g, w.b)
-    GameTooltip:AddLine(TEXT_DEFAULT:format(SW.Default(row.spec, row.stat)), T.muted.r, T.muted.g, T.muted.b, true)
+    local text = row.derived and TEXT_DERIVED or TEXT_DEFAULT:format(SW.Default(row.spec, row.stat))
+    GameTooltip:AddLine(text, T.muted.r, T.muted.g, T.muted.b, true)
     GameTooltip:Show()
 end
 
@@ -299,13 +302,16 @@ end
 local function PaintStat(row, key, value, changed, track, top)
     row.name:SetText(byStat[key][2])
     row.bar:SetWidth(math.max(1, top > 0 and track * value / top or 1))
-    row.dot:SetShown(changed)
-    row.reset:SetShown(changed)
-    local color = changed and T.accent or T.fg
-    row.box:SetText(WEIGHT:format(value))
+    local derived = SW.Derived(editing, key)
+    row.derived = derived
+    row.dot:SetShown(changed and not derived)
+    row.reset:SetShown(changed and not derived)
+    local color = derived and T.muted or changed and T.accent or T.fg
+    row.box:SetText(WEIGHT:format(derived and math.floor(value * DERIVED_PLACES + ROUND) / DERIVED_PLACES or value))
     row.box:SetTextColor(color.r, color.g, color.b)
+    row.box:EnableMouse(not derived)
     row:Show()
-    if focus ~= key then return end
+    if focus ~= key or derived then return end
     focus = nil
     row.box:SetFocus()
     row.box:HighlightText()

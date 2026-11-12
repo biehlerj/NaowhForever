@@ -63,6 +63,8 @@ local function Fixture(class)
         CreateFrame = function()
             local f = { events = {} }
             function f.RegisterEvent(self, event) self.events[event] = true end
+            function f.RegisterUnitEvent(self, event) self.events[event] = true end
+            function f.UnregisterAllEvents(self) self.events = {} end
             function f.SetScript(self, _, fn) self.onEvent = fn end
             state.watchers[#state.watchers + 1] = f
             return f
@@ -159,7 +161,7 @@ do
     -- Every spec, by its anchor: a fighter's main stat, a caster's spell damage, a healer's
     -- healing, a tank's Stamina.
     local ANCHOR = {
-        ["balance-druid"] = "spell", ["feral-dps-druid"] = "str", ["feral-tank-druid"] = "sta",
+        ["balance-druid"] = "spell", ["feral-dps-druid"] = "agi", ["feral-tank-druid"] = "sta",
         ["restoration-druid"] = "heal", ["beast-mastery-hunter"] = "agi", ["marksmanship-hunter"] = "agi",
         ["survival-hunter"] = "agi", ["arcane-mage"] = "spell", ["fire-mage"] = "spell", ["frost-mage"] = "spell",
         ["holy-paladin"] = "heal", ["protection-paladin"] = "sta", ["retribution-paladin"] = "str",
@@ -184,8 +186,8 @@ do
             check("within the editor's range: " .. spec.key .. " " .. stat,
                 worth >= range[stat][3] and worth <= range[stat][4])
         end
-        -- Plate wearers (Warriors, and Paladins who melee or tank) never value Agility over Strength.
-        if (spec.class == "WARRIOR" or spec.class == "PALADIN") and (spec.weights.str or 0) > 0 then
+        -- Warriors never value Agility over Strength; MythicSim measures a Paladin's Agility (its crit) above it.
+        if spec.class == "WARRIOR" and (spec.weights.str or 0) > 0 then
             check("plate: Strength over Agility: " .. spec.key, spec.weights.str > (spec.weights.agi or 0))
         end
     end
@@ -451,7 +453,7 @@ do
     state.worn = { [10] = 2, [11] = 4, [12] = 5 }
     local lines = Lines(1)
     check("an upgrade: one line, the arrow, how much, then the spec", #lines == 1
-        and lines[1]:find("^|A:bags%-greenarrow") and lines[1]:find("+5% upgrade|r", 1, true)
+        and lines[1]:find("^|A:bags%-greenarrow") and lines[1]:find("+6% upgrade|r", 1, true)
         and lines[1]:find("Assassination", 1, true))
     check("nothing on what is worse", #Lines(9) == 0)
     check("nor on what you wear", #Lines(2) == 0)
@@ -589,17 +591,18 @@ do
     local function Shown(group)
         local names, i = {}, 0
         for _, row in ipairs(weights.rows) do
-            if row.shown and (group == 1) == not ({ hit = 1, crit = 1, haste = 1, dps = 1, dmg = 1 })[row.stat] then
+            if row.shown and (group == 1) == not ({ hit = 1, crit = 1, haste = 1, exp = 1, dps = 1, dmg = 1 })[row.stat] then
                 i = i + 1
                 names[i] = row.name.text
             end
         end
         return table.concat(names, ",")
     end
-    check("points: only the stats Assassination uses", Shown(1) == "Strength,Agility,Stamina,Attack Power,Armor")
-    check("percents and weapon dps apart; an enchant's weapon damage is worked out", Shown(2) == "Weapon DPS,Hit %,Crit %,Haste %")
+    check("points: only the stats Assassination uses", Shown(1) == "Strength,Agility,Stamina,Attack Power,Armor Penetration,Armor")
+    check("percents and weapon dps apart; an enchant's weapon damage is worked out",
+        Shown(2) == "Weapon DPS,Hit %,Crit %,Haste %,Expertise %")
     check("each list under its title", weights.groups[1].text == "PER POINT" and weights.groups[2].text == "PER 1% OR WEAPON DPS")
-    check("the footer says whose weights", window.note.text.text == "Default weights  \194\183  5 Oct 2026"
+    check("the footer says whose weights", window.note.text.text == "Default weights  \194\183  12 Nov 2026"
         and window.reset.alpha == 0.35 and window.reset.mouse == false)
     check("what the tooltip line looks like", window.sample.text:find("Assassination", 1, true)
         and window.sample.text:find("+9% upgrade", 1, true))
@@ -687,6 +690,46 @@ do
     Flush()
     check("Reset asks, then puts them all back", SW.For("assassination-rogue").agi ~= 2
         and window.note.text.text:find("^Default"))
+end
+
+-------------------------------------------------------------------------------
+--  Healer Mana: a healer's Intellect and Spirit from its own regen, pool and crit; a measured
+--  healer export read in Naowh's units
+-------------------------------------------------------------------------------
+do
+    local ns, _, env = Fixture("PRIEST")
+    local SW = ns.StatWeights
+    local S = ns.StatWeightSettings
+    env.LE_UNIT_STAT_INTELLECT, env.LE_UNIT_STAT_SPIRIT = 4, 5
+    env.MANA_PER_INTELLECT = 15
+    env.UnitLevel = function() return 60 end
+    -- 10 mana a second from Spirit, 1.5 of it while casting.
+    env.GetManaRegenFromSpirit = function() return 10, 1.5 end
+    local key = "holy-priest"
+    check("off by default: your weights as they are", SW.For(key).int == SW.Default(key, "int")
+        and not SW.Derived(key, "int"))
+    S.Set("healerMana", true)
+    local w = SW.For(key)
+    -- 50 Spirit is past the knee: 0.125 a second a point, 15% of it while casting.
+    check("Spirit from your regen while casting", math.abs(w.spi - w.mp5 * 5 * 0.125 * 0.15) < 1e-9)
+    check("Intellect from its mana over two minutes, and its crit at 60",
+        math.abs(w.int - (w.mp5 * 5 * 15 / 120 + w.scrit / 59.5)) < 1e-9)
+    check("both shown as worked out", SW.Derived(key, "int") and SW.Derived(key, "spi") and not SW.Derived(key, "mp5"))
+    S.Set("fightLength", 300)
+    check("a longer fight: the pool counts for less", SW.For(key).int < w.int)
+    check("not a healer: untouched", SW.For("shadow-priest").int == SW.Default("shadow-priest", "int"))
+    SW.Set(key, "spi", 0.9)
+    check("a Spirit of your own stays yours", SW.For(key).spi == 0.9 and not SW.Derived(key, "spi"))
+    check("Export shares your own weights, not the worked-out ones", not SW.Export(key):find("int=", 1, true))
+    SW.Reset(key)
+    local ok = SW.Import('( Pawn: v1: "Total (3 fights)": Class=Priest, Spec=1, Healing=1.00, SpellCritRating=0.50, '
+        .. 'SpellHaste=3.00, Intellect=0.40, Spirit=0.30, Mp5=1.20)', key)
+    w = SW.For(key)
+    check("a measured healer export: crit rating per point read per 1%", ok and w.heal == 1 and w.scrit == 7
+        and w.haste == 3 and w.mp5 == 1.2)
+    check("and its Intellect and Spirit are yours, not worked out", w.int == 0.4 and w.spi == 0.3)
+    S.Set("healerMana", false)
+    check("off again: your weights as they are", SW.For(key).int == 0.4)
 end
 
 print(("test-stat-weights: %d checks passed"):format(checks))

@@ -15,6 +15,7 @@ local STATS = {
     { "rap", ns.L("Ranged Attack Power"), 0, 3, 0.05 }, { "dps", ns.L("Weapon DPS"), 0, 20, 0.1 },
     { "hit", ns.L("Hit %"), 0, 30, 0.5 },
     { "crit", ns.L("Crit %"), 0, 30, 0.5 }, { "haste", ns.L("Haste %"), 0, 30, 0.5 },
+    { "exp", ns.L("Expertise %"), 0, 50, 0.5 }, { "arp", ns.L("Armor Penetration"), 0, 3, 0.05 },
     { "spell", ns.L("Spell Damage"), 0, 3, 0.05 }, { "heal", ns.L("Healing"), 0, 3, 0.05 },
     { "shit", ns.L("Spell Hit %"), 0, 30, 0.5 }, { "scrit", ns.L("Spell Crit %"), 0, 30, 0.5 },
     { "mp5", ns.L("Mana every 5 sec"), 0, 5, 0.1 },
@@ -22,7 +23,8 @@ local STATS = {
     { "shadow", ns.L("Shadow Damage"), 0, 3, 0.05 }, { "nature", ns.L("Nature Damage"), 0, 3, 0.05 },
     { "arcane", ns.L("Arcane Damage"), 0, 3, 0.05 }, { "holy", ns.L("Holy Damage"), 0, 3, 0.05 },
     { "def", ns.L("Defense"), 0, 5, 0.05 }, { "dodge", ns.L("Dodge %"), 0, 30, 0.5 },
-    { "block", ns.L("Block %"), 0, 30, 0.5 }, { "armor", ns.L("Armor"), 0, 0.2, 0.005 },
+    { "block", ns.L("Block %"), 0, 30, 0.5 }, { "bv", ns.L("Block Value"), 0, 3, 0.05 },
+    { "armor", ns.L("Armor"), 0, 0.2, 0.005 },
     { "threat", ns.L("Threat %"), 0, 30, 0.5 },
 }
 local GAME_KEYS = {
@@ -35,13 +37,15 @@ local GAME_KEYS = {
     ITEM_MOD_SPELL_CRIT_RATING_SHORT = "scrit", ITEM_MOD_MANA_REGENERATION_SHORT = "mp5",
     ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "def", ITEM_MOD_DODGE_RATING_SHORT = "dodge",
     ITEM_MOD_BLOCK_RATING_SHORT = "block", ITEM_MOD_HASTE_RATING_SHORT = "haste", RESISTANCE0_NAME = "armor",
-    ITEM_MOD_DAMAGE_PER_SECOND_SHORT = "dps",
+    ITEM_MOD_DAMAGE_PER_SECOND_SHORT = "dps", ITEM_MOD_EXPERTISE_RATING_SHORT = "exp",
+    ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT = "arp", ITEM_MOD_BLOCK_VALUE_SHORT = "bv",
 }
 local PER_PERCENT = {
     ITEM_MOD_HIT_RATING_SHORT = 10, ITEM_MOD_HIT_SPELL_RATING_SHORT = 10, ITEM_MOD_CRIT_RATING_SHORT = 14,
     ITEM_MOD_CRIT_SPELL_RATING_SHORT = 14, ITEM_MOD_SPELL_CRIT_RATING_SHORT = 14, ITEM_MOD_DODGE_RATING_SHORT = 12,
-    ITEM_MOD_BLOCK_RATING_SHORT = 5, ITEM_MOD_HASTE_RATING_SHORT = 10,
+    ITEM_MOD_BLOCK_RATING_SHORT = 5, ITEM_MOD_HASTE_RATING_SHORT = 10, ITEM_MOD_EXPERTISE_RATING_SHORT = 10,
 }
+local FIGHT_LENGTH = 120
 local TREES = {
     DRUID = { "balance-druid", "feral-dps-druid", "restoration-druid" },
     HUNTER = { "beast-mastery-hunter", "marksmanship-hunter", "survival-hunter" },
@@ -106,14 +110,15 @@ local function Changes(create)
 end
 
 local function Changed(key)
-    merged[key] = nil
+    if key then merged[key] = nil end
     for i = 1, #listeners do listeners[i](key) end
 end
 
 local SW = { MAX_WORTH = 1000, PERCENT = 100 }
 ns.StatWeights = SW
 
-local S = UI.ModuleSettings("statWeights", { enabled = F.enabled })
+local S = UI.ModuleSettings("statWeights", { enabled = F.enabled, healerMana = F.healerMana,
+    upgradeMarks = F.upgradeMarks, fightLength = FIGHT_LENGTH })
 SW.Settings = S
 ns.StatWeightSettings = S
 SW.STATS = STATS
@@ -194,8 +199,7 @@ function SW.ActiveSpec()
     return mine[1] and mine[1].key
 end
 
-function SW.For(key)
-    if not key then return nil end
+local function Merged(key)
     local weights = merged[key]
     if weights then return weights end
     local spec = SW.Spec(key)
@@ -208,6 +212,24 @@ function SW.For(key)
     end
     merged[key] = weights
     return weights
+end
+
+SW.Own = Merged
+
+function SW.HealerOn(key)
+    local spec = key and SW.Spec(key)
+    return spec ~= nil and spec.healer == true and S.Get("healerMana") == true
+end
+
+function SW.For(key)
+    if not key then return nil end
+    local weights = Merged(key)
+    if weights and SW.HealerOn(key) then return SW.Healer(key, weights) end
+    return weights
+end
+
+function SW.Notify()
+    Changed(nil)
 end
 
 function SW.Default(key, stat)
