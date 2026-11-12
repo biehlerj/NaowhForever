@@ -1,6 +1,64 @@
 # Changelog
 
-## Unreleased
+## 1.2.29
+
+### Added
+- The Market: Full Window (The Market's settings, At the Auctioneer, off by default) opens The
+  Market as one big window in place of Blizzard's auction house, with every page as a tab and Buy's
+  own auction house search back.
+- Totem Bar key bindings for shamans, under Key Bindings > Totem Bar: Call Totems, each totem on the
+  bar, and Totemic Recall.
+- Creature Abilities (Scout): hunters see what a tameable beast teaches, with its rank, green when
+  it beats your pet's.
+- Creature Abilities (Scout): Higher Rank Alert, a toast when a beast near you teaches a higher rank
+  than your pet knows.
+- Dungeon Journal: right-click a dungeon or raid entrance on the world map opens that dungeon's map
+  and journal, the same ones Bosses and Loot shows inside a dungeon. Left-click is still a waypoint.
+  It starts off. Turn it on under Map Pins, next to Dungeon and Raid Entrances. It needs Bosses and
+  Loot in Dungeons on.
+- Stat Weights: Upgrade Marks, an upgrade arrow and percent on quest rewards, merchants, loot, rolls
+  and the auction house, before you hover (BiS List settings).
+- Stat Weights: Healer Mana works out a healer's Intellect and Spirit from their own mana, with a
+  Fight Length setting.
+- Stat Weights: Import takes a Healer Stat Weights Pawn string.
+
+### Changed
+- Character Panel: the Gear Score card is centred with a bigger score and the best under it, the
+  stats start higher, category headings are centred and stat names are left-aligned.
+- Options: Professions and Auction House are one category, Crafting & Market, with The Market and
+  Prices & Tooltips as its last two pages, and Gathering and Fishing on one page.
+- Badges: Naowh's badge card reads "Naowh himself".
+- Badges: guild chat, officer chat and guild achievement lines no longer show the Naowh Forever
+  badge next to names.
+- The Market: the Farm tab is narrower, without the empty space beside its map.
+- The Market: on the Sell tab at the auction house, Up Next is a column beside the item when your
+  screen has room, so many more of your items show; without the room its rows are one line.
+- Stat Weights: every damage and tank spec's default weights now come from MythicSim's Forever sims,
+  with Expertise, Armor Penetration and Block Value added.
+- Dungeon Journal: an upgrade is judged by your stat weights and shows how much.
+
+### Fixed
+- Settings search: a result shows the word you typed, in its name or the line under it, instead of
+  matching words only in a setting's description.
+- Settings search: a module is listed once, not also as its switch on Settings > Modules.
+- The Market: posting an item that Blizzard's own Sell tab also holds no longer causes a Lua error
+  at the auction house.
+- The Market: the Watch List, Shopping List and Price Graph show an item's name once the game has
+  loaded it, instead of "item" and its number.
+- The Market: the Watch box's Stop Watching is an x with a tooltip, so it no longer runs out of its
+  button.
+- Train Now: with more than ten spells to learn, the list scrolls, so you can see and untick every
+  one before Learn Selected.
+- The Market: its panel beside the auction house is no longer drawn under other addons' guide arrows
+  and buttons.
+- Rares Map Pins: no more stack overflow errors on the world map with the gamepad UI on.
+- Map Pins and Zone Info: Mount Hyjal's flight masters, at Summit of Eternity and Tainted Foothills,
+  now show.
+- Macros: NF Food no longer uses water or other drinks for warriors and rogues.
+- Naowh Quiz questions and answers follow the addon's language, and stay in English until that
+  language has a translation.
+- Buffs & Consumables: Weapon Enhancement Reminder now shows for rogues and shamans next to Poisons
+  and Weapon Imbue, and a stone or oil no longer counts as a poison.
 
 ## 1.2.28
 
