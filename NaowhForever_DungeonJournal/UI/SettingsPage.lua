@@ -266,8 +266,7 @@ local function DeclareMapPins()
         .. "a waypoint, and right-click for its map and journal when that is on.")
     entrances.store, entrances.always = S, true
     local entranceJournal = Toggle("entranceJournal", "Right-click entrance to open the dungeon map",
-        "Right-click a dungeon or raid entrance to show its map and dungeon journal on the world map, "
-            .. "the same ones as Bosses and Loot in Dungeons.")
+        "Right-click an entrance to open its dungeon map and journal; needs Bosses and Loot in Dungeons.")
     entranceJournal.store, entranceJournal.always = S, true
     entranceJournal.needs, entranceJournal.why = EntrancesOn, TEXT_ENTRANCES_OFF
     table.insert(ns.Shared.MapPins, {

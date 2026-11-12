@@ -92,11 +92,13 @@ local function GroupName(dungeons, fallback)
     return #dungeons == 1 and dungeons[1].name or dungeons[1].zone or fallback
 end
 
+local function RightClickOn()
+    return S.Get("entranceJournal") and S.Get("mapPanel") and not ns.GamepadStandDown()
+end
+
 local function OpenDungeon(dungeon, group)
     GameTooltip:Hide()
-    if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
-    if J.ShowDungeonBesideMap and J.ShowDungeonBesideMap(dungeon, group) then return end
-    if J.Maps[dungeon.key] then J.ShowMapOnWorldMap(dungeon) end
+    J.ShowDungeonBesideMap(dungeon, group)
 end
 
 local function OpenJournal(pin)
@@ -152,7 +154,7 @@ local function MakePinMixin()
         end
         local c = ns.ThemeTint("accentSoft", nil) or HINT_RGB
         GameTooltip:AddLine(TEXT_CLICK, c.r, c.g, c.b)
-        if S.Get("entranceJournal") then
+        if RightClickOn() then
             GameTooltip:AddLine(#dungeons > 1 and TEXT_RIGHT_MANY or TEXT_RIGHT, c.r, c.g, c.b)
         end
         GameTooltip:Show()
@@ -164,7 +166,7 @@ local function MakePinMixin()
 
     function Pin:OnClick(button)
         if button == "RightButton" then
-            if S.Get("entranceJournal") then OpenJournal(self) end
+            if RightClickOn() then OpenJournal(self) end
             return
         end
         if button ~= "LeftButton" then return end
