@@ -82,10 +82,10 @@ local function NextQuestion()
     seen[q.q] = true
     local order = Shuffled(#q.a)
     current = { answer = nil }
-    quiz.question:SetText(q.q)
+    quiz.question:SetText(ns.L(q.q))
     for i, btn in ipairs(quiz.answers) do
         local pick = order[i]
-        btn.label:SetText(q.a[pick])
+        btn.label:SetText(ns.L(q.a[pick]))
         btn.label:SetTextColor(T.fg.r, T.fg.g, T.fg.b)
         btn.right = pick == 1
         btn:Enable()
