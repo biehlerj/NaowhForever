@@ -374,7 +374,7 @@ do  -- chat, card, tooltip
     s.ns.BadgesCommand("preview naowh")
     check("naowh badge in chat", say(filter, "Me", 903, "Player-1-SELF"):find("BadgeNaowhChat.tga", 1, true))
     enter.fn(enter.owner, {}, "player:Me-Realm:903:SAY", "[Me]")
-    check("naowh card", card.title.text == "Founder" and card.about.text == "The Man. The King."
+    check("naowh card", card.title.text == "Founder" and card.about.text == "Naowh himself"
         and card.since.text == "")
     lines = {}
     s.postCalls[1](tooltip, { guid = "Player-1-SELF" })

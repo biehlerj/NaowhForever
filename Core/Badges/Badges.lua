@@ -71,7 +71,7 @@ end
 local TIERS = {
     naowh = {
         title = "Founder",
-        about = ns.L("The Man. The King."),
+        about = ns.L("Naowh himself"),
         label = "Naowh, the Founder",
         color = { r = 0xe6 / 255, g = 0xcc / 255, b = 0x80 / 255 },
         chat = MEDIA .. "BadgeNaowhChat.tga",
