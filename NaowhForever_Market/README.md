@@ -86,6 +86,9 @@ NaowhForever_Market/
   window, until players said they wanted the game's window and its flow, with The Market's extras beside
   it. The panel is anchored to the right edge of Blizzard's window, top to bottom, on its strata and
   scale, so it follows wherever the panel manager places it; Blizzard's frames are never anchored to it.
+- Docked, the panel and the window are raised to the top of that strata each time they dock. Left at their
+  default frame level, they tied with other addons' on-screen frames on `MEDIUM` (a guide's arrow and
+  quest-item button), which could draw over them.
 - The panel's X closes only the panel, and nothing is left above Blizzard's window to bring it back: the next
   visit opens it again, and so does putting away a window docked by the tabs below.
 - Farm, Price Graph and Reagents are tabs along the bottom of Blizzard's window, one row after its last tab

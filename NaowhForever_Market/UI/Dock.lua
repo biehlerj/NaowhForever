@@ -177,6 +177,7 @@ function Activate()
     if not dock then Build() end
     dock:SetScale(ah:GetScale())
     dock:SetFrameStrata(ah:GetFrameStrata())
+    dock:Raise()
     dock:ClearAllPoints()
     dock:SetPoint("TOPLEFT", ah, "TOPRIGHT", DOCK_GAP, 0)
     dock:SetPoint("BOTTOMLEFT", ah, "BOTTOMRIGHT", DOCK_GAP, 0)

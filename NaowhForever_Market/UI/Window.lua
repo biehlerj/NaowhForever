@@ -160,6 +160,7 @@ function Window.DockTo(ah, page, gap, onPick, onClose)
     dockedTo, dockGap, dockPicked, dockClosed = ah, gap, onPick, onClose
     window:SetScale(ns.UIScale())
     window:SetFrameStrata(ah:GetFrameStrata())
+    window:Raise()
     local top, side = Chrome()
     window:ClearAllPoints()
     window:SetPoint("TOPLEFT", ah, "TOPRIGHT", gap + side, -top)

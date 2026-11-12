@@ -34,6 +34,7 @@ local function Frame()
     function f:SetScale(s) self.scale = s end
     function f:GetEffectiveScale() return self.scale or 1 end
     function f:SetFrameStrata(s) self.strata = s end
+    function f:Raise() self.raised = true end
     function f:GetFrameStrata() return self.strata end
     function f:SetText() end
     function f:SetVertexColor() end
@@ -117,6 +118,7 @@ check("top to bottom, at Blizzard's window's height", window.points.BOTTOMLEFT[1
     and window.points.BOTTOMLEFT[2] == "BOTTOMRIGHT")
 check("at its own width where the screen has room for it", window.w == 1144)
 check("on Blizzard's strata", window.strata == "MEDIUM")
+check("raised over other frames on it", window.raised)
 check("and says which page it shows", picked[1] == "prices")
 ah.right = 1300
 Window.DockTo(ah, "farm", 4, OnPick, OnClose)

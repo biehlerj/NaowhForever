@@ -53,6 +53,7 @@ local function Frame()
     function f:SetScale(s) self.scale = s end
     function f:GetScale() return 1 end
     function f:SetFrameStrata(s) self.strata = s end
+    function f:Raise() self.raised = true end
     function f:GetFrameStrata() return "MEDIUM" end
     function f:EnableKeyboard(on) self.keys = on end
     function f:SetPropagateKeyboardInput() end
@@ -199,6 +200,7 @@ check("Blizzard's window is left as it is", ah.shown and ah.alpha == 1)
 check("The Market's panel shows beside it", Dock.Shown() and panel.points.TOPLEFT[1] == ah
     and panel.points.TOPLEFT[2] == "TOPRIGHT" and panel.points.BOTTOMLEFT[2] == "BOTTOMRIGHT")
 check("on Blizzard's strata", panel.strata == "MEDIUM")
+check("raised over other frames on it", panel.raised)
 check("with Buy first, as Blizzard's window opens on Buy", Pages.buy.shown and not Pages.sell.shown
     and not Pages.mine.shown)
 check("its tabs are Buy, Sell, My Auctions and, with Professions loaded, Shopping List", #panelPages == 4
