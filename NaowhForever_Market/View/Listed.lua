@@ -1,11 +1,11 @@
--- Listed.lua: the listings of the item on Sell, cheapest first, where your price lands among them, and Buy and Cancel on the row under the mouse (Market.Listed).
+-- Listed.lua: the listings of the item on Sell or Buy, cheapest first, where your price lands among them, and Buy and Cancel on the row under the mouse (Market.Listed).
 local ns = _G.NaowhForever
 
 local T = ns.THEME
 local Market = ns.Market
 local St = Market.Style
 local Parts = ns.Shared.Parts
-local Listings, Purchase, Sell = Market.Listings, Market.Purchase, Market.Sell
+local Listings, Purchase = Market.Listings, Market.Purchase
 
 local FOLDED = "marketListingsFolded"
 local HEAD_H, ROW_H, MARK_H, ROWS = 22, 18, 12, 4
@@ -36,8 +36,7 @@ local TEXT_CANCEL_ASK = ns.L("Cancel %s? It costs %s, and the items come back by
 local TEXT_CANCEL_FREE = ns.L("Cancel %s? The items come back by mail.")
 local STATUS = { searching = ns.L("Checking"), waiting = ns.L("Checking"), noanswer = ns.L("No answer") }
 
-local pane, redraw
-local lines = {}
+local pane, redraw, lines
 local bodyH = ROW_H
 local asking
 local note, noteKey
@@ -88,7 +87,7 @@ local function BuyAsked()
 end
 
 local function Quoted(itemID, count, total)
-    local entry = Sell.Focus()
+    local entry = pane.focus()
     CloseAsk()
     if not (entry and entry.commodity and entry.itemID == itemID) then return Purchase.Drop() end
     if total > GetMoney() then
@@ -101,9 +100,12 @@ local function Quoted(itemID, count, total)
 end
 
 local function Bought(ok, count)
-    local entry = Sell.Focus()
+    local entry = pane.focus()
     CloseAsk()
-    if ok then Listings.Again() end
+    if ok then
+        Listings.Again()
+        if entry and pane.bought then pane.bought(entry, count) end
+    end
     if entry then return Note(entry, ok and TEXT_BOUGHT:format(count) or TEXT_BUY_FAILED) end
     redraw()
 end
@@ -119,7 +121,7 @@ local function CostOf(count)
 end
 
 local function BuySome(itemID, most, text)
-    local entry, count = Sell.Focus(), tonumber(text)
+    local entry, count = pane.focus(), tonumber(text)
     if not (entry and entry.itemID == itemID and count and count >= 1) or asking or Purchase.Busy() then return end
     count = math.min(most, math.floor(count))
     if CostOf(count) > GetMoney() then return Note(entry, TEXT_NO_MONEY) end
@@ -128,7 +130,7 @@ local function BuySome(itemID, most, text)
 end
 
 local function Buy(index)
-    local entry = Sell.Focus()
+    local entry = pane.focus()
     if not entry or asking or Purchase.Busy() then return end
     local row = Listings.rows[index]
     local count, cost = 1, row.price
@@ -150,7 +152,7 @@ local function Buy(index)
 end
 
 local function Cancel(index)
-    local entry = Sell.Focus()
+    local entry = pane.focus()
     if not entry or asking or Purchase.Busy() then return end
     local row = Listings.rows[index]
     local auctionID, name = row.ownID, Name(entry, row.ownLink)
@@ -201,7 +203,7 @@ local function ShowTip(line)
     local row = Listings.rows[line.index]
     local m = T.muted
     GameTooltip:SetOwner(line, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(TEXT_TIP_TAKE, T.fg.r, T.fg.g, T.fg.b)
+    if pane.take then GameTooltip:AddLine(TEXT_TIP_TAKE, T.fg.r, T.fg.g, T.fg.b) end
     if CanBuy(row) then
         if pane.entry.commodity then
             local count, cost = Listings.Others(line.index)
@@ -228,9 +230,9 @@ local function LineLeave(line)
 end
 
 local function LineClicked(line)
-    local entry = Sell.Focus()
-    if not entry then return end
-    Sell.TakePrice(entry, Listings.rows[line.index].price)
+    local entry = pane.focus()
+    if not (entry and pane.take) then return end
+    pane.take(entry, Listings.rows[line.index].price)
     redraw()
 end
 
@@ -287,12 +289,13 @@ local function PaintLines(price)
     local cheapest = Cheapest()
     local y, marked = 0, false
     for i = 1, Listings.count do
-        if not marked and Listings.rows[i].price > price then
+        if price and not marked and Listings.rows[i].price > price then
             y, marked = PlaceMark(y), true
         end
         y = PaintLine(i, y, cheapest)
     end
-    if not marked then y = PlaceMark(y) end
+    if price and not marked then y = PlaceMark(y) end
+    pane.mark:SetShown(price ~= nil)
     for i = Listings.count + 1, #lines do lines[i]:Hide() end
     pane.list:SetSize(pane.scroll:GetWidth(), y)
     return math.min(y, VIEW_H)
@@ -362,8 +365,15 @@ local function BuildMark()
     pane.mark = mark
 end
 
-function Listed.New(parent, onChange)
-    pane, redraw = CreateFrame("Frame", nil, parent), onChange
+function Listed.Use(listed)
+    pane, redraw, lines = listed, listed.redraw, listed.lines
+    Purchase.onQuote, Purchase.onDone = Quoted, Bought
+end
+
+function Listed.New(parent, onChange, focus, take)
+    pane = CreateFrame("Frame", nil, parent)
+    pane.redraw, pane.lines, pane.focus, pane.take = onChange, {}, focus, take
+    Listed.Use(pane)
     ns.Solid(pane, "BACKGROUND", T.fg, St.PANEL_FILL):SetAllPoints()
     ns.Border(pane, St.BORDER_RGB)
     BuildHead()
@@ -378,6 +388,5 @@ function Listed.New(parent, onChange)
     pane.scroll:HookScript("OnSizeChanged", function(_, width) pane.list:SetWidth(width) end)
     BuildMark()
     pane.Paint, pane.Asking, pane.Close = Paint, Asking, Close
-    Purchase.onQuote, Purchase.onDone = Quoted, Bought
     return pane
 end

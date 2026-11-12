@@ -5,7 +5,8 @@ local Market = ns.Market
 local S = Market.Settings
 local Settings = ns.Shared.Settings
 
-local ORDER_SELLING, ORDER_AUCTIONS, ORDER_BAGS, ORDER_PRICES, ORDER_WATCH, ORDER_KEYS = 10, 15, 20, 30, 40, 80
+local ORDER_AUCTIONEER, ORDER_SELLING, ORDER_AUCTIONS, ORDER_BAGS, ORDER_PRICES, ORDER_WATCH, ORDER_KEYS =
+    5, 10, 15, 20, 30, 40, 80
 local TEXT_OFF = ns.L("Turn on The Market")
 local TEXT_PROFESSIONS_OFF = "Turn on Professions"
 local TEXT_NEEDS_TOOLTIP = ns.L("Needs Tooltip Lines")
@@ -141,6 +142,16 @@ local function DurationSummary(store)
 end
 
 local page = Settings.Page("The Market/Settings", S)
+
+page:Card({
+    id = "auctioneer", name = "At the Auctioneer", order = ORDER_AUCTIONEER,
+    help = "How The Market shows at the auction house.",
+    search = "full window replace blizzard auction house whole takeover open",
+    rows = {
+        { key = "fullWindow", label = "Full Window", toggle = true, needs = On, why = Why,
+          help = "The Market opens as one big window in place of Blizzard's auction house." },
+    },
+})
 
 page:Card({
     id = "selling", name = "Selling", order = ORDER_SELLING,

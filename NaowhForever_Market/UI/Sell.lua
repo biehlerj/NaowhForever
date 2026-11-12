@@ -780,7 +780,7 @@ function Page.Build(parent)
     BuildPostRow(BuildForm())
     BuildMessage()
     BuildBar()
-    listPane = Market.Listed.New(page, Page.Draw)
+    listPane = Market.Listed.New(page, Page.Draw, Sell.Focus, Sell.TakePrice)
     listPane:SetPoint("TOPLEFT", focusPane, "BOTTOMLEFT", 0, -SECTION_GAP)
     listPane:SetPoint("RIGHT")
     BuildQueue(focusPane)
@@ -791,6 +791,7 @@ end
 
 function Page.Show()
     page:Show()
+    Market.Listed.Use(listPane)
     list:SetWidth(scroll:GetWidth())
     if not active then
         active, failed = true, false

@@ -3,7 +3,10 @@
 -- List, and follows Blizzard's Buy, Sell and Auctions tabs; its X closes only the panel until the next visit, with no
 -- button left to bring it back. Farm, Price Graph and Reagents tabs follow Blizzard's last tab: each docks The Market's
 -- window in the panel's place, and the picked tab again or the window's X brings the panel back. Leaving the
--- auctioneer puts it all away. Post With Keys and Bag Worth start off.
+-- auctioneer puts it all away. Post With Keys and Bag Worth start off. With Full Window on (off by default), Blizzard's
+-- window is faded out and The Market's window covers it instead; its Blizzard button steps aside to the panel for
+-- the visit, with a The Market button above Blizzard's window to go back, and Blizzard's window is always faded back in
+-- when The Market lets go of it.
 local checks = 0
 local function check(label, value) assert(value, label); checks = checks + 1 end
 
@@ -21,7 +24,7 @@ Load("NaowhForever_Market/Market.lua", {
     } },
     C_CVar = { GetCVarDefault = function() return "2" end },
 })
-check("there is no setting to open The Market instead of Blizzard's window", defaults.openAtAuctioneer == nil)
+check("Full Window starts off", defaults.fullWindow == false)
 check("Post With Keys starts off", defaults.postKeys == false)
 check("Bag Worth starts off", defaults.bagWorth == false)
 
@@ -92,7 +95,8 @@ local pickTab, panel, panelPages, row, moved, opened, listAsked
 local buttons, under = 0, 0
 local made, timers = {}, {}
 local window = Frame()
-local docking
+local docking, covering, lastButton
+local ns
 local Window = {
     PAGES = { { key = "farm", label = "Farm" }, { key = "reagents", label = "Reagents" },
         { key = "prices", label = "Price Graph" } },
@@ -102,7 +106,23 @@ local Window = {
         window:Show()
         onPick(page)
     end,
-    Docked = function() if docking then return window end end,
+    Docked = function() if docking or covering then return window end end,
+    ShowPageIn = function(_, key)
+        local page = ns.Market.Pages[key]
+        if not page.built then page.Build() end
+        page.Show()
+    end,
+    HidePage = function(key) if ns.Market.Pages[key].built then ns.Market.Pages[key].Hide() end end,
+    Covering = function() return covering ~= nil end,
+    Cover = function(to, onAside)
+        covering = { to = to, aside = onAside }
+        window:Show()
+    end,
+    Uncover = function()
+        if not covering then return end
+        covering = nil
+        window:Hide()
+    end,
     Undock = function()
         if not docking then return end
         docking = nil
@@ -115,7 +135,7 @@ function Window.Hide()
     window:Hide()
     if was then was.onClose() end
 end
-local ns = {
+ns = {
     Market = {
         Settings = { Get = function(k) return settings[k] end, OnChange = function() end },
         On = function() return marketOn end,
@@ -158,7 +178,13 @@ local ns = {
     } },
     L = function(text) return text end,
     Font = function() return Frame() end,
-    Button = function() buttons = buttons + 1; return Frame() end,
+    Button = function(_, _, _, _, onClick)
+        buttons = buttons + 1
+        local button = Frame()
+        button.click, lastButton = onClick, button
+        return button
+    end,
+    Tooltip = function() end,
     Apply = function() end,
 }
 local Pages = ns.Market.Pages
@@ -333,6 +359,63 @@ ah:Open()
 check("with The Market off, Blizzard's window is left alone", ah.alpha == 1 and not Dock.Shown()
     and not row.shown and buttons == 0)
 ah:Close()
+
+-- Full Window.
+marketOn = true
+settings.postKeys = false
+ah:Close()
+settings.fullWindow = true
+Window.Open = function(page) opened = page; window:Show() end
+ah:Open()
+check("with Full Window on, The Market's window covers Blizzard's", covering and covering.to == ah and window.shown)
+check("Blizzard's window is faded out, not hidden", ah.alpha == 0 and ah.shown)
+check("and the panel and the tabs under Blizzard's window stay away", not Dock.Shown() and not row.shown
+    and ns.MarketAuctionTabs() == nil)
+check("Professions' panels sit beside the window", ns.MarketAuctionWindow() == window)
+check("bag items and Farm's Sell count it as at the auction house", Dock.AtAuction())
+check("nothing sits above Blizzard's window", buttons == 0)
+location = {}
+ah:SetPostItem(location)
+check("right-clicking a bag item opens the window's Sell with it", opened == "sell"
+    and Pages.sell.picked == location and not location.locked)
+
+covering.aside()
+check("its Blizzard button fades Blizzard's window back in and lets go of it", ah.alpha == 1 and not covering)
+check("with the panel and the tabs under it, as without Full Window", Dock.Shown() and row.shown)
+local back = lastButton
+check("and a The Market button above Blizzard's window, at its top right", buttons == 1 and back.shown
+    and back.points.BOTTOMRIGHT[1] == ah and back.points.BOTTOMRIGHT[2] == "TOPRIGHT")
+row.click("farm")
+check("a tab under Blizzard's window still docks the window there", docking and docking.page == "farm")
+back.click()
+check("The Market button covers Blizzard's window again", covering and ah.alpha == 0 and not docking
+    and not Dock.Shown() and not row.shown and not back.shown)
+
+covering = nil
+window:Hide()
+ah:Close()
+check("when the window's X closes the auction house, Blizzard's window is faded back in", ah.alpha == 1)
+ah:Open()
+check("the next visit covers it again, whatever was picked last time", covering and ah.alpha == 0)
+covering.aside()
+ah:Close()
+ah:Open()
+check("stepping aside lasts only that visit", covering and ah.alpha == 0 and buttons == 1)
+
+settings.fullWindow = false
+ns.Apply()
+check("turning Full Window off at the auctioneer brings Blizzard's window and the panel back", not covering
+    and ah.alpha == 1 and Dock.Shown() and row.shown and not back.shown)
+settings.fullWindow = true
+ns.Apply()
+check("and on again covers it", covering and ah.alpha == 0 and not Dock.Shown())
+marketOn = false
+ns.Apply()
+check("turning The Market off lets go of Blizzard's window", not covering and ah.alpha == 1 and not Dock.Shown()
+    and not back.shown)
+ah:Close()
+check("Escape and X stay Blizzard's while it is not covered", closes == 0)
+settings.fullWindow = nil
 
 -- Without Professions the panel has no Shopping List tab.
 ns.Professions = nil

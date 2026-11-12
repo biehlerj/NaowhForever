@@ -23,6 +23,12 @@ you gather is recorded, and what you really gather prices Farm's nodes. Bag Wort
 bags would fetch on your bags, and item tooltips gain The Market's lines: your stack's worth, the
 price over the past week, disenchanting, who makes it, what it crafts into and, if you ask, the best way
 to sell it. A Compact style keeps only the auction, vendor and disenchant prices.
+With Full Window on (off by default), The Market's window takes the auction house's place instead, with
+every page as a tab along its bottom: Buy, Sell, My Auctions, Shopping List, Farm, Price Graph and Reagents.
+Its Buy searches the auction house itself, by name and category, beside the Watch List and Searches, and
+lists what it finds; a row, a watched item or a Shopping List row picked there shows its listings with Buy
+on them. Scan Prices sits in its title bar beside a button to Blizzard's window, which brings back the
+panel for the rest of the visit, with a The Market button above Blizzard's window to go back.
 Built on [`Shared/`](../Shared/README.md).
 
 ## Layout
@@ -43,6 +49,7 @@ NaowhForever_Market/
   Auctions.lua       your auctions, each checked against the listings, and cancelling (Market.Auctions)
   History.lua        each item's lowest price per day and how many were listed, from your scans and the listings you see, two weeks of them, and the items whose price moved most (Market.History)
   Watch.lua          the items you watch for a price, and the chat line when one is at or under it (Market.Watch)
+  Results.lua        what the auction house's last browse search found, however it was sent, and more as you scroll (Market.Results)
   Searches.lua       your searches in named lists and the last ones you ran, run in Blizzard's Buy tab, and a list as a string to share (Market.Searches)
   Worth.lua          what your bags would fetch, their most valuable items, and the best way to sell an item (Market.Worth)
   Bank.lua           what your bank held when you last had it open, kept for each character, and what it would fetch (Market.Bank)
@@ -58,10 +65,11 @@ NaowhForever_Market/
     Spark.lua        an item's last two weeks of prices as a small line, for Farm (Market.Spark)
     Chart.lua        an item's lowest price each day as a chart you can hover for the day's price and how many were listed, for Price Graph (Market.Chart)
     Finder.lua       an item list searched by name across your scans, and the Watch price box, for Buy, Shopping List and Price Graph (Market.Finder)
-    Listed.lua       the listings of the item on Sell, where your price lands, and Buy and Cancel on a row (Market.Listed)
+    Listed.lua       the listings of the item on Sell or the full window's Buy, where your price lands, and Buy and Cancel on a row (Market.Listed)
     Quantity.lua     the chips over Sell's quantity box: 1, a number and All, kept as the default for that type of item (Market.Quantity)
+    Browse.lua       the full window's auction house search beside Buy and Shopping List: name, category, results, and the picked item's listings (Market.Browse)
   UI/
-    Window.lua       The Market's window: title bar, scan line, the Farm, Reagents and Price Graph pages, free or docked (Market.Window)
+    Window.lua       The Market's window: title bar, scan line, the Farm, Reagents and Price Graph pages, free or docked, or every page over the auction house; and the holders the pages move between it and the panel in (Market.Window)
     Farm.lua         the Farm page: the zone list, the zone's map, its loop and the picked item
     Tabs.lua         a tab bar for the window and the panel, with Buy's, Sell's and My Auctions' counts after their labels (Market.Tabs)
     Sell.lua         the panel's Sell page: the item, its price against the listings, the post line, its listings, Up Next
@@ -69,11 +77,11 @@ NaowhForever_Market/
     Reagents.lua     the Reagents page: Professions' Reagents list under a search
     Prices.lua       the Price Graph page: any item in your scans by name, from your bags, a writ filter or the movers, and its price chart
     Searches.lua     the Buy page's Searches view: a saved list or Recent, run with a click, kept and edited from menus (Market.SearchView)
-    Buy.lua          the panel's Buy page: your Watch List with any item in your scans to add to it, or your saved searches
-    Shopping.lua     the panel's Shopping List page: yours and your alts' materials still to buy, counted when bought
+    Buy.lua          the Buy page: your Watch List with any item in your scans to add to it, or your saved searches, and in the full window Browse beside them
+    Shopping.lua     the Shopping List page: yours and your alts' materials still to buy, counted when bought, and in the full window the picked one's listings
     Move.lua         Shift + drag moving Blizzard's auction house, and keeping it there (Market.Move)
     HouseTabs.lua    the Farm, Price Graph and Reagents tabs under Blizzard's window, drawn as its own tabs (Market.HouseTabs)
-    Dock.lua         the panel docked beside Blizzard's auction house, and the tabs that dock the window there instead (Market.Dock)
+    Dock.lua         the panel docked beside Blizzard's auction house, the tabs that dock the window there instead, or with Full Window on the window over it (Market.Dock)
     BagWorth.lua     the Bag Worth card on your bags, with your bank if you ask, and the numbers on their most valuable slots
     Tooltip.lua      The Market's lines on item tooltips
     Mail.lua         what a mail's attachments would fetch at auction, one line on the inbox's own tooltip
@@ -82,10 +90,30 @@ NaowhForever_Market/
 
 ## Why
 
-- Blizzard's auction house window is left as the game draws it. The Market used to cover it with its own
-  window, until players said they wanted the game's window and its flow, with The Market's extras beside
-  it. The panel is anchored to the right edge of Blizzard's window, top to bottom, on its strata and
+- Blizzard's auction house window is left as the game draws it by default. The Market used to cover it with
+  its own window, until players said they wanted the game's window and its flow, with The Market's extras
+  beside it; others missed the one big window, so Full Window brings it back as a setting, off by default.
+  The panel is anchored to the right edge of Blizzard's window, top to bottom, on its strata and
   scale, so it follows wherever the panel manager places it; Blizzard's frames are never anchored to it.
+- Full Window fades Blizzard's window to alpha 0 rather than hiding it (hiding frames other Blizzard code lays
+  out taints it), and The Market's window covers it from its top-left corner one strata up, at least its own
+  size or Blizzard's window plus `BLIZZARD_TABS` (40) for the tabs under it, in its own scale, so nothing of
+  Blizzard's faded window can take a click. It is anchored to Blizzard's window, so Shift + drag on it moves both.
+  Blizzard's window is faded back in whenever The Market lets go of it: the Blizzard button, Full Window or The
+  Market turned off, and leaving the auctioneer, including by the window's X or Escape, which close the auction
+  house (`C_AuctionHouse.CloseAuctionHouse`) as Blizzard's own X would. The Blizzard button lasts the visit.
+- Each page is built once, inside a holder frame (`Window.ShowPageIn`), and the holder is moved to whichever of
+  the panel or the window shows the page, so Sell, Buy, My Auctions and Shopping List are the panel's own pages
+  in the window, at the window's width. Only one shows a page at a time: the panel hides before the window covers
+  Blizzard's, and the window before the panel comes back.
+- In the full window Buy and Shopping List keep their panel-width column on the left, and Browse fills the rest.
+  Browse sends its searches through Searches, the same path as the Searches view, so a search made there is in
+  Recent and a saved search run from the Searches view lists in Browse: Results reads the browse results whoever
+  sent them. A picked item's commodity status comes from `C_AuctionHouse.GetItemKeyInfo`, which can be nil until
+  `ITEM_KEY_ITEM_INFO_RECEIVED`, so its listings wait for that. Its listings are Sell's (`Market.Listed`), given
+  the picked item instead of Sell's; with no price of yours they have no "Your price" mark and a click takes no
+  price. A commodity bought there from the Shopping List counts on the list of the row it was picked from, as one
+  bought in Blizzard's buy dialog does beside the panel.
 - Docked, the panel and the window are raised to the top of that strata each time they dock. Left at their
   default frame level, they tied with other addons' on-screen frames on `MEDIUM` (a guide's arrow and
   quest-item button), which could draw over them.
@@ -1113,3 +1141,29 @@ Which house pays more, on Price Graph:
 
 136. Before any scan at Blackwater, Price Graph shows Blackwater's price for an item but no "After the cut"
      line. After a scan there, the line appears for items whose prices differ by a tenth or more.
+
+Full Window:
+
+137. With Full Window off (the default), the auction house is as before: Blizzard's window with the panel.
+     Turn it on at an auctioneer: Blizzard's window disappears and The Market's window covers its place, on
+     Buy, with Buy, Sell, My Auctions, Shopping List (with Professions), Farm, Price Graph and Reagents tabs.
+     Nothing of Blizzard's window shows or takes a click around it, its tabs and Scan Prices included.
+138. On Buy, type a name and press Enter: the results list cheapest first, by name, lowest price and how many
+     are listed, and the search is in the Searches view's Recent. Pick a category from the menu: the search
+     runs in it. Scroll near the end of a long list: more come in. The column headers sort.
+139. Click a result: its name and listings show under the list. A commodity's Buy asks how many, then the
+     game's price, then buys; the listings refresh. A gear piece's Buy asks and buys that auction. Clicking a
+     listing takes no price and there is no "Your price" line. Your own listing offers Cancel.
+140. Pick a Watch List item, and a saved search from the Searches view: the item's listings, and the search's
+     results, show beside them.
+141. On Shopping List, pick a row and buy some of a commodity there: the row's count drops, on your list or on
+     the alt's whose row it was.
+142. Sell, My Auctions, Farm, Price Graph and Reagents work as in the panel and window, at the window's width.
+     With Post With Keys on, Space posts on Sell. Right-click a bag item: Sell opens with it.
+143. Scan Prices in the title bar scans, and the scan line beside it updates. Shift + drag the window: the
+     auction house moves with it and is there next visit.
+144. Click the Blizzard button: Blizzard's window is back with the panel, its tabs and a The Market button above
+     its top right. That button brings the full window back. Leave and come back: the full window again.
+145. The window's X, and Escape, close the auction house. Turn Full Window off at the auctioneer, and The Market
+     off: Blizzard's window comes back each time, with the panel or alone. No Lua error, taint or blocked action
+     at any step, in or out of combat.

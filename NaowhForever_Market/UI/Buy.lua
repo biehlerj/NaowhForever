@@ -1,4 +1,4 @@
--- Buy.lua: the panel's Buy page: your watch list with any item in your scans to add to it, or your saved searches.
+-- Buy.lua: the Buy page: your watch list with any item in your scans to add to it, or your saved searches, and in the full window the auction house's own search beside them.
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -20,7 +20,7 @@ local VIEWS = {
     { key = "searches", label = "Searches", tip = "Your saved searches, run in the auction house's own Buy tab." },
 }
 
-local page, views, head, watch, finder, searches
+local page, column, views, head, watch, finder, searches
 local view = "watch"
 local watched = {}
 
@@ -53,7 +53,7 @@ function Page.Draw()
 end
 
 local function BuildHead()
-    head = CreateFrame("Frame", nil, page)
+    head = CreateFrame("Frame", nil, column)
     head:SetPoint("TOPLEFT", views, "BOTTOMLEFT", 0, -GAP)
     head:SetPoint("RIGHT")
     head:SetHeight(HEAD_H)
@@ -66,7 +66,7 @@ local function BuildHead()
     head.name:SetWordWrap(false)
     head.sub = ns.Font(head, St.SMALL_SIZE, nil, T.muted)
     head.sub:SetPoint("TOPLEFT", head.name, "BOTTOMLEFT", 0, -SUB_GAP)
-    watch = Finder.Watch(page, BUTTON_W, BUTTON_H, Page.Draw)
+    watch = Finder.Watch(column, BUTTON_W, BUTTON_H, Page.Draw)
     watch:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -GAP)
     watch:SetPoint("RIGHT")
 end
@@ -81,7 +81,7 @@ local function ShowView(key)
     end
     finder.frame:SetShown(watching)
     if not (watching or searches) then
-        searches = Market.SearchView.Build(page, WIDTH)
+        searches = Market.SearchView.Build(column, WIDTH)
         searches:SetPoint("TOPLEFT", views, "BOTTOMLEFT", 0, -GAP)
         searches:SetPoint("BOTTOMRIGHT")
     end
@@ -89,14 +89,23 @@ local function ShowView(key)
     Page.Draw()
 end
 
+local function Picked(itemID)
+    if Market.Window.Covering() then Market.Browse.PickItem(itemID) end
+end
+
 function Page.Build(parent)
     page = CreateFrame("Frame", nil, parent)
     page:SetAllPoints()
-    views = Parts.Tabs(page, WIDTH, VIEWS, ShowView, true)
+    column = CreateFrame("Frame", nil, page)
+    column:SetPoint("TOPLEFT")
+    column:SetPoint("BOTTOMLEFT")
+    column:SetWidth(WIDTH)
+    views = Parts.Tabs(column, WIDTH, VIEWS, ShowView, true)
     views:SetPoint("TOPLEFT")
     Parts.PaintTabs(views, view)
     BuildHead()
-    finder = Finder.New(page, WIDTH, FromList, Page.Draw, true)
+    finder = Finder.New(column, WIDTH, FromList, Page.Draw, true)
+    finder.onPick = Picked
     finder.frame:SetPoint("TOPLEFT", watch, "BOTTOMLEFT", 0, -GAP)
     finder.frame:SetPoint("BOTTOMRIGHT")
     Market.Searches.Watch()
@@ -104,6 +113,11 @@ end
 
 function Page.Show()
     page:Show()
+    if Market.Window.Covering() then
+        Market.Browse.Attach(page, column)
+    else
+        Market.Browse.Detach()
+    end
     Page.Draw()
 end
 
@@ -120,4 +134,5 @@ end
 function Page.Hide()
     page:Hide()
     Market.Searches.Stop()
+    Market.Browse.Detach()
 end

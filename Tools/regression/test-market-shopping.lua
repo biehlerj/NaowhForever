@@ -106,6 +106,7 @@ ns.Shared = {
         end,
     },
 }
+local browse = {}
 ns.Market = {
     C = { SILVER = 100 },
     Style = { TEXT_SIZE = 12, SMALL_SIZE = 11, SEARCH_H = 24, SCROLLBAR = 6, PANEL_FILL = 0.1, PICKED_FILL = 0.2,
@@ -114,6 +115,12 @@ ns.Market = {
     Pages = {},
     Dock = { Refresh = function() end },
     HouseKey = function() return "Realm-Horde" end,
+    Window = { Covering = function() return browse.covering end },
+    Browse = {
+        Attach = function(page, column, onBought) browse.page, browse.column, browse.bought = page, column, onBought end,
+        Detach = function() browse.page = nil end,
+        PickItem = function(itemID, owner, who) browse.item, browse.owner, browse.who = itemID, owner, who end,
+    },
 }
 
 local dialog = { BuyNow = function() end }
@@ -236,6 +243,42 @@ check("and an item picked there is on no one's list", (function()
     return Page.Picked() == nil
 end)())
 search:SetText("")
+
+check("beside the auction house, a picked row's listings are left to Blizzard's window", browse.item == nil
+    and browse.page == nil)
+browse.covering = true
+Page.Show()
+check("in the full window, the page shows the auction house's listings beside its list", browse.page == page
+    and browse.column == page.children[1])
+rows = Rows()
+rows[3].scripts.OnClick(rows[3])
+check("and a row picked shows that item's listings, for that alt", browse.item == LINEN
+    and browse.owner == "Player-2" and browse.who == "Zed")
+browse.bought({ itemID = LINEN, commodity = true, owner = "Player-2", who = "Zed" }, 4)
+check("bought there, it counts on that alt's list", #bought == 3 and bought[3].owner == "Player-2"
+    and bought[3].who == "Zed" and bought[3].qty == 4)
+browse.bought({ itemID = LINEN, commodity = true }, 2)
+check("but not on yours while the alt's row is picked", #bought == 3)
+rows[1].scripts.OnClick(rows[1])
+browse.bought({ itemID = LINEN, commodity = true }, 2)
+check("picked from your own row, it counts on yours", #bought == 4 and bought[4].owner == nil
+    and bought[4].qty == 2)
+browse.bought({ itemID = WOOL, commodity = true }, 1)
+check("another item than the picked row's counts on no list", #bought == 4)
+browse.bought({ itemID = LINEN }, 1)
+check("an item that is not a commodity counts on no list", #bought == 4)
+search:SetText("cloth")
+rows = Rows()
+rows[1].scripts.OnClick(rows[1])
+check("an item picked from your scans shows its listings for no one's list", browse.item == rows[1].itemID
+    and browse.owner == nil)
+browse.bought({ itemID = rows[1].itemID, commodity = true }, 1)
+check("and bought there counts on no list", #bought == 4)
+search:SetText("")
+Page.Hide()
+check("and the listings go with the page", browse.page == nil)
+browse.covering = nil
+Page.Show()
 
 mine = {}
 Shopping.Redraw()

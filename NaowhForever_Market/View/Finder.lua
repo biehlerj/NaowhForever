@@ -83,6 +83,7 @@ end
 local function RowClicked(row)
     local finder = row.finder
     finder.picked, finder.at = row.itemID, row.index
+    if finder.onPick then finder.onPick(row.itemID, row.index) end
     finder.redraw()
 end
 

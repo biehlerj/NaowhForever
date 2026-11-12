@@ -6,13 +6,13 @@ local REALM_JOIN = "-"
 local DURATION_CVAR = "auctionHouseDurationDropdown"
 
 local S = ns.UI.ModuleSettings("market", { enabled = F.enabled,
-    duration = tonumber(C_CVar.GetCVarDefault(DURATION_CVAR)), postKeys = false, askBadPost = true,
+    duration = tonumber(C_CVar.GetCVarDefault(DURATION_CVAR)), postKeys = false, askBadPost = true, fullWindow = false,
     bagWorth = false, bagWorthBank = false,
     aheadAllowed = 0,
     tooltip = true, tooltipStyle = "detailed", tooltipStack = "both", tooltipShift = false, tooltipBest = false, tooltipBestMargin = 0,
     tooltipOther = false, tooltipMail = false, tooltipAverage = false,
     farmHerbs = true, farmVeins = true, farmSkins = true, farmFish = true, farmLocked = false, farmPlan = false,
-    sortRun = "", sortCrafts = "", sortMine = "", undercut = "step", undercutPercent = 5, undercutAmount = 100,
+    sortRun = "", sortCrafts = "", sortMine = "", sortBuy = "", undercut = "step", undercutPercent = 5, undercutAmount = 100,
     startingBid = false, watchAlerts = true,
     sellQuantityTrade = 0, sellQuantityConsumable = 0, sellQuantityRecipe = 0, sellQuantityOther = 0,
     sellNumberTrade = 20, sellNumberConsumable = 20, sellNumberRecipe = 20, sellNumberOther = 20 })

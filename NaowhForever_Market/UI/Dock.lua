@@ -1,4 +1,4 @@
--- Dock.lua: The Market at Blizzard's auction house: its panel docked to the right with Buy, Sell, My Auctions and Shopping List, and the Farm, Price Graph and Reagents tabs that dock The Market's window there instead (Market.Dock).
+-- Dock.lua: The Market at Blizzard's auction house: its panel docked to the right with Buy, Sell, My Auctions and Shopping List, the Farm, Price Graph and Reagents tabs that dock The Market's window there instead, or with Full Window on, The Market's window in place of Blizzard's (Market.Dock).
 local ns = _G.NaowhForever
 
 local Market = ns.Market
@@ -13,7 +13,9 @@ local DOCK_GAP, HEAD_H = 4, 34
 local NEXT_FRAME = 0
 local WATCH_H = 20
 local DRAG_BUTTON = "LeftButton"
+local BACK_W, BACK_H, BACK_GAP = 120, 22, 4
 local TEXT_TITLE = "The Market"
+local TEXT_BACK_TIP = ns.L("The Market's full window, in place of Blizzard's.")
 local TEXT_WATCH_ONE = ns.L("%d on your watch list is at or under your price")
 local TEXT_WATCH_MANY = ns.L("%d on your watch list are at or under your price")
 local PAGES = {
@@ -27,11 +29,10 @@ local WINDOW_PAGES = { "farm", "prices", "reagents" }
 local BLIZZARD_PAGES = { Buy = "buy", ItemBuy = "buy", CommoditiesBuy = "buy", WoWTokenBuy = "buy",
     ItemSell = "sell", CommoditiesSell = "sell", WoWTokenSell = "sell", Auctions = "mine" }
 
-local dock, body, tabs, events, ah, watchLine, row
+local dock, body, tabs, events, ah, watchLine, row, back
 local shown = "buy"
 local blizzardPage, docked
-local built = {}
-local closed = false
+local closed, stepped = false, false
 
 local Dock = {}
 Market.Dock = Dock
@@ -39,15 +40,10 @@ Market.Dock = Dock
 local PaintWatch
 
 local function ShowPage(key)
-    if built[shown] and shown ~= key then Market.Pages[shown].Hide() end
+    if shown ~= key then Market.Window.HidePage(shown) end
     shown = key
     Market.Tabs.Paint(tabs, key)
-    local page = Market.Pages[key]
-    if not built[key] then
-        page.Build(body)
-        built[key] = true
-    end
-    page.Show()
+    Market.Window.ShowPageIn(body, key)
     PaintWatch()
 end
 
@@ -65,7 +61,7 @@ local function OnKeyDown(self, key)
 end
 
 local function OnHidden()
-    if built[shown] then Market.Pages[shown].Hide() end
+    Market.Window.HidePage(shown)
 end
 
 local function OpenWatch()
@@ -170,9 +166,53 @@ local function ShowRow()
     StyleRow()
 end
 
+local function Uncover()
+    Market.Window.Uncover()
+    if ah then ah:SetAlpha(1) end
+end
+
+local function StepAside()
+    stepped = true
+    Activate()
+end
+
+local function Return()
+    stepped = false
+    Activate()
+end
+
+local function Cover()
+    if docked then
+        docked = nil
+        Market.Window.Undock()
+    end
+    if dock then dock:Hide() end
+    if row then row:Hide() end
+    if back then back:Hide() end
+    ah:SetAlpha(0)
+    Market.Window.Cover(ah, StepAside)
+    Changed()
+end
+
+local function ShowBack()
+    if not S.Get("fullWindow") then
+        if back then back:Hide() end
+        return
+    end
+    if not back then
+        back = ns.Button(ah, TEXT_TITLE, BACK_W, BACK_H, Return)
+        back:SetPoint("BOTTOMRIGHT", ah, "TOPRIGHT", 0, BACK_GAP)
+        ns.Tooltip(back, TEXT_TITLE, TEXT_BACK_TIP)
+    end
+    back:Show()
+end
+
 function Activate()
     if not (Market.On() and ah and ah:IsShown()) then return end
+    if S.Get("fullWindow") and not stepped then return Cover() end
+    Uncover()
     ShowRow()
+    ShowBack()
     if closed or docked then return end
     if not dock then Build() end
     dock:SetScale(ah:GetScale())
@@ -191,10 +231,12 @@ function Activate()
 end
 
 local function Deactivate()
+    Uncover()
     if dock then dock:Hide() end
     docked = nil
     Market.Window.Undock()
     if row then row:Hide() end
+    if back then back:Hide() end
     Changed()
 end
 
@@ -205,7 +247,7 @@ local function OnBlizzardShow()
 end
 
 local function OnBlizzardHide()
-    closed = false
+    closed, stepped = false, false
     blizzardPage = nil
     Market.Move.Stop()
     Deactivate()
@@ -217,17 +259,22 @@ function Dock.Shown()
 end
 
 function Dock.AtAuction()
-    return Dock.Shown() or docked ~= nil
+    return Dock.Shown() or docked ~= nil or Market.Window.Covering()
 end
 
 function Dock.Pick(location)
     if not Dock.AtAuction() then return end
-    if docked then Market.Window.Hide() end
-    ShowPage("sell")
+    if Market.Window.Covering() then
+        Market.Window.Open("sell")
+    else
+        if docked then Market.Window.Hide() end
+        ShowPage("sell")
+    end
     Market.Pages.sell.PickLocation(location)
 end
 
 function Dock.Refresh()
+    if Market.Window.Covering() then return Market.Window.Refresh() end
     if not Dock.Shown() then return end
     PaintWatch()
     Market.Tabs.Paint(tabs, shown)
@@ -300,7 +347,7 @@ local function Apply()
 end
 
 local function OnSetting(key)
-    if key == "enabled" or key == "postKeys" then Apply() end
+    if key == "enabled" or key == "postKeys" or key == "fullWindow" then Apply() end
 end
 
 S.OnChange(OnSetting)

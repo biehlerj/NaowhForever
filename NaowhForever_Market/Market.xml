@@ -12,6 +12,7 @@
     <Script file="Auctions.lua"/>
     <Script file="History.lua"/>
     <Script file="Watch.lua"/>
+    <Script file="Results.lua"/>
     <Script file="Searches.lua"/>
     <Script file="Worth.lua"/>
     <Script file="Bank.lua"/>
@@ -28,6 +29,7 @@
     <Script file="View\Listed.lua"/>
     <Script file="View\Quantity.lua"/>
     <Script file="View\Columns.lua"/>
+    <Script file="View\Browse.lua"/>
     <Script file="UI\Tabs.lua"/>
     <Script file="UI\Window.lua"/>
     <Script file="UI\Farm.lua"/>

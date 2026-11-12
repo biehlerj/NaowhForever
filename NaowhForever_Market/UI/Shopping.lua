@@ -1,4 +1,4 @@
--- Shopping.lua: the panel's Shopping List page: what your Shopping List and your alts' still need, each counted on its own list when bought.
+-- Shopping.lua: the Shopping List page: what your Shopping List and your alts' still need, each counted on its own list when bought, and in the full window the listings of the one you pick.
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -10,6 +10,7 @@ local Finder = Market.Finder
 
 local HEAD_H, HEAD_ICON, NAME_SIZE, NAME_GAP, SUB_GAP, GAP = 40, 32, 15, 8, 3, 10
 local BUTTON_W, BUTTON_H = 86, 24
+local WIDTH = St.DOCK_W - St.DOCK_PAD * 2
 local ROSTER = "marketCharacters"
 local BUY_EVENTS = { "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED" }
 local TEXT_LIST = ns.L("From Professions, what you still need")
@@ -19,7 +20,7 @@ local TEXT_MORE_FOR = ns.L("%d more for %s")
 local TEXT_SCAN_SUB = ns.L("Your last scan: %s each")
 local TEXT_NO_SCAN_SUB = ns.L("Not in your scans yet")
 
-local page, head, watch, finder, events, roster
+local page, column, head, watch, finder, events, roster
 local entries, pool, alts = {}, {}, {}
 local buying = {}
 
@@ -117,10 +118,7 @@ local function OnBuyNow(dialog)
     for _, event in ipairs(BUY_EVENTS) do events:RegisterEvent(event) end
 end
 
-local function OnEvent(_, event)
-    local item, qty, owner, who = buying.item, buying.qty, buying.owner, buying.who
-    Done()
-    if event ~= "COMMODITY_PURCHASE_SUCCEEDED" then return end
+local function Counted(item, qty, owner, who)
     local shopping = Shopping()
     if owner then
         shopping.BoughtFor(owner, who, item, qty)
@@ -131,12 +129,31 @@ local function OnEvent(_, event)
     end
 end
 
+local function OnEvent(_, event)
+    local item, qty, owner, who = buying.item, buying.qty, buying.owner, buying.who
+    Done()
+    if event == "COMMODITY_PURCHASE_SUCCEEDED" then Counted(item, qty, owner, who) end
+end
+
+local function BoughtHere(entry, count)
+    local e = Page.Picked()
+    if entry.commodity and e and e.item == entry.itemID and e.owner == entry.owner then
+        Counted(entry.itemID, count, entry.owner, entry.who)
+    end
+end
+
+local function Picked(itemID)
+    if not Market.Window.Covering() then return end
+    local e = Page.Picked()
+    Market.Browse.PickItem(itemID, e and e.owner, e and e.who)
+end
+
 local function OnListChanged()
     if page:IsShown() then Page.Draw() end
 end
 
 local function BuildHead()
-    head = CreateFrame("Frame", nil, page)
+    head = CreateFrame("Frame", nil, column)
     head:SetPoint("TOPLEFT")
     head:SetPoint("TOPRIGHT")
     head:SetHeight(HEAD_H)
@@ -149,7 +166,7 @@ local function BuildHead()
     head.name:SetWordWrap(false)
     head.sub = ns.Font(head, St.SMALL_SIZE, nil, T.muted)
     head.sub:SetPoint("TOPLEFT", head.name, "BOTTOMLEFT", 0, -SUB_GAP)
-    watch = Finder.Watch(page, BUTTON_W, BUTTON_H, Page.Draw)
+    watch = Finder.Watch(column, BUTTON_W, BUTTON_H, Page.Draw)
     watch:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -GAP)
     watch:SetPoint("RIGHT")
 end
@@ -157,9 +174,14 @@ end
 function Page.Build(parent)
     page = CreateFrame("Frame", nil, parent)
     page:SetAllPoints()
+    column = CreateFrame("Frame", nil, page)
+    column:SetPoint("TOPLEFT")
+    column:SetPoint("BOTTOMLEFT")
+    column:SetWidth(WIDTH)
     BuildHead()
-    finder = Finder.New(page, St.DOCK_W - St.DOCK_PAD * 2, FromList, Page.Draw)
+    finder = Finder.New(column, WIDTH, FromList, Page.Draw)
     finder.side = Side
+    finder.onPick = Picked
     finder.frame:SetPoint("TOPLEFT", watch, "BOTTOMLEFT", 0, -GAP)
     finder.frame:SetPoint("BOTTOMRIGHT")
     events = CreateFrame("Frame")
@@ -170,6 +192,11 @@ end
 
 function Page.Show()
     page:Show()
+    if Market.Window.Covering() then
+        Market.Browse.Attach(page, column, BoughtHere)
+    else
+        Market.Browse.Detach()
+    end
     Page.Draw()
 end
 
@@ -179,4 +206,5 @@ end
 
 function Page.Hide()
     page:Hide()
+    Market.Browse.Detach()
 end

@@ -152,6 +152,7 @@ ns.Shared = {
         PaintTabs = function(bar, key) bar.picked = key end,
     },
 }
+local browse = {}
 ns.Market = {
     C = { SILVER = 100 },
     Style = { TEXT_SIZE = 12, SMALL_SIZE = 11, SEARCH_H = 24, SCROLLBAR = 6, PANEL_FILL = 0.1, PICKED_FILL = 0.2,
@@ -160,6 +161,12 @@ ns.Market = {
     Pages = {},
     Dock = { Refresh = function() end },
     On = function() return true end,
+    Window = { Covering = function() return browse.covering end },
+    Browse = {
+        Attach = function(page, column, onBought) browse.page, browse.column, browse.bought = page, column, onBought end,
+        Detach = function() browse.page = nil end,
+        PickItem = function(itemID, owner, who) browse.item, browse.owner, browse.who = itemID, owner, who end,
+    },
 }
 
 local readyFrames, order = {}, {}
@@ -233,7 +240,7 @@ local page = root.children[1]
 local finderFrame, pick
 check("Buy has two views, Watch List first", #tips.items == 2 and tips.items[1].label == "Watch List"
     and tips.items[2].label == "Searches" and tips.picked == "watch")
-for _, child in ipairs(page.children) do
+for _, child in ipairs(page.children[1].children) do
     for _, c in ipairs(child.children) do
         if c.kind == "EditBox" then finderFrame = child end
     end

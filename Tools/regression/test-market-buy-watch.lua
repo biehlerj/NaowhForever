@@ -118,6 +118,7 @@ ns.Shared = {
         end,
     },
 }
+local browse = {}
 ns.Market = {
     C = { SILVER = 100 },
     AfterCut = function(price) return math.floor(price * 0.95) end,
@@ -128,6 +129,12 @@ ns.Market = {
     Pages = {},
     WRITS = { [ALCHEMY] = { 201, 203, 204 }, [TAILORING] = { 202, 203 } },
     Dock = { Refresh = function() refreshed = refreshed + 1 end },
+    Window = { Covering = function() return browse.covering end },
+    Browse = {
+        Attach = function(page, column, onBought) browse.page, browse.column, browse.bought = page, column, onBought end,
+        Detach = function() browse.page = nil end,
+        PickItem = function(itemID, owner, who) browse.item, browse.owner, browse.who = itemID, owner, who end,
+    },
     Searches = { Watch = function() end, Stop = function() end },
     Worth = { Read = function() return bags end },
     Chart = { New = function(parent)
@@ -183,7 +190,7 @@ Buy.Build(root)
 Buy.Show()
 local buyMoney = moneyBoxes[1]
 local search
-for _, child in ipairs(root.children[1].children) do
+for _, child in ipairs(root.children[1].children[1].children) do
     for _, c in ipairs(child.children) do if c.kind == "EditBox" then search = c end end
 end
 check("Buy has a search box", search ~= nil)
@@ -210,6 +217,19 @@ rows[2].scripts.OnClick(rows[2])
 buyMoney.amount = 50
 Click("Watch")
 check("a second item joins it", Watch.Target(103) == 50)
+check("beside the auction house, a picked row's listings are left to Blizzard's window", browse.item == nil
+    and browse.page == nil)
+browse.covering = true
+Buy.Show()
+local buyPage = root.children[1]
+check("in the full window, Buy shows the auction house's own search beside its views", browse.page == buyPage
+    and browse.column == buyPage.children[1] and browse.bought == nil)
+rows = RowsOf(root)
+rows[1].scripts.OnClick(rows[1])
+check("and a row picked there shows its listings", browse.item == rows[1].itemID)
+browse.covering = nil
+Buy.Show()
+check("beside the auction house again, the search goes", browse.page == nil)
 
 search:SetText("")
 rows = RowsOf(root)
