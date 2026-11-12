@@ -118,6 +118,9 @@ The QoL store and the Alerts group
 - A key binding whose module is off prints that it is switched off (`SwitchedOff`), instead of
   calling a function that was never made. The bindings for the modules' own windows and settings
   (`NaowhForever_ToggleModule`) go through `OpenModule`, which says the same.
+- Forever has the totem bar but its own Key Bindings have no Totem Bar keys, so Bindings.xml
+  binds the game's totem bar buttons by click under their own section. The game's buttons show
+  these keys by themselves, since they look up a click binding when their own has no key.
 
 Namespace and builds
 - `MODULE_KEY` must match the addon folder: the DB and saved positions key off it.

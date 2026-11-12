@@ -13,7 +13,10 @@ local function Fixture(badges)
     local ns = {
         UI = {},
         FEATURE_BADGES = badges, BADGES_LIVE = 1,
-        L = function(text) return text end,
+        L = function(text, ...)
+            if select("#", ...) > 0 then return text:format(...) end
+            return text
+        end,
         Print = function(msg) s.printed[#s.printed + 1] = msg end,
         ToggleOptionsWindow = function() s.toggled = s.toggled + 1 end,
         IsUnlockModeActive = function() return s.unlock end,
@@ -206,6 +209,24 @@ for key, window in pairs({ SCRAP = { "scrap", "ToggleScrapList", "Junk List", "Q
     t.ns[window[2]] = function() toggled = toggled + 1 end
     t.env.NaowhForever_ToggleWindow(window[1])
     check("and otherwise toggles it", toggled == 1)
+end
+
+-- Forever's own bindings have no Totem Bar keys, so the totem bar's buttons are bound here by click.
+do
+    local t = Fixture(0)
+    check("the totem keys have their own Key Bindings section", t.env.BINDING_HEADER_NAOWHFOREVER_TOTEMS == "Totem Bar")
+    local totems = { MultiCastSummonSpellButton = "Call Totems", MultiCastRecallSpellButton = "Totemic Recall",
+        MultiCastActionButton1 = "Page 1, Totem 1", MultiCastActionButton4 = "Page 1, Totem 4",
+        MultiCastActionButton5 = "Page 2, Totem 1", MultiCastActionButton12 = "Page 3, Totem 4" }
+    for button, name in pairs(totems) do
+        check(button .. " is named " .. name, t.env["BINDING_NAME_CLICK " .. button .. ":LeftButton"] == name)
+    end
+    local bound = 0
+    for button in bindings:gmatch('<Binding name="CLICK (MultiCast%w+):LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>') do
+        check("the " .. button .. " key has a name", t.env["BINDING_NAME_CLICK " .. button .. ":LeftButton"] ~= nil)
+        bound = bound + 1
+    end
+    check("every totem bar button has a key: Call, Recall and three pages of four", bound == 14)
 end
 
 local toc = Read("NaowhForever.toc")

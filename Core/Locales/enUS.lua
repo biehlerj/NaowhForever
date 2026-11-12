@@ -8141,6 +8141,10 @@ L["An auction is undercut only when more than this many items are listed for les
 L["The Market's keys."] = true
 L["Cancel Next Undercut Auction"] = true
 L["On My Auctions, each press cancels your next undercut auction."] = true
+L["Totem Bar"] = true
+L["Call Totems"] = true
+L["Totemic Recall"] = true
+L["Page %d, Totem %d"] = true
 L["Yours %s"] = true
 L["Search your scans by name"] = true
 L["%d found"] = true

@@ -37,4 +37,18 @@
     <Binding name="NAOWHFOREVER_AIM" category="BINDING_HEADER_NAOWHFOREVER">NaowhForever_ToggleWindow("aim")</Binding>
     <Binding name="NAOWHFOREVER_WORD" category="BINDING_HEADER_NAOWHFOREVER">NaowhForever_ToggleWindow("word")</Binding>
     <Binding name="NAOWHFOREVER_EFFICIENCY" category="BINDING_HEADER_NAOWHFOREVER">NaowhForever_ToggleWindow("efficiency")</Binding>
+    <Binding name="CLICK MultiCastSummonSpellButton:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton1:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton2:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton3:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton4:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton5:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton6:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton7:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton8:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton9:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton10:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton11:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastActionButton12:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
+    <Binding name="CLICK MultiCastRecallSpellButton:LeftButton" category="BINDING_HEADER_NAOWHFOREVER_TOTEMS"/>
 </Bindings>

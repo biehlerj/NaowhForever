@@ -16,6 +16,7 @@ local WINDOW_KEYS = { scrap = { "ToggleScrapList", "Junk List", "Quality of Life
     aim = { "ToggleAimTrainer", "Aim Trainer", "Quality of Life" },
     word = { "ToggleDailyWord", "Daily Word", "Quality of Life" },
     efficiency = { "ToggleSpellEfficiencyReport", "Mana Efficiency", "Quality of Life" } }
+local TOTEM_PAGES, TOTEMS_PER_PAGE = 3, 4
 local TIP_TITLE = { r = 1, g = 0.82, b = 0 }
 local TIP_TEXT = { r = 1, g = 1, b = 1 }
 local TEXT_BRAND = "Naowh Forever"
@@ -96,6 +97,13 @@ _G["BINDING_NAME_CLICK NaowhForeverDisenchantAll:LeftButton"] = ns.L("Disenchant
 _G["BINDING_NAME_CLICK NaowhForeverFish:LeftButton"] = ns.L("One-Key Fishing")
 BINDING_NAME_NAOWHFOREVER_FISHING_GEAR = ns.L("Put Fishing Gear Back")
 BINDING_NAME_NAOWHFOREVER_MARKET_CANCEL = ns.L("Cancel Next Undercut Auction")
+BINDING_HEADER_NAOWHFOREVER_TOTEMS = ns.L("Totem Bar")
+_G["BINDING_NAME_CLICK MultiCastSummonSpellButton:LeftButton"] = ns.L("Call Totems")
+_G["BINDING_NAME_CLICK MultiCastRecallSpellButton:LeftButton"] = ns.L("Totemic Recall")
+for i = 1, TOTEM_PAGES * TOTEMS_PER_PAGE do
+    _G["BINDING_NAME_CLICK MultiCastActionButton" .. i .. ":LeftButton"] =
+        ns.L("Page %d, Totem %d", math.ceil(i / TOTEMS_PER_PAGE), (i - 1) % TOTEMS_PER_PAGE + 1)
+end
 
 local function SwitchedOff(name)
     return function() ns.Print(TEXT_SWITCHED_OFF:format(ns.L(name))) end
