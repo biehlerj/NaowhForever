@@ -19,6 +19,7 @@ function Move.Place()
         ah:SetPoint(saved[1], UIParent, saved[2], saved[3], saved[4])
     end
     Market.Window.FitDock()
+    Market.Dock.Fit()
 end
 
 function Move.Start()
@@ -36,6 +37,7 @@ function Move.Stop()
     local point, _, relativePoint, x, y = ah:GetPoint()
     ns.AccountSettings()[POSITION] = { point, relativePoint, x, y }
     Market.Window.FitDock()
+    Market.Dock.Fit()
 end
 
 function Move.Hook(frame)

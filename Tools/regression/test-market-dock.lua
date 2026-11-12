@@ -49,7 +49,9 @@ local function Frame()
         local old = self.scripts[name]
         self.scripts[name] = function(...) if old then old(...) end; fn(...) end
     end
-    function f:SetWidth() end
+    function f:SetWidth(w) self.width = w end
+    function f:GetRight() return self.right end
+    function f:GetEffectiveScale() return 1 end
     function f:SetHeight() end
     function f:SetShown(on) if on then self:Show() else self:Hide() end end
     function f:SetText(text) self.text = text end
@@ -74,6 +76,9 @@ local closes, resets = 0, 0
 local MODES = { Buy = {}, ItemBuy = {}, CommoditiesBuy = {}, WoWTokenBuy = {}, ItemSell = {}, CommoditiesSell = {},
     WoWTokenSell = {}, Auctions = {} }
 local ah = Frame()
+ah.right = 800
+local screen = Frame()
+screen.right = 1920
 ah.BuyTab, ah.SellTab, ah.AuctionsTab = Frame(), Frame(), Frame()
 ah.Tabs = { ah.BuyTab, ah.SellTab, ah.AuctionsTab }
 function ah:SetPostItem(location) location.locked = true end
@@ -188,11 +193,13 @@ ns = {
     Apply = function() end,
 }
 local Pages = ns.Market.Pages
+Pages.sell.DOCK_W = 668
 function Pages.buy.ShowList() listAsked = true end
 
 local lib
 Load("NaowhForever_Market/UI/Dock.lua", {
     _G = { NaowhForever = ns, AuctionHouseFrame = ah },
+    UIParent = screen,
     AuctionHouseFrameDisplayMode = MODES,
     C_AddOns = { IsAddOnLoaded = function() return true end },
     C_AuctionHouse = { CloseAuctionHouse = function() closes = closes + 1 end },
@@ -266,8 +273,16 @@ check("the line goes when none are under", not watchLine.shown)
 
 ah:SetDisplayMode(MODES.ItemSell)
 check("Blizzard's Sell tab brings the panel to Sell", Pages.sell.shown and not Pages.buy.shown)
+check("which widens the panel for Up Next's column when the screen has room", panel.width == 668)
+screen.right = 1200
+Dock.Fit()
+check("and keeps it narrow when it does not", panel.width == 380)
+screen.right = 1920
+Dock.Fit()
+check("moving Blizzard's window looks again", panel.width == 668)
 ah:SetDisplayMode(MODES.Auctions)
 check("Blizzard's Auctions tab brings it to My Auctions", Pages.mine.shown and not Pages.sell.shown)
+check("and the other tabs keep the narrow panel", panel.width == 380)
 ah:SetDisplayMode(MODES.CommoditiesBuy)
 check("and Blizzard's Buy, a commodity's page too, to Buy", Pages.buy.shown and not Pages.mine.shown)
 pickTab("sell")
@@ -425,6 +440,7 @@ ah.scripts = {}
 ah.shown = true
 Load("NaowhForever_Market/UI/Dock.lua", {
     _G = { NaowhForever = ns, AuctionHouseFrame = ah },
+    UIParent = screen,
     AuctionHouseFrameDisplayMode = MODES,
     C_AddOns = { IsAddOnLoaded = function() return true end },
     C_Item = { UnlockItem = function() end },

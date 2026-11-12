@@ -25,6 +25,7 @@ local PAST_H = 18
 local FOCUS_H = HEAD_H + REASON_H + FORM_H + St.TAB_H + BUTTON_H + NET_GAP + NET_H + SECTION_GAP * 4
 local BAR_H, PROGRESS_H, PROGRESS_GAP = 16, 4, 10
 local QUEUE_HEAD_H, QUEUE_ROW_H, QUEUE_ICON, SECTION_H = 34, 34, 24, 22
+local QUEUE = { W = 280, COMPACT_HEAD_H = 24, COMPACT_ROW_H = 22, COMPACT_ICON = 16 }
 local ROW_IN, ROW_TEXT_GAP, ROW_LINE_IN = 6, 6, 3
 local MARKER_W, SCROLL_IN = 2, 4
 local STAR_SIZE, STAR_IN, FOLD_SIZE = 10, 2, 10
@@ -109,7 +110,7 @@ local ask = {}
 local asking
 local hiddenOpen = false
 
-local Page = {}
+local Page = { DOCK_W = St.DOCK_W + SECTION_GAP + QUEUE.W }
 Market.Pages.sell = Page
 
 local function Coins(copper)
@@ -223,7 +224,9 @@ local function DrawFocus()
     content:SetShown(entry ~= nil)
     message:SetShown(entry == nil)
     listPane:SetShown(entry ~= nil)
-    queuePane:SetPoint("TOPLEFT", entry and listPane or focusPane, "BOTTOMLEFT", 0, -SECTION_GAP)
+    if not queuePane.split then
+        queuePane:SetPoint("TOPLEFT", entry and listPane or focusPane, "BOTTOMLEFT", 0, -SECTION_GAP)
+    end
     if not entry then
         local done = #Sell.postedOrder > 0
         message.title:SetText(done and TEXT_DONE or TEXT_EMPTY)
@@ -324,7 +327,12 @@ end
 local function QueueEnter(row)
     if row.kind == "section" then return end
     row.hover:Show()
-    ShowTip(row, row.kind == "item" and TEXT_ROW_HINT or nil)
+    local hint = row.kind == "item" and TEXT_ROW_HINT or nil
+    if queuePane.split then return ShowTip(row, hint) end
+    ShowTip(row, row.sub:GetText())
+    if not hint then return end
+    GameTooltip:AddLine(hint, T.muted.r, T.muted.g, T.muted.b)
+    GameTooltip:Show()
 end
 
 local function QueueLeave(row)
@@ -385,12 +393,15 @@ local function PaintQueueRow(row, line, focusKey, index)
     row.fold:SetShown(fold)
     row.fold:SetRotation(hiddenOpen and St.OPEN_TURN or 0)
     row.star:SetShown(line.kind == "item" and line.entry.favourite)
-    row:SetHeight(section and SECTION_H or QUEUE_ROW_H)
+    local split = queuePane.split
+    local icon = split and QUEUE_ICON or QUEUE.COMPACT_ICON
+    row:SetHeight(section and SECTION_H or split and QUEUE_ROW_H or QUEUE.COMPACT_ROW_H)
+    row.icon:SetSize(icon, icon)
     row.section:SetShown(section)
     row.icon:SetShown(not section)
     row.name:SetShown(not section)
     row.worth:SetShown(not section)
-    row.sub:SetShown(not section)
+    row.sub:SetShown(split and not section)
     row.stripe:SetShown(not section and index % 2 == 0)
     local picked = line.kind == "item" and line.entry.key == focusKey
     row.picked:SetShown(picked)
@@ -734,18 +745,14 @@ local function BuildMessage()
     message.sub:SetWidth(DURATION_W)
 end
 
-local function BuildQueue(top)
+local function BuildQueue()
     queuePane = CreateFrame("Frame", nil, page)
-    queuePane:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, -SECTION_GAP)
-    queuePane:SetPoint("BOTTOMRIGHT", 0, BAR_H + SECTION_GAP)
     Panel(queuePane)
-    local title = ns.Font(queuePane, TEXT_SIZE, nil, T.fg, true)
-    title:SetPoint("TOPLEFT", ROW_IN, -ROW_IN)
-    title:SetText(TEXT_UP_NEXT)
+    queuePane.title = ns.Font(queuePane, TEXT_SIZE, nil, T.fg, true)
+    queuePane.title:SetPoint("TOPLEFT", ROW_IN, -ROW_IN)
+    queuePane.title:SetText(TEXT_UP_NEXT)
     queuePane.sub = ns.Font(queuePane, SMALL_SIZE, nil, T.muted)
-    queuePane.sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -SUB_GAP)
     scroll = ns.UI.SlimScroll(queuePane)
-    scroll:SetPoint("TOPLEFT", 0, -QUEUE_HEAD_H)
     scroll:SetPoint("BOTTOMRIGHT", -(St.SCROLLBAR + SCROLL_IN), 0)
     list = CreateFrame("Frame", nil, scroll)
     list:SetHeight(1)
@@ -770,8 +777,6 @@ function Page.Build(parent)
     page = CreateFrame("Frame", nil, parent)
     page:SetAllPoints()
     focusPane = CreateFrame("Frame", nil, page)
-    focusPane:SetPoint("TOPLEFT")
-    focusPane:SetPoint("TOPRIGHT")
     focusPane:SetHeight(FOCUS_H)
     content = CreateFrame("Frame", nil, focusPane)
     content:SetAllPoints()
@@ -782,16 +787,40 @@ function Page.Build(parent)
     BuildBar()
     listPane = Market.Listed.New(page, Page.Draw, Sell.Focus, Sell.TakePrice)
     listPane:SetPoint("TOPLEFT", focusPane, "BOTTOMLEFT", 0, -SECTION_GAP)
-    listPane:SetPoint("RIGHT")
-    BuildQueue(focusPane)
+    listPane:SetPoint("RIGHT", focusPane, "RIGHT")
+    BuildQueue()
+    page:HookScript("OnSizeChanged", Page.Fit)
     Post.onDone = Posted
     events = CreateFrame("Frame")
     events:SetScript("OnEvent", OnEvent)
 end
 
+function Page.Fit()
+    local split = page:GetWidth() > St.DOCK_W
+    if split == queuePane.split then return end
+    queuePane.split = split
+    focusPane:ClearAllPoints()
+    focusPane:SetPoint("TOPLEFT")
+    queuePane:ClearAllPoints()
+    queuePane:SetPoint("BOTTOMRIGHT", 0, BAR_H + SECTION_GAP)
+    queuePane.sub:ClearAllPoints()
+    if split then
+        queuePane:SetPoint("TOPRIGHT")
+        queuePane:SetWidth(QUEUE.W)
+        focusPane:SetPoint("RIGHT", queuePane, "LEFT", -SECTION_GAP, 0)
+        queuePane.sub:SetPoint("TOPLEFT", queuePane.title, "BOTTOMLEFT", 0, -SUB_GAP)
+    else
+        focusPane:SetPoint("TOPRIGHT")
+        queuePane.sub:SetPoint("BOTTOMLEFT", queuePane.title, "BOTTOMRIGHT", GAP, 0)
+    end
+    scroll:SetPoint("TOPLEFT", 0, -(split and QUEUE_HEAD_H or QUEUE.COMPACT_HEAD_H))
+    Page.Draw()
+end
+
 function Page.Show()
     page:Show()
     Market.Listed.Use(listPane)
+    Page.Fit()
     list:SetWidth(scroll:GetWidth())
     if not active then
         active, failed = true, false

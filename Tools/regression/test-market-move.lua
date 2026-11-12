@@ -25,10 +25,11 @@ local function At(point, x, y)
     return p[1] == point and p[2] == screen and p[3] == point and p[4] == x and p[5] == y
 end
 
-local account, on, shift, fits = {}, true, false, 0
+local account, on, shift, fits, panels = {}, true, false, 0, 0
 local ns = {
     AccountSettings = function() return account end,
-    Market = { On = function() return on end, Window = { FitDock = function() fits = fits + 1 end } },
+    Market = { On = function() return on end, Window = { FitDock = function() fits = fits + 1 end },
+        Dock = { Fit = function() panels = panels + 1 end } },
 }
 local env
 env = setmetatable({
@@ -56,7 +57,7 @@ check("and is kept on the screen", ah.clamped == true)
 ah.shown = true
 env.ShowUIPanel()
 check("never moved, it stays where the panel manager puts it", At("TOPLEFT", 36, -116) and ah.placed == 0)
-check("and what is docked is fitted to it", fits == 1)
+check("and what is docked is fitted to it", fits == 1 and panels == 1)
 
 ah.scripts.OnDragStart(ah)
 check("a drag without Shift moves nothing", not ah.moving)

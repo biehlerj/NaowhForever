@@ -39,9 +39,18 @@ Market.Dock = Dock
 
 local PaintWatch
 
+local function Width(key)
+    local wide = Market.Pages[key].DOCK_W
+    if not wide then return DOCK_W end
+    local room = (UIParent:GetRight() * UIParent:GetEffectiveScale() - ah:GetRight() * ah:GetEffectiveScale())
+        / dock:GetEffectiveScale() - DOCK_GAP
+    return room >= wide and wide or DOCK_W
+end
+
 local function ShowPage(key)
     if shown ~= key then Market.Window.HidePage(shown) end
     shown = key
+    dock:SetWidth(Width(key))
     Market.Tabs.Paint(tabs, key)
     Market.Window.ShowPageIn(body, key)
     PaintWatch()
@@ -256,6 +265,10 @@ end
 
 function Dock.Shown()
     return dock ~= nil and dock:IsShown()
+end
+
+function Dock.Fit()
+    if Dock.Shown() then dock:SetWidth(Width(shown)) end
 end
 
 function Dock.AtAuction()

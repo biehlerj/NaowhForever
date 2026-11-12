@@ -47,6 +47,8 @@ local function Setup(opts)
             end end
             if k == "SetTextColor" then return function(self, r, g, b) self.color = { r = r, g = g, b = b } end end
             if k == "GetHeight" then return function(self) return self.height end end
+            if k == "SetWidth" then return function(self, w) self.width = w end end
+            if k == "GetWidth" then return function(self) return self.width or 0 end end
             if k == "SetEnabled" then return function(self, on) self.enabled = on and true or false end end
             if k == "SetAlpha" then return function(self, a) self.alpha = a end end
             if k == "HasFocus" then return function() return false end end
@@ -175,7 +177,11 @@ local function Setup(opts)
     Load({ "NaowhForever_Market/View/Style.lua", "NaowhForever_Market/View/Listed.lua",
         "NaowhForever_Market/View/Quantity.lua", "NaowhForever_Market/UI/Sell.lua" }, env)
     t.page = t.M.Pages.sell
-    t.page.Build(Frame("Frame"))
+    local holder = Frame("Frame")
+    t.page.Build(holder)
+    for _, f in ipairs(t.frames) do
+        if f.parent == holder then t.pageFrame = f end
+    end
 
     function t.Key(key)
         local action = t.page.KeyAction(key)

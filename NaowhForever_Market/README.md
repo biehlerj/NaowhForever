@@ -634,6 +634,17 @@ NaowhForever_Market/
   Next one row once an item has a past post. Folded, the pane is its head, `HEAD_H` (22).
 - While an item's listings are asked for, the pane keeps the height it had and reads Checking, so Up Next does
   not jump with every item; with nobody selling it is one line saying yours would be the only one.
+- Under the form and the listings, Up Next had room for two rows. On Sell the panel widens to the page's
+  `DOCK_W` (668) when the screen has that room right of Blizzard's window, and Up Next is a column of its own
+  (`QUEUE.W`, 280) the page's full height beside them; the form keeps the narrow panel's 360. The other tabs stay
+  380, and the tab bar stays 360 on Sell too, so the tabs never move under the cursor.
+- Without that room the panel stays 380: it is clamped to the screen, so a wider one would slide over
+  Blizzard's window. Up Next stays under the form with one-line rows (`QUEUE.COMPACT_ROW_H`, 22) and its count
+  beside its title, and a row's price each moves to its tooltip. The room is looked at again whenever Blizzard's
+  window is placed or moved (`Dock.Fit`, from `Move`).
+- Sell picks its layout from its own width (`Page.Fit`, on every resize), so in the full window it has the
+  column too. Its new sizes are fields of one table, `QUEUE`, and `Fit` is on the page table: the file's main
+  chunk is at Lua 5.1's limit of 200 locals.
 - A row is its price for one, to the copper, its quantity, and a green Yours pill when some of it is yours.
   The cheapest row that is not yours has the accent price: it is the one Sell prices against.
 - The Your price marker is a thin row put before the first listing dearer than the price in the price box,
@@ -1170,3 +1181,13 @@ Full Window:
 145. The window's X, and Escape, close the auction house. Turn Full Window off at the auctioneer, and The Market
      off: Blizzard's window comes back each time, with the panel or alone. No Lua error, taint or blocked action
      at any step, in or out of combat.
+
+Sell's Up Next column:
+
+146. With room right of Blizzard's window, open Sell: the panel widens and Up Next is a column on its right,
+     top to bottom, with ten or more items. The form and listings on the left look as on the narrow panel.
+     Buy, My Auctions and Shopping List are the narrow panel, and the tabs stay where they were.
+147. Shift + drag Blizzard's window to the screen's right edge: the panel goes narrow, with Up Next under the
+     form in one-line rows, its count beside "Up Next", and a row's price each in its tooltip. Drag it back: the
+     column returns. The panel never covers Blizzard's window.
+148. With Full Window on, Sell has the column on the right, at the window's width.
