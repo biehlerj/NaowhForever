@@ -1,10 +1,13 @@
--- Scout.lua: a creature's abilities, how much of your physical damage its armor takes, and a beast's pet family for hunters, on its tooltip.
+-- Scout.lua: a creature's abilities, how much of your physical damage its armor takes, and a beast's pet family and what it teaches for hunters, on its tooltip, with a toast when a beast near you teaches a higher rank than your pet knows.
 local ns = _G.NaowhForever
+
+local IsSpellKnown = C_SpellBook.IsSpellKnown
 
 local S = ns.QoLSettings
 local T = ns.THEME
 local St = ns.Shared.Style
 local C = ns.QoLConstants
+local Parts = ns.Shared.Parts
 
 local MAX_LEVEL = #ns.ScoutArmor
 local UNKNOWN_GAP = 10
@@ -59,11 +62,21 @@ local TEXT_RANGE = ns.L("%d yd")
 local TEXT_RANGES = ns.L("%d-%d yd")
 local TEXT_MELEE = ns.L("Melee")
 local TEXT_SUMMARY = ns.L("Hold %s for details")
+local TEXT_TEACHES = ns.L("Teaches")
+local TEXT_RANK = ns.L("%s (Rank %d)")
+local TEXT_TAME = ns.L("Tame %s to learn")
+local TEXT_DISMISS = ns.L("Dismiss")
+local PET_BANK = Enum.SpellBookSpellBank.Pet
+local TOAST_NAME, TOAST_POS = "NaowhForeverScoutTeachToast", "scoutTeachToastPos"
+local TOAST_W, TOAST_ICONS, DISMISS_W = 440, 1, 90
+local TOAST_SECONDS = 20
+local NEARBY_EVENTS = { "NAME_PLATE_UNIT_ADDED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT" }
 
-local abilities, tameable, stats, events, details
+local abilities, tameable, teaches, stats, events, details, toast
 local listed = {}
 local spellTips, named, requested = {}, {}, {}
-local shown
+local rankOf, chainOf, petRanks, alerted, toastIcons = {}, {}, {}, {}, {}
+local shown, petDirty
 
 local function On()
     return S.Get("enabled") and S.Get("scout")
@@ -77,12 +90,17 @@ end
 local function Load()
     if abilities then return true end
     if InCombatLockdown() then return false end
-    local flat, tame = Unpack(ns.ScoutAbilitiesPacked), Unpack(ns.ScoutTameablePacked)
-    if type(flat) ~= "table" or type(tame) ~= "table" then return false end
-    abilities, tameable = {}, {}
+    local flat, tame, taught = Unpack(ns.ScoutAbilitiesPacked), Unpack(ns.ScoutTameablePacked),
+        Unpack(ns.ScoutTeachesPacked)
+    if type(flat) ~= "table" or type(tame) ~= "table" or type(taught) ~= "table" then return false end
+    abilities, tameable, teaches = {}, {}, {}
     for i = 1, #flat, 2 do abilities[flat[i]] = flat[i + 1] end
     for i = 1, #tame, 2 do tameable[tame[i]] = tame[i + 1] end
-    ns.ScoutAbilitiesPacked, ns.ScoutTameablePacked = nil, nil
+    for i = 1, #taught, 2 do teaches[taught[i]] = taught[i + 1] end
+    for chain, list in ipairs(ns.ScoutPetRanks) do
+        for i = 1, #list, 2 do rankOf[list[i]], chainOf[list[i]] = list[i + 1], chain end
+    end
+    ns.ScoutAbilitiesPacked, ns.ScoutTameablePacked, ns.ScoutTeachesPacked = nil, nil, nil
     return true
 end
 
@@ -110,6 +128,29 @@ end
 
 local function KeyDown()
     return KEYS[S.Get("scoutKey")]()
+end
+
+local function Hunter()
+    return select(2, UnitClass("player")) == HUNTER
+end
+
+local function TeachOn()
+    return On() and S.Get("scoutTeachAlert") and true or false
+end
+
+local function ReadPet()
+    wipe(petRanks)
+    petDirty = false
+    for spell, rank in pairs(rankOf) do
+        local chain = chainOf[spell]
+        if rank > (petRanks[chain] or 0) and IsSpellKnown(spell, PET_BANK) then petRanks[chain] = rank end
+    end
+end
+
+local function Higher(spell)
+    if petDirty then ReadPet() end
+    local known = petRanks[chainOf[spell]]
+    return known ~= nil and rankOf[spell] > known
 end
 
 local function Meta(info)
@@ -269,8 +310,21 @@ local function AddImmunities(tooltip, npc)
     end
 end
 
+local function AddTeaches(tooltip, list)
+    local label = TEXT_TEACHES
+    for _, spell in ipairs(list) do
+        local name = C_Spell.GetSpellName(spell)
+        if name then
+            local color = Higher(spell) and TAME_RGB or GOLD
+            tooltip:AddDoubleLine(label, TEXT_RANK:format(name, rankOf[spell]), T.muted.r, T.muted.g, T.muted.b,
+                color.r, color.g, color.b)
+            label = " "
+        end
+    end
+end
+
 local function AddFamily(tooltip, unit, npc)
-    if select(2, UnitClass("player")) ~= HUNTER then return end
+    if not Hunter() then return end
     local family, level = UnitCreatureFamily(unit), UnitLevel(unit)
     if Secret(family) or not family or Secret(level) then return end
     local text, color = TEXT_TAMEABLE, TAME_RGB
@@ -287,6 +341,7 @@ local function AddFamily(tooltip, unit, npc)
         tooltip:AddDoubleLine(TEXT_SPEED, TEXT_SPEED_VALUE:format(speed / MS_PER_SECOND), T.muted.r, T.muted.g, T.muted.b,
             GOLD.r, GOLD.g, GOLD.b)
     end
+    if teaches[npc] then AddTeaches(tooltip, teaches[npc]) end
 end
 
 local function OnUnit(tooltip, data)
@@ -316,11 +371,54 @@ local function OnTooltipHide()
     HideDetails()
 end
 
+local function Dismiss(self)
+    self:Hide()
+end
+
+local function ShowTeacher(name, spell)
+    if not toast then
+        toast = Parts.Toast({ name = TOAST_NAME, width = TOAST_W, icons = TOAST_ICONS, store = S, posKey = TOAST_POS,
+            on = TeachOn, buttons = { { text = TEXT_DISMISS, width = DISMISS_W, click = Dismiss } } })
+    end
+    toastIcons[1] = C_Spell.GetSpellTexture(spell)
+    Parts.FillToast(toast, TEXT_RANK:format(C_Spell.GetSpellName(spell), rankOf[spell]), TEXT_TAME:format(name),
+        toastIcons)
+    Parts.ShowToast(toast, TOAST_SECONDS)
+end
+
+local function CheckTeacher(unit)
+    if Secret(unit) or not Load() or (not S.Get("scoutInstances") and IsInInstance()) then return end
+    local npc = NpcID(UnitGUID(unit))
+    local list = npc and teaches[npc]
+    if not list then return end
+    local level, name = UnitLevel(unit), UnitName(unit)
+    if Secret(level) or Secret(name) or not name or level <= 0 or level > UnitLevel("player") then return end
+    for _, spell in ipairs(list) do
+        if not alerted[spell] and C_Spell.GetSpellName(spell) and Higher(spell) then
+            alerted[spell] = true
+            ShowTeacher(name, spell)
+            return
+        end
+    end
+end
+
 local function OnEvent(_, event, key, down)
     if event == "PLAYER_REGEN_ENABLED" then
         if Load() then
             events:UnregisterEvent("PLAYER_REGEN_ENABLED")
         end
+        return
+    elseif event == "UNIT_PET" or event == "PET_BAR_UPDATE" then
+        petDirty = true
+        return
+    elseif event == "NAME_PLATE_UNIT_ADDED" then
+        CheckTeacher(key)
+        return
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        CheckTeacher("target")
+        return
+    elseif event == "UPDATE_MOUSEOVER_UNIT" then
+        CheckTeacher("mouseover")
         return
     end
     if not shown or MODIFIERS[key] ~= S.Get("scoutKey") then return end
@@ -328,6 +426,7 @@ local function OnEvent(_, event, key, down)
 end
 
 local function Apply()
+    if toast and not TeachOn() then toast:Hide() end
     if not On() then
         if events then events:UnregisterAllEvents() end
         shown = nil
@@ -342,6 +441,14 @@ local function Apply()
     end
     events:UnregisterAllEvents()
     if S.Get("scoutAbilities") then events:RegisterEvent("MODIFIER_STATE_CHANGED") end
+    if Hunter() and (S.Get("scoutFamily") or TeachOn()) then
+        petDirty = true
+        events:RegisterUnitEvent("UNIT_PET", "player")
+        events:RegisterEvent("PET_BAR_UPDATE")
+    end
+    if Hunter() and TeachOn() then
+        for _, event in ipairs(NEARBY_EVENTS) do events:RegisterEvent(event) end
+    end
     if not Load() then
         events:RegisterEvent("PLAYER_REGEN_ENABLED")
     end
@@ -379,7 +486,9 @@ ns.Shared.Settings.Page("QoL/Interface", S):Card({
         { key = "scoutDetails", label = "Details Show", choice = DETAILS,
           help = "Under the creature's tooltip, or as the full spell tooltips beside it." },
         { key = "scoutFamily", label = "Pet Family", toggle = true,
-          help = "Hunters see a beast's pet family and whether they can tame it yet." },
+          help = "Hunters see a beast's pet family, whether they can tame it yet and what it teaches." },
+        { key = "scoutTeachAlert", label = "Higher Rank Alert", toggle = true,
+          help = "Hunters get a toast when a beast near them teaches a higher rank than their pet knows." },
         { key = "scoutInstances", label = "Also in Instances", toggle = true },
         { key = "scoutHint", label = "Key Hint", toggle = true,
           help = "A line saying which key shows the details." },

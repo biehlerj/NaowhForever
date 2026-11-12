@@ -1,6 +1,7 @@
 -- Run with Lua 5.1 from the repository root: Scout's generated data (NaowhForever_QoL/Interface/ScoutData.lua),
 -- unpacked the way the client does (Tools/regression/encoding_util.lua stands in for C_EncodingUtil). The
--- abilities, the tameable beasts and each creature's stats come back as plain lists of numbers, a few known
+-- abilities, the tameable beasts, what they teach and each creature's stats come back as plain lists of numbers, each
+-- taught spell has a rank in the pet ability ranks, a few known
 -- creatures have the abilities and stats the game's database gives them and none of the spells the scripts wrongly
 -- put on creatures, and the armor by level is the game's ExpectedStat: one value for each of the 63 levels, level
 -- 63 at classic's raid boss 3731. Missing instance abilities also use cached Journal pages and reviewed numeric
@@ -16,6 +17,8 @@ local CAMP_BENEFITS, BOOSTED_REST = 1229741, 1229451
 local ARMOR, SCHOOLS_IMMUNE, MECHANICS_IMMUNE, FIRE_SCHOOL, STUN_BIT, FEAR_BIT = 1, 2, 3, 4, 12, 5
 local PACKED_MAX = 600 * 1024
 local MIN_CREATURES, MIN_STATS, MIN_TAMEABLE = 3000, 4500, 400
+local MIN_TEACHERS, MIN_PET_ABILITIES = 250, 12
+local PRAIRIE_WOLF_ALPHA, BITE_1, BITE_2, BITE_8, FURIOUS_HOWL_1 = 2960, 17253, 17255, 17261, 24604
 local STAT_FIELDS = 9
 
 local ns = {}
@@ -32,9 +35,10 @@ local function Unpack(packed)
 end
 
 local function Ascii(s) return type(s) == "string" and not s:find("[\128-\255]") end
-check("the three lists ship as ASCII strings, small enough", Ascii(ns.ScoutAbilitiesPacked)
-    and Ascii(ns.ScoutTameablePacked) and Ascii(ns.ScoutStatsPacked)
-    and #ns.ScoutAbilitiesPacked + #ns.ScoutTameablePacked + #ns.ScoutStatsPacked < PACKED_MAX)
+check("the four lists ship as ASCII strings, small enough", Ascii(ns.ScoutAbilitiesPacked)
+    and Ascii(ns.ScoutTameablePacked) and Ascii(ns.ScoutTeachesPacked) and Ascii(ns.ScoutStatsPacked)
+    and #ns.ScoutAbilitiesPacked + #ns.ScoutTameablePacked + #ns.ScoutTeachesPacked + #ns.ScoutStatsPacked
+    < PACKED_MAX)
 
 local flat = Unpack(ns.ScoutAbilitiesPacked)
 check("the abilities unpack to a creature ID and its spells, pair by pair", type(flat) == "table" and #flat % 2 == 0)
@@ -94,6 +98,36 @@ check("a Clattering Scorpid every 2.00 sec", tameable[CLATTERING_SCORPID] == 200
 check("Hogger and Ragnaros cannot", not tameable[HOGGER] and not tameable[RAGNAROS])
 check("a boar can", tameable[BOAR])
 check("so can a beast Forever adds, its attack time unknown", tameable[VULDREN] == 0)
+
+local rankOf, ascending = {}, true
+for _, chain in ipairs(ns.ScoutPetRanks) do
+    local last = 0
+    for i = 1, #chain, 2 do
+        rankOf[chain[i]] = chain[i + 1]
+        if type(chain[i]) ~= "number" or chain[i + 1] <= last then ascending = false end
+        last = chain[i + 1]
+    end
+end
+check("each pet ability's ranks are spell and rank pairs, rising", #ns.ScoutPetRanks >= MIN_PET_ABILITIES and ascending)
+check("Bite has its eight ranks, 17253 the first and 17261 the last", rankOf[BITE_1] == 1 and rankOf[BITE_8] == 8)
+
+local taught = Unpack(ns.ScoutTeachesPacked)
+check("what beasts teach unpacks to a creature ID and its spells, pair by pair",
+    type(taught) == "table" and #taught % 2 == 0)
+local teaches, teachers, ranked = {}, 0, true
+for i = 1, #taught, 2 do
+    teaches[taught[i]] = taught[i + 1]
+    teachers = teachers + 1
+    if not tameable[taught[i]] then ranked = false end
+    for _, spell in ipairs(taught[i + 1]) do
+        if not rankOf[spell] then ranked = false end
+    end
+end
+check(("many beasts teach an ability (%d), each tameable and each spell ranked"):format(teachers),
+    teachers >= MIN_TEACHERS and ranked)
+check("a Prairie Wolf Alpha teaches Bite 2 and Furious Howl 1", Has(teaches[PRAIRIE_WOLF_ALPHA], BITE_2)
+    and Has(teaches[PRAIRIE_WOLF_ALPHA], FURIOUS_HOWL_1))
+check("a beast Forever adds teaches nothing the data can show", teaches[VULDREN] == nil)
 
 local numbers = Unpack(ns.ScoutStatsPacked)
 check("the stats unpack to a creature ID and its numbers, pair by pair", type(numbers) == "table" and #numbers % 2 == 0)

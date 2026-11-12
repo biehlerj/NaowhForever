@@ -28,13 +28,14 @@ TEMPLATE = (
     "  `ResistanceHoly` int(10),\n  `ResistanceFire` int(10),\n  `ResistanceNature` int(10),\n"
     "  `ResistanceFrost` int(10),\n  `ResistanceShadow` int(10),\n  `ResistanceArcane` int(10),\n"
     "  `MechanicImmuneMask` int(10),\n  `SchoolImmuneMask` int(10),\n  `CreatureTypeFlags` int(10),\n"
-    "  `MeleeBaseAttackTime` int(10),\n  `SpellList` int(10),\n  `ScriptName` varchar(100),\n"
+    "  `MeleeBaseAttackTime` int(10),\n  `PetSpellDataId` int(10),\n  `SpellList` int(10),\n"
+    "  `ScriptName` varchar(100),\n"
     "  PRIMARY KEY (`Entry`)\n) ENGINE=InnoDB;\n"
-    "INSERT INTO `creature_template` VALUES (448,'Hogger',538,0,0,0,0,0,0,0,0,0,2000,0,''),"
-    "(2850,'Broken, Tooth',1593,0,0,0,0,0,0,0,0,1,1000,0,''),"
-    "(11502,'Ragnaros',4691,0,0,0,-40,0,0,116097015,4,108,2000,0,'boss_ragnaros'),"
-    "(1001,'Spell\\'s List',100,0,60,0,20,0,0,0,0,0,2000,7,''),"
-    "(1003,'It''s',50,0,0,0,0,0,0,0,0,0,2000,0,'');\n"
+    "INSERT INTO `creature_template` VALUES (448,'Hogger',538,0,0,0,0,0,0,0,0,0,2000,0,0,''),"
+    "(2850,'Broken, Tooth',1593,0,0,0,0,0,0,0,0,1,1000,5,0,''),"
+    "(11502,'Ragnaros',4691,0,0,0,-40,0,0,116097015,4,108,2000,0,0,'boss_ragnaros'),"
+    "(1001,'Spell\\'s List',100,0,60,0,20,0,0,0,0,0,2000,0,7,''),"
+    "(1003,'It''s',50,0,0,0,0,0,0,0,0,0,2000,0,0,'');\n"
 )
 AI = (
     "CREATE TABLE `creature_ai_scripts` (\n  `creature_id` int(10),\n  `event_type` int(10),\n"
@@ -181,6 +182,10 @@ class Database(unittest.TestCase):
         self.assertEqual(self.stats[2850]["speed"], 1000)
         self.assertEqual(self.stats[448]["speed"], 2000)
 
+    def test_reads_a_creatures_pet_spell_data(self):
+        self.assertEqual(self.stats[2850]["pet_spells"], 5)
+        self.assertEqual(self.stats[448]["pet_spells"], 0)
+
     def test_a_creature_casts_what_its_scripts_and_its_spell_list_say(self):
         self.assertEqual(self.casts[448], {6016, 6730, 6268})
         self.assertEqual(self.casts[1001], {20565, 17257})
@@ -194,7 +199,7 @@ class Database(unittest.TestCase):
         self.assertNotIn(403233, self.casts[448])
 
     def test_a_row_with_the_wrong_number_of_fields_is_an_error(self):
-        short = DUMP.replace("(1003,'It''s',50,0,0,0,0,0,0,0,0,0,2000,0,'')", "(1003,'It''s',50,0)")
+        short = DUMP.replace("(1003,'It''s',50,0,0,0,0,0,0,0,0,0,2000,0,0,'')", "(1003,'It''s',50,0)")
         with self.assertRaises(ValueError):
             list(scout.rows(short, "creature_template"))
 
@@ -264,6 +269,29 @@ class Armor(unittest.TestCase):
         self.assertEqual(len(armor), 63)
         self.assertEqual(armor[0], 10)
         self.assertEqual(armor[62], 630)
+
+
+class PetTeaching(unittest.TestCase):
+    NAMES = {17253: "Bite", 17255: "Bite", 17256: "Bite", 24423: "Demoralizing Screech", 7371: "Charge",
+             26201: "Charge", 9999: "Bite"}
+    SUBTEXTS = {17253: "Rank 1", 17255: "Rank 2", 17256: "Rank 3", 24423: "Rank 1", 7371: "Rank 1",
+                26201: "Rank 5", 9999: ""}
+
+    def test_reads_each_creature_spell_data_rows_spells(self):
+        rows = [{"ID": "5", "Spells_0": "17255", "Spells_1": "24423", "Spells_2": "0", "Spells_3": "0"}]
+        with mock.patch.object(scout.wago, "table", return_value=rows) as table:
+            self.assertEqual(scout.creature_spell_data(), {5: [17255, 24423]})
+        self.assertEqual(table.call_args.args[:2], ("CreatureSpellData", scout.CLASSIC_ERA))
+
+    def test_ranks_each_ability_by_its_rank_rising_and_leaves_out_a_spell_with_none(self):
+        chains = scout.rank_chains({17256, 17253, 24423, 26201, 7371, 9999}, self.NAMES, self.SUBTEXTS)
+        self.assertEqual(chains, [[17253, 1, 17256, 3], [7371, 1, 26201, 5], [24423, 1]])
+
+    def test_a_tameable_beast_teaches_its_ranked_spells(self):
+        stats = {2850: {"pet_spells": 5}, 448: {"pet_spells": 6}, 1003: {"pet_spells": 0}}
+        data = {5: [17255, 9999], 6: [17253]}
+        taught = scout.teaches({2850: 1000, 1003: 0}, stats, data, {17253, 17255})
+        self.assertEqual(taught, {2850: [17255]})
 
 
 class ScriptedBaseline(unittest.TestCase):

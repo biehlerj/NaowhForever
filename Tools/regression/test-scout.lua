@@ -2,7 +2,9 @@
 -- it hooks and builds nothing. On, a creature's tooltip gets its abilities with range and cast time, its armor and the
 -- cut of your physical damage at your level, and a hint naming the details key. Holding that key shows Scout's own
 -- details box under the tooltip or the full spell tooltips beside it, and letting go hides them: the creature's
--- tooltip is never redrawn. Hunters see a beast's family, whether they can tame it yet and its attack speed. A hidden
+-- tooltip is never redrawn. Hunters see a beast's family, whether they can tame it yet, its attack speed and what it
+-- teaches, green when that is a higher rank than their pet knows; the Higher Rank Alert puts that in a toast for a
+-- beast near them, once per spell. A hidden
 -- creature ID adds nothing, a spell the client does not know is left out, instances can be left out, and the data
 -- waits for combat.
 -- A creature's own armor is used, the level's expected armor (with a ~) when it has none; what it is immune to and
@@ -17,22 +19,28 @@ local SPELLS = {
     [6730] = { name = "Head Butt", icon = 3, castTime = 0, minRange = 0, maxRange = 0, desc = "Stuns for 2 sec." },
     [20565] = { name = "Magma Blast", icon = 4, castTime = 1000, minRange = 0, maxRange = 50000, desc = "Fire." },
     [7000] = { name = "Quiet", icon = 5, castTime = 0, minRange = 0, maxRange = 0, desc = "" },
+    [17253] = { name = "Bite", icon = 6 },
+    [17255] = { name = "Bite", icon = 7 },
+    [24423] = { name = "Demoralizing Screech", icon = 8 },
 }
+local RANKS = { { 17253, 1, 17255, 2, 17256, 3 }, { 24423, 1, 24577, 2 } }
 local ARMOR = {}
 for level = 1, 63 do ARMOR[level] = level * 10 end
 ARMOR[11], ARMOR[37], ARMOR[63] = 545, 1607, 3731
 
 local function Fixture(settings)
     local s = { lines = {}, frames = {}, keys = {}, combat = false, instance = false, playerLevel = 12, class = "WARRIOR",
-        units = {}, unit = "mouseover", hooks = 0, timers = {}, loads = 0, settings = settings or {} }
+        units = {}, unit = "mouseover", hooks = 0, timers = {}, loads = 0, settings = settings or {}, petKnows = {},
+        toastShows = 0 }
     local defaults = { enabled = true, scout = true, scoutAbilities = true, scoutArmor = true, scoutImmunities = true,
         scoutKey = "ctrl",
-        scoutDetails = "inline", scoutFamily = true, scoutInstances = true, scoutHint = true }
+        scoutDetails = "inline", scoutFamily = true, scoutInstances = true, scoutHint = true, scoutTeachAlert = false }
     local S = { Get = function(k) local v = s.settings[k]; if v == nil then return defaults[k] end; return v end,
         Set = function(k, v) s.settings[k] = v end }
     local function Frame(kind, name)
         local f = { kind = kind, name = name, events = {}, scripts = {}, shown = false, lines = {} }
         function f:RegisterEvent(e) self.events[e] = true end
+        function f:RegisterUnitEvent(e, unit) self.events[e] = unit end
         function f:UnregisterEvent(e) self.events[e] = nil end
         function f:UnregisterAllEvents() self.events = {} end
         function f:SetScript(k, fn) self.scripts[k] = fn end
@@ -65,6 +73,7 @@ local function Fixture(settings)
         abilities = { HOGGER, { 6016, 6268, 6730, MYSTERY }, RAGNAROS, { 20565 }, TOOTH, { 6016 }, BOAR, {},
             1001, { 7000 } },
         tameable = { TOOTH, 1000, 1003, 0 },
+        teaches = { TOOTH, { 17255 }, 1003, { 17253, 24423 } },
         stats = { HOGGER, { 538, 0, 0, 0, 0, 0, 0, 0, 0 }, RAGNAROS, { 4691, 4, 116097015, 0, 0, 0, 0, 0, 0 },
             TOOTH, { 1593, 0, 0, 0, 0, 0, 0, 0, 0 }, 1001, { 100, 0, 0, 0, 60, 0, 20, 0, 0 },
             1002, { 500, 1, 0, 0, 0, 0, 0, 0, 0 } },
@@ -72,12 +81,24 @@ local function Fixture(settings)
     local ns = {
         L = function(t) return t end, QoLSettings = S, ScoutArmor = ARMOR,
         ScoutAbilitiesPacked = "abilities", ScoutTameablePacked = "tameable", ScoutStatsPacked = "stats",
+        ScoutTeachesPacked = "teaches", ScoutPetRanks = RANKS,
         THEME = { accentSoft = { r = 0.3, g = 0.7, b = 0.96 }, muted = { r = 0.6, g = 0.6, b = 0.6 },
             fg = { r = 0.9, g = 0.9, b = 0.9 } },
         QoLConstants = { WHITE_RGB = { r = 1, g = 1, b = 1 }, PERCENT = 100 },
         Shared = { Style = { HAVE_RGB = { r = 0.3, g = 0.82, b = 0.48 }, RED_RGB = { r = 0.97, g = 0.44, b = 0.44 },
             FOREVER_GOLD_RGB = { r = 1, g = 0.82, b = 0 }, PLACE_DOT = " . " },
-            Settings = { Page = function(page) s.page = page; return { Card = function(_, card) s.card = card end } end } },
+            Settings = { Page = function(page) s.page = page; return { Card = function(_, card) s.card = card end } end },
+            Parts = {
+                Toast = function(spec)
+                    s.toast = { spec = spec, shown = false }
+                    function s.toast:Hide() self.shown = false end
+                    return s.toast
+                end,
+                FillToast = function(_, title, line, icons) s.toastTitle, s.toastLine, s.toastIcon = title, line, icons[1] end,
+                ShowToast = function(toast)
+                    if toast.spec.on() then toast.shown, s.toastShows = true, s.toastShows + 1 end
+                end,
+            } },
         Apply = function() end,
     }
     local function Unit(unit) return s.units[unit] or {} end
@@ -88,7 +109,8 @@ local function Fixture(settings)
         CreateFrame = function(kind, name) return Frame(kind, name) end,
         hooksecurefunc = function(t, k, fn) local old = t[k]; t[k] = function(...) old(...); fn(...) end end,
         TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) s.hooks = s.hooks + 1; s.onUnit = fn end },
-        Enum = { TooltipDataType = { Unit = 2 }, CompressionMethod = { Deflate = 0 } },
+        Enum = { TooltipDataType = { Unit = 2 }, CompressionMethod = { Deflate = 0 }, SpellBookSpellBank = { Pet = 1 } },
+        C_SpellBook = { IsSpellKnown = function(id, bank) return bank == 1 and s.petKnows[id] == true end },
         C_EncodingUtil = { DecodeBase64 = function(x) return x end, DecompressString = function(x) return x end,
             DeserializeCBOR = function(x) s.unpacked = (s.unpacked or 0) + 1; return packed[x] end },
         C_Spell = {
@@ -113,6 +135,8 @@ local function Fixture(settings)
         UnitCanAttack = function(_, unit) return Unit(unit).hostile ~= false end,
         UnitClass = function() return s.class, s.class end,
         UnitCreatureFamily = function(unit) return Unit(unit).family end,
+        UnitGUID = function(unit) return Unit(unit).guid end,
+        UnitName = function(unit) return Unit(unit).name end,
         issecretvalue = function(v) return v == s.secret and v ~= nil end,
         wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
         bit = {
@@ -200,11 +224,11 @@ end
 do
     local s = Fixture()
     s.Login()
-    check("on: one unit hook, abilities and tameable beasts unpacked once, stats not until used",
-        s.hooks == 1 and s.unpacked == 2)
+    check("on: one unit hook, abilities, tameable beasts and what they teach unpacked once, stats not until used",
+        s.hooks == 1 and s.unpacked == 3)
     check("listening for the details key", s.Listening("MODIFIER_STATE_CHANGED"))
     s.Hover(HOGGER, { level = 11 })
-    check("the first creature's armor unpacks the stats, once", s.unpacked == 3)
+    check("the first creature's armor unpacks the stats, once", s.unpacked == 4)
     check("a creature's abilities, under their header", s.Find("Abilities") and s.Find("Pierce Armor"))
     check("each with its range and cast time", s.Find("Rushing Charge").right == "5-25 yd . Instant"
         and s.Find("Head Butt").right == "Melee . Instant")
@@ -376,7 +400,7 @@ do
     check("and a tooltip in combat adds nothing yet", #s.lines == 0)
     s.combat = false
     s.Fire("PLAYER_REGEN_ENABLED")
-    check("after combat it unpacks", s.unpacked == 2)
+    check("after combat it unpacks", s.unpacked == 3)
     check("and stops waiting for combat to end", not s.Listening("PLAYER_REGEN_ENABLED"))
     s.Hover(HOGGER, { level = 11 })
     check("and tooltips fill in", s.Find("Pierce Armor") ~= nil)
@@ -386,7 +410,88 @@ do
     local s = Fixture({ scoutArmor = false, scoutImmunities = false })
     s.Login()
     s.Hover(HOGGER, { level = 11 })
-    check("Armor and Immunities both off: the stats are never unpacked", s.unpacked == 2 and s.Find("Pierce Armor"))
+    check("Armor and Immunities both off: the stats are never unpacked", s.unpacked == 3 and s.Find("Pierce Armor"))
+end
+
+local function Guid(npc)
+    return "Creature-0-1-2-3-" .. npc .. "-0000ABCDEF"
+end
+
+do
+    local s = Fixture()
+    s.class, s.playerLevel = "HUNTER", 40
+    s.Login()
+    check("a hunter with Pet Family on: pet changes are listened for, beasts nearby are not",
+        s.Listening("UNIT_PET") and s.Listening("PET_BAR_UPDATE") and not s.Listening("NAME_PLATE_UNIT_ADDED"))
+    s.Hover(TOOTH, { level = 37, family = "Cat" })
+    local line = s.Find("Teaches")
+    check("what a beast teaches, with its rank, in gold while the pet knows no Bite",
+        line and line.right == "Bite (Rank 2)" and line.rr == 1)
+    s.petKnows[17253] = true
+    s.Fire("PET_BAR_UPDATE")
+    s.Hover(TOOTH, { level = 37, family = "Cat" })
+    check("a higher rank than the pet's is green", s.Find("Teaches").rr == 0.3)
+    s.Hover(1003, { level = 5, family = "Cat" })
+    local taught = {}
+    for _, l in ipairs(s.lines) do
+        if type(l.right) == "string" and l.right:find("(Rank", 1, true) then taught[#taught + 1] = l end
+    end
+    check("one line per taught spell, the header on the first", #taught == 2 and taught[1].text == "Teaches"
+        and taught[1].right == "Bite (Rank 1)" and taught[2].text == " ")
+    check("the pet's own rank and an ability it lacks stay gold", taught[1].rr == 1 and taught[2].rr == 1
+        and taught[2].right == "Demoralizing Screech (Rank 1)")
+
+    s.units.nameplate1 = { guid = Guid(TOOTH), level = 37, name = "Broken Tooth" }
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    check("Higher Rank Alert off: no toast", s.toast == nil)
+    s.S.Set("scoutTeachAlert", true)
+    check("on: nameplates, the target and mouseover are listened for", s.Listening("NAME_PLATE_UNIT_ADDED")
+        and s.Listening("PLAYER_TARGET_CHANGED") and s.Listening("UPDATE_MOUSEOVER_UNIT"))
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    check("a beast near you teaching a higher rank: a toast naming the rank and the beast", s.toastShows == 1
+        and s.toastTitle == "Bite (Rank 2)" and s.toastLine == "Tame Broken Tooth to learn" and s.toastIcon == 7)
+    s.units.target = s.units.nameplate1
+    s.Fire("PLAYER_TARGET_CHANGED")
+    check("once per spell a session", s.toastShows == 1)
+    s.units.mouseover = { guid = Guid(1003), level = 5, name = "It's" }
+    s.Fire("UPDATE_MOUSEOVER_UNIT")
+    check("no toast for the pet's own rank or an ability it has no rank of", s.toastShows == 1)
+    s.secret = "nameplate2"
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
+    check("a secret unit token is left alone", s.toastShows == 1)
+    s.secret = nil
+    s.S.Set("scoutTeachAlert", false)
+    check("off again: the toast goes and nameplates are not listened for", not s.toast.shown
+        and not s.Listening("NAME_PLATE_UNIT_ADDED"))
+end
+
+do
+    local s = Fixture({ scoutTeachAlert = true })
+    s.class, s.playerLevel = "HUNTER", 30
+    s.petKnows[17253] = true
+    s.Login()
+    s.units.nameplate1 = { guid = Guid(TOOTH), level = 37, name = "Broken Tooth" }
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    check("a beast above your level: no toast", s.toast == nil)
+    s.instance, s.playerLevel = true, 40
+    s.S.Set("scoutInstances", false)
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    check("Also in Instances off: no toast inside one", s.toast == nil)
+    s.instance = false
+    s.petKnows[17253] = nil
+    s.petKnows[17256] = true
+    s.Fire("UNIT_PET", "player")
+    s.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    check("a new pet with a higher rank already: no toast", s.toast == nil)
+    s.S.Set("scoutFamily", false)
+    check("Pet Family off but the alert on: still listening for pet changes", s.Listening("UNIT_PET"))
+end
+
+do
+    local s = Fixture({ scoutTeachAlert = true })
+    s.Login()
+    check("not a hunter: no pet or nameplate events", not s.Listening("UNIT_PET")
+        and not s.Listening("NAME_PLATE_UNIT_ADDED"))
 end
 
 print(("test-scout: %d checks passed"):format(checks))

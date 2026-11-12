@@ -14,7 +14,9 @@ since. Their stats come from the CMaNGOS classic database
     its spell list;
   - Armor, the six Resistance columns, MechanicImmuneMask and SchoolImmuneMask;
   - tameable: CreatureTypeFlags bit 1, or a beast ForeverChanges or its Wowhead page calls tameable;
-  - a tameable beast's MeleeBaseAttackTime, the attack speed it keeps as a hunter's pet.
+  - a tameable beast's MeleeBaseAttackTime, the attack speed it keeps as a hunter's pet;
+  - what a tameable beast teaches when tamed: its PetSpellDataId, a row of Classic Era's CreatureSpellData
+    (Forever's client has no such table), each spell ranked by Forever's own Spell table ("Rank 2").
 A creature the database lacks (Forever's new ones) or whose spells are in the server's code (most
 instance bosses: ScriptName) takes what Wowhead's creature page says it casts, read by --fetch-gaps
 into the cache, one page at a time. With no cached page, reviewed Classic script casts from
@@ -34,9 +36,10 @@ Armor by level is the game's ExpectedStat (classic rows, ExpansionID -2), for a 
 database lacks.
 
 Writes NaowhForever_QoL/Interface/ScoutData.lua: abilities, tameable beasts (with their attack time in
-ms, 0 when the database lacks the beast) and stats packed as
+ms, 0 when the database lacks the beast), what they teach and stats packed as
 glimmer_nodes.pack does (CBOR deflated in Base64, decoded by the client when Scout first needs
-them), and the armor by level as a plain list.
+them), and the armor by level and the pet abilities' ranks (one list of spell, rank pairs per
+ability) as plain lists.
 
 Usage: python Tools/build/scout.py [--dump FILE] [--fetch-gaps] [--refresh-zones] [--offline] [--report FILE]
 --offline skips Wowhead only; the database dump and wago.tools tables are still needed.
@@ -57,6 +60,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import paths  # noqa: E402
 import wago  # noqa: E402
 import wowhead  # noqa: E402
+from forever_new import CLASSIC_ERA  # noqa: E402
 from glimmer_nodes import pack  # noqa: E402
 from journal import ROOT, header, write  # noqa: E402
 from quest_chains import ZONE_MAP  # noqa: E402
@@ -89,6 +93,8 @@ NOISE_SPELLS = {403233}
 NOISE_NAMES = {"Dazed", "Camp Benefits", "Boosted Rest"}
 TAMEABLE = re.compile(r"\[li\]Tameable \(")
 ABILITY = re.compile(r'"id":(\d+),.*?"name":"((?:[^"\\]|\\.)*)"')
+RANK = re.compile(r"^Rank (\d+)$")
+PET_SLOTS = 4
 SAVE_EVERY = 50
 PAUSE = 4     # seconds on top of wowhead.fetch's own: its CDN answers 403 to anything quicker, for hours
 
@@ -224,6 +230,7 @@ def database(sql):
             "resist": [max(0, int(row[name])) for name in RESISTANCES],
             "tameable": int(row["CreatureTypeFlags"]) & TAMEABLE_FLAG != 0,
             "speed": int(row["MeleeBaseAttackTime"]),
+            "pet_spells": int(row["PetSpellDataId"]),
         }
         if row["SpellList"] != "0":
             casts[npc] |= lists.get(row["SpellList"], set())
@@ -296,6 +303,33 @@ def creature_abilities(npc, name, casts, pages, baseline, supplement, spell_name
 def armor():
     rows_ = {int(r["Lvl"]): r for r in wago.table("ExpectedStat") if r["ExpansionID"] == CLASSIC}
     return [int(round(float(rows_[level]["CreatureArmor"]))) for level in range(1, MAX_LEVEL + 1)]
+
+
+def creature_spell_data():
+    """{ CreatureSpellData ID: [spell IDs] }, from Classic Era's client."""
+    return {int(r["ID"]): [int(r[f"Spells_{i}"]) for i in range(PET_SLOTS) if r[f"Spells_{i}"] != "0"]
+            for r in wago.table("CreatureSpellData", CLASSIC_ERA, hotfixes=False)}
+
+
+def teaches(tameable, stats, spell_data, ranks):
+    """{ npcID: [spell IDs] } of what each tameable beast teaches, only the spells with a rank."""
+    result = {}
+    for npc in tameable:
+        spells = [s for s in spell_data.get(stats.get(npc, {}).get("pet_spells", 0), []) if s in ranks]
+        if spells:
+            result[npc] = spells
+    return result
+
+
+def rank_chains(spells, spell_names, subtexts):
+    """[[spell, rank, spell, rank, ...], ...]: the spells grouped by name, one list per ability, ranks
+    rising, from the client's "Rank N" subtexts; a spell with no rank is left out."""
+    chains = collections.defaultdict(list)
+    for spell in spells:
+        m = RANK.match(subtexts.get(spell, ""))
+        if m and spell in spell_names:
+            chains[spell_names[spell]].append((int(m.group(1)), spell))
+    return [[x for rank, spell in sorted(chains[name]) for x in (spell, rank)] for name in sorted(chains)]
 
 
 def creatures(cache, refresh=False, offline=False, extra=None):
@@ -392,18 +426,29 @@ def main():
             tameable[npc] = stats.get(npc, {}).get("speed", 0)
         if npc in stats and stat_row(stats[npc]):
             creature_stats[npc] = stat_row(stats[npc])
-    lines = header("ScoutData.lua", "Scout's creature abilities, tameable beasts with their attack speed, and stats "
-                   "(armor, immunities, resistances), packed, from Classic databases, reviewed Classic scripts, "
-                   "cached Journal abilities and reported Forever instance casts, and creature "
-                   "armor by level (the game's ExpectedStat), generated by Tools/build/scout.py")
+    spell_data = creature_spell_data()
+    taught = {s for npc in tameable for s in spell_data.get(stats.get(npc, {}).get("pet_spells", 0), [])}
+    subtexts = {int(r["ID"]): r["NameSubtext_lang"] for r in wago.table("Spell")}
+    chains = rank_chains(taught, spell_names, subtexts)
+    taught_by = teaches(tameable, stats, spell_data, {spell for chain in chains for spell in chain[::2]})
+    lines = header("ScoutData.lua", "Scout's creature abilities, tameable beasts with their attack speed and what "
+                   "they teach, and stats (armor, immunities, resistances), packed, from Classic databases, reviewed "
+                   "Classic scripts, cached Journal abilities and reported Forever instance casts, creature "
+                   "armor by level (the game's ExpectedStat) and the ranks of the pet abilities beasts teach, "
+                   "generated by Tools/build/scout.py")
     lines += [f'ns.ScoutAbilitiesPacked = "{pack(abilities)}"',
               f'ns.ScoutTameablePacked = "{pack(tameable)}"',
+              f'ns.ScoutTeachesPacked = "{pack(taught_by)}"',
               f'ns.ScoutStatsPacked = "{pack(creature_stats)}"',
-              "ns.ScoutArmor = { " + ", ".join(str(a) for a in armor()) + " }"]
+              "ns.ScoutArmor = { " + ", ".join(str(a) for a in armor()) + " }",
+              "ns.ScoutPetRanks = {"]
+    lines += ["    { " + ", ".join(str(x) for x in chain) + " }," for chain in chains]
+    lines += ["}"]
     write(OUT, lines)
     left = [npc for npc in gaps if npc not in abilities]
-    print(f"{len(abilities)} creatures with abilities, {len(creature_stats)} with stats, {len(tameable)} tameable;"
-          f" {len(left)} gaps still without abilities", file=sys.stderr)
+    print(f"{len(abilities)} creatures with abilities, {len(creature_stats)} with stats, {len(tameable)} tameable,"
+          f" {len(taught_by)} teaching {len(chains)} pet abilities; {len(left)} gaps still without abilities",
+          file=sys.stderr)
     print("most shared spells:", [(s, spell_names.get(s), n) for s, n in common.most_common(12)], file=sys.stderr)
     if args.report:
         missing = [n for n in gaps if str(n) not in cache["npcs"] and n not in abilities]

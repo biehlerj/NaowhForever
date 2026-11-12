@@ -46,8 +46,10 @@ NaowhForever_QoL/
                         (ns.OpenConsoleVariables), to change, export and import (ns.ImportConsoleVariables),
                         and the pinned ones put back at login
     ChatZones.lua       Chat Zones
-    ScoutData.lua       Scout's creature abilities and tameable beasts (packed) and armor by level, generated
-    Scout.lua           Scout: abilities, armor and pet family on a creature's tooltip
+    ScoutData.lua       Scout's creature abilities, tameable beasts and what they teach (packed), armor by level
+                        and pet ability ranks, generated
+    Scout.lua           Scout: abilities, armor, pet family and what a beast teaches on a creature's tooltip,
+                        and the Higher Rank Alert
     TownMailboxes.lua   mailboxes by map (ns.TownMailboxes), generated
     TownSpiritHealers.lua  spirit healers by map (ns.TownSpiritHealers), generated
     TownTravel.lua      boats and zeppelins by map (ns.TownTravel), generated
@@ -1079,6 +1081,17 @@ NaowhForever_QoL/
 - Hunters can tame a beast of their level or lower, so a tameable one above it reads
   "Untameable until level N" in red, and one whose level shows as `??` "Untameable at your level".
   The family is the game's (UnitCreatureFamily); whether it can be tamed at all is the database's.
+- What a beast teaches is Classic Era's CreatureSpellData row for the beast's PetSpellDataId in
+  the database: Forever's client has no such table. Each spell's rank is Forever's own Spell table
+  ("Rank 2"), shipped as numbers (`ns.ScoutPetRanks`) so no translated "Rank" text is parsed.
+  Forever renamed Screech to Demoralizing Screech; the IDs are the same.
+- Your pet's rank of an ability is the highest rank in its spellbook
+  (`C_SpellBook.IsSpellKnown(spell, Enum.SpellBookSpellBank.Pet)`), read again after UNIT_PET or
+  PET_BAR_UPDATE. A taught rank above it is green; an ability your pet has no rank of is not
+  "higher", so a cat sees no alert for a boar's Charge.
+- The Higher Rank Alert checks nameplates, your target and mouseover (only those carry a unit to
+  read), for a beast you can tame at your level. It shows once per spell a session, in the shared
+  toast.
 - The data is packed like Glimmer's spots and unpacked when Scout is first on, out of combat;
   turned on in combat it waits for combat to end. A creature whose ID is hidden gets nothing
   added; one whose level is hidden gets its abilities but no armor or pet family. A spell the

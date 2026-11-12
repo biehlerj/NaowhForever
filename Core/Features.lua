@@ -120,6 +120,7 @@ ns.FEATURES = {
         mouseRing = false,
         gcdTracker = false,
         scout = false,
+        scoutTeachAlert = false,
         focusCastBar = false,
         trainerPopup = true,
         flightTimer = true,

@@ -271,7 +271,7 @@ local S = UI.ModuleSettings("qol", {
     mouseMeleeSound = false, mouseMeleeSoundKey = "none", mouseMeleeSoundInterval = 3,
 
     scout = F.scout, scoutAbilities = true, scoutArmor = true, scoutImmunities = true, scoutKey = "ctrl", scoutDetails = "inline",
-    scoutFamily = true, scoutInstances = true, scoutHint = true,
+    scoutFamily = true, scoutInstances = true, scoutHint = true, scoutTeachAlert = F.scoutTeachAlert,
     gcdTracker = F.gcdTracker, gcdDuration = 5, gcdIconSize = 32, gcdSpacing = 4, gcdDirection = "RIGHT",
     gcdFadeStart = 0.5, gcdStack = true, gcdCombatOnly = false,
     gcdWorld = true, gcdDungeon = true, gcdRaid = true, gcdPvP = true,
