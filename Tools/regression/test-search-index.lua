@@ -103,8 +103,9 @@ Check(Names("ize") == "", "but not its middle")
 Check(Names("sound") == "Timer Sound|Alert Sound", "matches come in window order")
 Check(Names("ping") == "Timer Sound", "a setting's help counts")
 Check(Names("look") == "Bar Size|Timer Sound", "and its group")
-Check(Names("parry") == "Parry Alert|Timer Sound|Alert Sound|Alert Color",
-    "a card's name finds the card, first since it is named by what was typed, and the settings in it")
+Check(Names("parry") == "Parry Alert|Alert Sound|Alert Color",
+    "a card's name finds the card, first since it is named by what was typed, and the settings in it, "
+    .. "but not a setting whose help alone has the word")
 Check(Names("meter") == "[Bars]|[Other]", "a category's name finds its pages")
 Check(Names("bars ping") == "Timer Sound" and Names("meter naowh") == "Naowh's Tips",
     "a category or page name narrows the settings under it")
@@ -193,7 +194,7 @@ do
     Check(f.cards["Meter/Bars:alert"]["Alert Sound"] and not f.cards["Meter/Other:misc"], "card by card")
     Check(f.first["Meter/Bars"] == "Meter/Bars:timer" and f.order[1] == "Meter/Bars", "the first card and page, in window order")
     f = Build(list, "parry")
-    Check(f.cards["Meter/Bars:alert"] == true and f.count["Meter/Bars"] == 4,
+    Check(f.cards["Meter/Bars:alert"] == true and f.count["Meter/Bars"] == 3,
         "a card matched by name shows whole, and its own settings still count")
     f = Build(list, "meter")
     Check(f.all["Meter/Bars"] and f.all["Meter/Other"] and f.count["Meter/Other"] == 0,

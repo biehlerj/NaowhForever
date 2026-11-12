@@ -17,8 +17,8 @@ NaowhForever_SearchIndex/
 
 - A turned-off module's addon never loads, so its settings are never declared and the search has
   nothing of its own to read. The build runs every module's files against stubs to declare them.
-- Each entry is a card id, the row's label (`false` for the card itself), its help, the card's name
-  and the row's group, in English: the search translates them as it does a loaded page's.
+- Each entry is a card id, the row's label (`false` for the card itself), its help, the card's name,
+  the row's group and its `search` words, in English: the search translates them as it does a loaded page's.
 - Git keeps `SearchIndex.lua` as an empty placeholder: the release (and the pull request `package`
   check) builds the real one over it just before packaging. Committed in full, it went stale with
   every settings change merged ahead of it. The packager leaves untracked files out, so the

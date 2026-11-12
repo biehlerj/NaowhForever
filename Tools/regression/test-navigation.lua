@@ -670,7 +670,7 @@ do
     for _, f in ipairs(frames) do if f.rows and f.footer then popup = f end end
     local second = popup.rows[2]
     Check(popup.rows[1].entry and second.entry and popup.rows[1].trail.text ~= second.trail.text
-        and second.trail.text:find("Glow Part B", 1, true), "a name used twice in a card shows each with its group")
+        and second.trail.text:find("Part B", 1, true), "a name used twice in a card shows each with its group")
     local lit, highlight = nil, UI.HighlightSetting
     UI.HighlightSetting = function(shown) lit = shown end
     second.scripts.OnClick(second); Flush()
@@ -701,7 +701,7 @@ do
         "the Profiles page counts it")
     Check(Shown("Onboarding").text:find(ns.Color("accent", "Onboarding"), 1, true) and drawnWith[#drawnWith] ~= false,
         "drawn with the search, its words lit")
-    input:SetText("skin"); Flush()
+    input:SetText("walks"); Flush()
     Check(drawnWith[#drawnWith] == UI.filter, "the page draws again as the words change")
     root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
     Check(UI.filter == nil and drawnWith[#drawnWith] == false and Head("Setups") ~= nil and not Shown("Onboarding"),

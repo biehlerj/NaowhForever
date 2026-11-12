@@ -82,6 +82,59 @@ local function NoTwins(matches, query)
     end
 end
 
+-- What a player types: every word the results show, whole and by its first three letters. Each result
+-- shows a typed word lit, in its name or the line under it, or holds it among its card's search words;
+-- a result found only by its help is listed only when nothing shows the words. Each result's page counts it.
+local Mark, Trail, Build = UI.Search.Mark, UI.Search.Trail, UI.Search.Build
+local LIT = "<lit>"
+local function Flat(text)
+    return " " .. text:lower():gsub("[^%w\128-\255]+", " ") .. " "
+end
+
+local function Keyword(text, word)
+    if text:find(" " .. word, 1, true) then return true end
+    for _, plural in ipairs({ "^(.-)s$", "^(.-[sxz])es$", "^(.-[cs]h)es$" }) do
+        local stem = word:match(plural)
+        if stem and #stem >= 3 and text:find(" " .. stem, 1, true) then return true end
+    end
+    return false
+end
+
+local function Typing(list, where)
+    local color = ns.Color
+    ns.Color = function(_, text) return LIT .. text end
+    local queries = {}
+    for _, t in ipairs(list) do
+        for w in Flat(ns.L(t.label or t.tag) .. " " .. Trail(t, nil)):gmatch("%S+") do
+            if #w >= 2 then
+                queries[w] = true
+                if #w > 3 then queries[w:sub(1, 3)] = true end
+            end
+        end
+    end
+    local typed = 0
+    for q in pairs(queries) do
+        typed = typed + 1
+        local filter, matches, unlit, lit = Build(list, q), Find(list, q), {}, false
+        for _, m in ipairs(matches) do
+            local shown = Mark(filter, ns.L(m.label or m.tag)) .. Trail(m, filter)
+            if shown:find(LIT, 1, true) then
+                lit = true
+            elseif not Keyword(m.seen or "", q) then
+                unlit[#unlit + 1] = m
+            end
+            Check(filter.count[m.page] or filter.all[m.page],
+                "'" .. q .. "' lists " .. Shown(m) .. " but its page does not count it" .. where)
+        end
+        for _, m in ipairs(lit and unlit or {}) do
+            Check(false, "'" .. q .. "' lists " .. Shown(m) .. " with no typed word in sight" .. where)
+        end
+        NoTwins(matches, q)
+    end
+    ns.Color = color
+    Check(typed > 1000, "every word the results show is typed, " .. typed .. where)
+end
+
 -- Every module on: each card and setting by its own name.
 local list = UI.Search.Collect()
 local entries = 0
@@ -111,11 +164,24 @@ for _, cat in ipairs(O.CATEGORIES) do
     end
 end
 for _, mod in ipairs(O.MODULES) do
-    Check(#Find(list, O.DisplayName(mod)) > 0, O.DisplayName(mod) .. " is not found by its name")
+    local matches = Find(list, O.DisplayName(mod))
+    Check(#matches > 0, O.DisplayName(mod) .. " is not found by its name")
+    local card, switch = false, false
+    for _, m in ipairs(matches) do
+        card = card or (m.card ~= nil and ns.L(m.label or "") == O.DisplayName(mod))
+        switch = switch or (m.page == "Settings" and m.trail == "MODULES" and ns.L(m.label or "") == O.DisplayName(mod))
+    end
+    Check(not (card and switch), O.DisplayName(mod) .. " lists its card and its Settings > Modules switch")
+end
+
+-- A word only a setting's help holds lists it only when nothing shows the word: "real" is not "realm".
+for _, m in ipairs(Find(list, "real")) do
+    Check(not (m.label or ""):find("Alt") and not (m.label or ""):find("Scan"), "'real' lists " .. tostring(m.label))
 end
 
 -- A plural finds what is named in the singular.
 Check(#Find(list, "minimap buttons") > 0 and #Find(list, "reminders") > 0, "a plural finds the singular")
+Typing(list, "")
 
 -- A card one module declares on another's page: the module lists it, and with that module off the page
 -- shows the module's own card in its place and search finds the card's settings there.
@@ -209,6 +275,7 @@ for _, mod in ipairs(O.MODULES) do
     end
 end
 Check(offEntries > 1000, "every turned-off module's settings are searched, " .. offEntries .. " found")
+Typing(list, ", every module off")
 
 assert(#failures == 0, table.concat(failures, "\n"))
 print(("PASS search audit: %d checks, %d settings on, %d off"):format(checks, entries, offEntries))

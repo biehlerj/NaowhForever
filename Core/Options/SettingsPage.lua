@@ -689,7 +689,7 @@ end
 function Terms:Take(row)
     if row.text == "" or row.type == "label" then return end
     local off = row.module and not Loaded(row.module) and row.module or nil
-    self.add(row.text, row.tooltip, self.section, off)
+    self.add(row.text, row.tooltip, self.section, off, row.module)
 end
 
 function Terms:DualRow(_, _, left, right)

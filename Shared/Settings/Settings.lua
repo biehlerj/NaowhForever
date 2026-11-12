@@ -226,13 +226,13 @@ local function SearchText(spec)
 end
 
 local function IndexCard(item, add)
-    add(item.uid, item.name, SearchText(item))
+    add(item.uid, item.name, SearchText(item), nil, nil, item.search)
     local group
     for _, row in ipairs(Settings.Rows(item)) do
         if row.kind == "group" then
             group = row.group
         elseif row.label then
-            add(item.uid, row.label, SearchText(row), item.name, group)
+            add(item.uid, row.label, SearchText(row), item.name, group, row.search)
         end
     end
 end

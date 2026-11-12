@@ -91,12 +91,12 @@ local out = {
 for _, mod in ipairs(ns.Options.MODULES) do
     for _, tab in ipairs(mod.tabs) do
         local lines = {}
-        Settings.Index(tab.key, function(uid, label, help, cardName, group)
+        Settings.Index(tab.key, function(uid, label, help, cardName, group, search)
             if type(label) ~= "string" then return end
             local id = uid:match("^.*:([^:]+)$")
             if cardName == nil then label, cardName = nil, label end
-            lines[#lines + 1] = ("        { %s, %s, %s, %s, %s },"):format(Quote(id), Quote(label), Quote(help),
-                Quote(cardName), Quote(group))
+            lines[#lines + 1] = ("        { %s, %s, %s, %s, %s, %s },"):format(Quote(id), Quote(label), Quote(help),
+                Quote(cardName), Quote(group), Quote(search))
         end)
         if #lines > 0 then
             out[#out + 1] = ("    [%s] = {"):format(Quote(tab.key))

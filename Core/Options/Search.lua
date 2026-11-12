@@ -7,7 +7,7 @@ local INDEX_ADDON = "NaowhForever_SearchIndex"
 local NONE = {}
 local NOT_LETTERS, LETTER, WORD = "[^%w\128-\255]+", "[%w\128-\255]", "()([%w\128-\255]+)"
 local FUZZY_MIN, FUZZY_SHARE, MAX_CAPTURES = 3, 0.5, 32
-local PLURALS, STEM_MIN = { "^(.-)s$", "^(.-)es$" }, 3
+local PLURALS, STEM_MIN = { "^(.-)s$", "^(.-[sxz])es$", "^(.-[cs]h)es$" }, 3
 local CARD_UID = "^(.-):[^:]+$"
 local CARD_PARTS = "^(.-):([^:]+)$"
 local TEXT_RESULT_GROUP = "%s / %s"
@@ -45,25 +45,27 @@ local function Place(page, cardName)
     return ns.L(cat and cat.name or page.title or page.name), table.concat(parts, " / ")
 end
 
-local function Entry(page, card, label, help, cardName, group, scope, owner)
+local function Entry(page, card, label, help, cardName, group, scope, owner, search)
     local t, where = Place(page, cardName)
     return { page = page.key, card = card, label = label, tag = t, trail = where, group = group, owner = owner,
         isCard = cardName == nil, scope = scope, name = Words(Both(label or cardName)),
+        seen = Words(table.concat({ Both(label), Both(cardName), Both(group), search or "" }, " ")),
         words = Words(table.concat({ Both(label), Both(help), Both(group), Both(cardName) }, " ")) }
 end
 
 local function IndexInto(list, page, scope, Settings, settingsKey)
-    Settings.Index(settingsKey, function(card, label, help, cardName, group)
-        list[#list + 1] = Entry(page, card, label, help, cardName, group, scope, card and card:match(CARD_UID))
+    Settings.Index(settingsKey, function(card, label, help, cardName, group, search)
+        list[#list + 1] = Entry(page, card, label, help, cardName, group, scope, card and card:match(CARD_UID), search)
     end)
 end
 
 local function AddTerms(list, page, tag, scope)
     local terms = page.terms and ns[page.terms]
     if not terms then return end
-    terms(function(label, help, section, off)
+    terms(function(label, help, section, off, mod)
         list[#list + 1] = { page = page.key, label = label, tag = tag, trail = section, scope = scope, off = off,
-            name = Words(Both(label)), words = Words(table.concat({ Both(label), Both(help), Both(section) }, " ")) }
+            module = mod, name = Words(Both(label)), seen = Words(Both(label) .. " " .. Both(section)),
+            words = Words(table.concat({ Both(label), Both(help), Both(section) }, " ")) }
     end)
 end
 
@@ -76,7 +78,8 @@ end
 local function PageTarget(list, page)
     local tag, trail = Place(page)
     local words = Words(tag .. " " .. trail .. " " .. ModuleNames(page))
-    list[#list + 1] = { page = page.key, tag = tag, trail = trail, name = words, words = words }
+    local seen = Words(tag .. " " .. trail)
+    list[#list + 1] = { page = page.key, tag = tag, trail = trail, name = seen, words = words, seen = seen }
     return tag, words
 end
 
@@ -88,7 +91,7 @@ local function IndexOff(list, mod, pageKey, id)
         if page then
             local tag, trail = Place(page)
             local scope = Words(tag .. " " .. trail .. " " .. name)
-            list[#list + 1] = Entry(page, card, e[2] or e[4], e[3], e[2] and e[4] or nil, e[5], scope, pageKey)
+            list[#list + 1] = Entry(page, card, e[2] or e[4], e[3], e[2] and e[4] or nil, e[5], scope, pageKey, e[6])
         end
     end
 end
@@ -227,47 +230,68 @@ local function Own(target, word)
     if Has(target.scope, word, true) then return false end
 end
 
+local function Reads(text, word)
+    return Has(text, word) or Has(text, word, true)
+end
+
 local function Matched(target, typed)
-    local own, fuzzy, score, named = false, 0, 0, true
+    local own, fuzzy, score, named, shown, direct = false, 0, 0, true, true, false
     for _, word in ipairs(typed) do
         local mine = Own(target, word)
         if mine then
             own = true
-            named = named and (Has(target.name, word) or Has(target.name, word, true))
+            named = named and Reads(target.name, word)
+            if Reads(target.seen, word) then
+                direct = true
+            elseif not Reads(target.scope, word) then
+                shown = false
+            end
         elseif mine == false then
             named = false
         else
             local s = Fuzzy(word, target)
             if not s then return false end
-            own, fuzzy, score = true, fuzzy + 1, score + s
+            own, fuzzy, score, direct = true, fuzzy + 1, score + s, true
         end
     end
-    return own, fuzzy, score, named and (#typed == #(target.nameWords or NameWords(target)) and 2 or 1) or 0
+    return own, fuzzy, score, named and (#typed == #(target.nameWords or NameWords(target)) and 2 or 1) or 0,
+        shown and direct
 end
 
 local function Better(a, b)
     if a.named ~= b.named then return a.named > b.named end
     if a.fuzzy ~= b.fuzzy then return a.fuzzy < b.fuzzy end
     if a.score ~= b.score then return a.score > b.score end
+    if (a.card == nil) ~= (b.card == nil) then return a.card ~= nil end
     return a.at < b.at
 end
 
 local function Matches(list, typed)
-    local out = {}
+    local out, shown = {}, {}
     if #typed == 0 then return out end
     for i, target in ipairs(list) do
-        local own, fuzzy, score, named = Matched(target, typed)
+        local own, fuzzy, score, named, reads = Matched(target, typed)
         if own then
             target.fuzzy, target.score, target.at, target.named = fuzzy, score, i, named
             out[#out + 1] = target
+            if reads then shown[#shown + 1] = target end
         end
     end
+    if shown[1] then out = shown end
     table.sort(out, Better)
     return out
 end
 
 local function Find(list, query)
-    return Matches(list, Typed(query))
+    local carded, out = {}, {}
+    local matches = Matches(list, Typed(query))
+    for _, t in ipairs(matches) do
+        if t.card and t.label then carded[ns.L(t.label)] = true end
+    end
+    for _, t in ipairs(matches) do
+        if not (t.module and carded[ns.L(t.label)]) then out[#out + 1] = t end
+    end
+    return out
 end
 
 local function AddMatch(f, t)
@@ -361,6 +385,15 @@ local function Mark(filter, text)
     return Paint(text, lit)
 end
 
+local function Trail(entry, filter)
+    local trail = entry.trail and entry.trail ~= "" and TEXT_RESULT_PATH:format(entry.tag, entry.trail) or entry.tag
+    if entry.group and not entry.inGroup then
+        local group = ns.L(entry.group)
+        if Mark(filter, group) ~= group then trail = TEXT_RESULT_PATH:format(trail, group) end
+    end
+    return Mark(filter, trail)
+end
+
 local function Narrowing(filter, pageKey)
     if filter and not filter.all[pageKey] and (filter.count[pageKey] or 0) > 0 then return filter end
     return nil
@@ -377,7 +410,7 @@ local function CarriedChanged(before, after)
     return false
 end
 
-UI.Search = { Collect = Collect, Find = Find, Build = Build, Mark = Mark, Narrowed = Narrowed }
+UI.Search = { Collect = Collect, Find = Find, Build = Build, Mark = Mark, Trail = Trail, Narrowed = Narrowed }
 
 function UI.SearchCarries(pageKey, settingsKey)
     local keys = carries[pageKey] or {}
@@ -412,8 +445,7 @@ local function PaintResults()
         row:SetShown(i <= shown and entry ~= nil)
         if entry then
             row.title:SetText(Mark(UI.filter, ns.L(entry.label or entry.tag)))
-            local trail = entry.trail and entry.trail ~= "" and TEXT_RESULT_PATH:format(entry.tag, entry.trail) or entry.tag
-            row.trail:SetText(trail)
+            row.trail:SetText(Trail(entry, UI.filter))
             row.fill:SetShown(index == selectedResult)
         end
     end
