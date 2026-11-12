@@ -9,6 +9,7 @@ local BETA_REGIONS = { [90] = true, [110] = true }
 
 local MEDIA = "Interface\\AddOns\\NaowhForever\\Core\\Badges\\Media\\"
 local CACHE_SIZE = 200
+local GUILD_EVENTS = { CHAT_MSG_GUILD = true, CHAT_MSG_OFFICER = true, CHAT_MSG_GUILD_ACHIEVEMENT = true }
 local TOAST_HOLD = 4
 local STEP_IN, STEP_HOLD, STEP_OUT = 1, 2, 3
 local BYTE = 255
@@ -231,7 +232,8 @@ local function Remember(lineID, guid)
     nextSlot = nextSlot % CACHE_SIZE + 1
 end
 
-local function DecorateName(_, name, _, sender, _, _, _, _, _, _, _, _, lineID, guid)
+local function DecorateName(event, name, _, sender, _, _, _, _, _, _, _, _, lineID, guid)
+    if GUILD_EVENTS[event] then return name end
     local tier = TierOf(EntryOf(guid, sender))
     if not tier then return name end
     if lineID and not Secret(lineID) then Remember(lineID, guid) end

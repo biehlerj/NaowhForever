@@ -243,6 +243,10 @@ do  -- chat, card, tooltip
     check("the badge is as tall as the text", dev:find("BadgeDeveloperChat.tga:0:0:", 1, true) ~= nil)
     check("legendary badge", say(filter, "Patron", 2, "Player-1-LEG"):find("BadgeLegendaryChat.tga", 1, true))
     check("epic badge", say(filter, "Epic", 8, "Player-1-EPIC"):find("BadgeEpicChat.tga", 1, true))
+    for _, event in ipairs({ "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER", "CHAT_MSG_GUILD_ACHIEVEMENT" }) do
+        check("no badge in " .. event, filter(event, "Glyalith", "hi", "Glyalith", "", "", "", "", 0, 0, "", 0, 7,
+            "Player-1-DEV") == "Glyalith")
+    end
     check("a patron with no tier the addon knows wears the Legendary one",
         say(filter, "Odd", 9, "Player-1-ODD"):find("BadgeLegendaryChat.tga", 1, true))
     check("the moderator is red now, epic purple is the Epic patrons'",
