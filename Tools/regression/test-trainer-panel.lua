@@ -36,6 +36,7 @@ local trainer = Stub()
 local COLOR = { r = 1, g = 1, b = 1 }
 local gamepad = false
 local asked
+local money = 1000
 
 local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.upper, Lower = string.lower,
     GamepadStandDown = function() return gamepad end,
@@ -60,6 +61,7 @@ local ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.up
     SetButtonText = function(button, text) button.text = text end,
     Confirm = function(text, onYes) asked = { text = text, yes = onYes } end,
     Apply = NOTHING,
+    UI = { SlimScroll = function() return Stub("ScrollFrame") end },
 }
 
 local env = setmetatable({
@@ -75,7 +77,7 @@ local env = setmetatable({
     hooksecurefunc = NOTHING,
     wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
     UnitLevel = function() return 20 end,
-    GetMoney = function() return 1000 end,
+    GetMoney = function() return money end,
     GetNumTrainerServices = function() return #SERVICES end,
     GetTrainerServiceInfo = function() return nil, nil, nil, 10 end,
     GetTrainerServiceCost = function() return COST end,
@@ -148,5 +150,19 @@ check("a spell not skipped unticks as before", not rows[1].tick.shown and Learn(
 
 Visit()
 check("the next visit starts the skipped spell unticked again", rows[1].tick.shown and not rows[2].tick.shown)
+
+-- More spells than the panel shows at once: every one gets a row in the scrolling list, and one past the
+-- first ten can be unticked like the rest, so Learn Selected never buys a spell you could not see.
+for i = #SERVICES + 1, 12 do SERVICES[i] = { name = ("Spell %02d"):format(i), spell = 200 + i } end
+money = 100000
+Visit()
+rows = Rows()
+check("twelve spells, twelve rows, all of them drawn", #rows == 12 and rows[11].shown and rows[12].shown)
+rows[12].scripts.OnClick(rows[12])
+check("the twelfth unticks", not rows[12].tick.shown)
+check("and Learn Selected leaves it out", not Learn():find("Spell 12", 1, true))
+for i = 4, 12 do SERVICES[i] = nil end
+Visit()
+check("back to three spells, the rows past them hide", rows[3].shown and not rows[4].shown and not rows[12].shown)
 
 print(("test-trainer-panel: %d checks passed"):format(checks))

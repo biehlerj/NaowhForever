@@ -13,6 +13,7 @@ local PANEL_HEADER = 40
 local OFFER_H, OFFER_ICON, MAX_OFFERS = 34, 26, 10
 local OFFER_GAP = 2
 local LIST_GAP = 4
+local SCROLL_ROOM = 12
 local CHECK = 16
 local CHECK_X, TICK_INSET = 4, 4
 local ICON_GAP, NAME_GAP = 10, 8
@@ -158,9 +159,10 @@ local function OnOfferEnter(self)
 end
 
 local function NewOffer(i)
-    local row = CreateFrame("Button", nil, panel)
-    row:SetSize(PANEL_W - 2 * PANEL_PAD, OFFER_H - OFFER_GAP)
-    row:SetPoint("TOPLEFT", PANEL_PAD, -(PANEL_HEADER + LIST_GAP + (i - 1) * OFFER_H))
+    local row = CreateFrame("Button", nil, panel.list)
+    row:SetHeight(OFFER_H - OFFER_GAP)
+    row:SetPoint("TOPLEFT", 0, -(i - 1) * OFFER_H)
+    row:SetPoint("RIGHT", panel.list, "RIGHT")
     local check = CreateFrame("Frame", nil, row)
     check:SetSize(CHECK, CHECK)
     check:SetPoint("LEFT", CHECK_X, 0)
@@ -243,6 +245,10 @@ local function Build()
     ns.Border(panel, Style.BORDER_RGB)
     BuildHeader()
     panel.rows = {}
+    panel.scroll = ns.UI.SlimScroll(panel)
+    panel.scroll:SetPoint("TOPLEFT", PANEL_PAD, -(PANEL_HEADER + LIST_GAP))
+    panel.list = CreateFrame("Frame", nil, panel.scroll)
+    panel.scroll:SetScrollChild(panel.list)
     BuildFooter()
     panel.done = ns.Font(panel, FONT_ROW, nil, T.muted)
     panel.done:SetPoint("TOPLEFT", PANEL_PAD, -(PANEL_HEADER + DONE_DROP))
@@ -253,7 +259,10 @@ end
 
 local function FillRows(offers)
     local shown = math.min(#offers, MAX_OFFERS)
-    for i = 1, shown do
+    local width = PANEL_W - 2 * PANEL_PAD - (#offers > MAX_OFFERS and SCROLL_ROOM or 0)
+    panel.scroll:SetSize(width, shown * OFFER_H)
+    panel.list:SetSize(width, math.max(1, #offers * OFFER_H))
+    for i = 1, #offers do
         local row = panel.rows[i] or NewOffer(i)
         local offer = offers[i]
         row.offer = offer
@@ -264,7 +273,7 @@ local function FillRows(offers)
         CheckPaint(row)
         row:Show()
     end
-    for i = shown + 1, #panel.rows do panel.rows[i]:Hide() end
+    for i = #offers + 1, #panel.rows do panel.rows[i]:Hide() end
     return shown
 end
 
@@ -361,7 +370,10 @@ local function OnEvent(_, event, arg1)
     elseif event == "TRAINER_SHOW" then
         wipe(unpicked)
         learned = 0
-        if panel then panel.dismissed = nil end
+        if panel then
+            panel.dismissed = nil
+            panel.scroll:SetVerticalScroll(0)
+        end
         HookTrainerFrame()
         Queue()
     elseif event == "TRAINER_CLOSED" then
