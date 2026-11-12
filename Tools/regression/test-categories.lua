@@ -146,10 +146,10 @@ local function Count(items, uid)
     end
     return n
 end
-local ahOverview = Compose(O.PAGES["Auction House > Overview"])
+local ahOverview = Compose(O.PAGES["Crafting & Market > Overview"])
 Check(Count(ahOverview, "@The Market") == 1, "The Market off: its card shows once on the Overview")
 Check(Holds(ahOverview, "QoL/Loot & Items:auctionPrices"), "and Auction Prices stays on the Overview")
-local tooltips = Compose(O.PAGES["Auction House > Prices & Tooltips"])
+local tooltips = Compose(O.PAGES["Crafting & Market > Prices & Tooltips"])
 Check(Holds(tooltips, "QoL/Loot & Items:auctionPrices") and Holds(tooltips, "@The Market"),
     "The Market off: Prices & Tooltips keeps Auction Prices, with The Market's card for its own settings")
 loaded.NaowhForever_Market = nil

@@ -226,7 +226,7 @@ Modals and windows
   (`onReleased`) fits the page to the new width and redraws it only when that width changed.
 
 Categories
-- The window is laid out by what the player is doing, not by module: Home, then 13 categories in
+- The window is laid out by what the player is doing, not by module: Home, then 12 categories in
   three bands, each with an Overview and two to six pages. Players looked for a setting under the
   game system it belongs to and could not find it inside a module (2026-11 feedback).
 - Modules still declare their cards on their own pages (`Module/Tab`), which their own windows

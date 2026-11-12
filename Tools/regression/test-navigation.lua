@@ -292,9 +292,9 @@ do
     for _, cat in ipairs(ns.Options.CATEGORIES) do listed[#listed + 1] = (cat.band or "") .. ":" .. cat.name end
     Check(table.concat(listed, "|") == ":Interface|CHARACTER:Character & Gear|CHARACTER:Leveling & Training"
         .. "|CHARACTER:Action Bars & Macros|CHARACTER:Buffs & Consumables|WORLD:Quests & Exploration|WORLD:Map & Travel"
-        .. "|WORLD:Professions|WORLD:Auction House|WORLD:Bags, Loot & Mail|COMBAT & GROUPS:Combat"
+        .. "|WORLD:Crafting & Market|WORLD:Bags, Loot & Mail|COMBAT & GROUPS:Combat"
         .. "|COMBAT & GROUPS:Dungeons & Groups|COMBAT & GROUPS:PvP",
-        "the thirteen categories in their bands, Interface on its own under Home")
+        "the twelve categories in their bands, Interface on its own under Home")
 end
 local moduleList = Button("Map & Travel").parent
 local navTopBar = false
@@ -811,7 +811,7 @@ ModuleSwitch("Action Bars").scripts.OnClick(); Flush()
 Check(ns.ActionBarSettings.Get("enabled") == barsWas and confirmText == nil and reloadText == nil
     and not disabled.NaowhForever_Utilities, "and back, with Utilities left on for the others")
 confirmText = nil
-ns.OpenOptionsWindow("Professions > Crafting"); Flush()
+ns.OpenOptionsWindow("Crafting & Market > Crafting"); Flush()
 ModuleSwitch("Professions").scripts.OnClick(); Flush()
 ModuleSwitch("Professions").scripts.OnClick(); Flush()
 Check(confirmText and not confirmText:find("Training Planner", 1, true), "Professions leaves Training Planner alone")
@@ -820,7 +820,7 @@ Check(disabled.NaowhForever_Professions and not disabled.NaowhForever_Training a
     "and only the modules that need it")
 missingAddOns.NaowhForever_Professions = true
 ns.OpenOptionsWindow("Professions/Settings"); Flush()
-Check(Text("Professions / Crafting") and Head("Professions") and ModuleSwitch("Professions")._get() == false,
+Check(Text("Crafting & Market / Crafting") and Head("Professions") and ModuleSwitch("Professions")._get() == false,
     "a link to a module that is off lands on its category page, where its own card turns it back on")
 missingAddOns.NaowhForever_Professions = nil
 
