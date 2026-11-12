@@ -478,6 +478,16 @@ do
     Check("rogue's bar shows the cooked fish", t.FoodBar().buttons[1].attrs.item1, "item:4592")
 end
 
+-- No mana, no drink: a rogue out of food never gets water from NF Food.
+do
+    local t = Fixture({ class = "ROGUE", settings = { food = true }, bags = { 4540, 1179 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("rogue's food without the water", t.Body("NF Food"), "#showtooltip\n/use item:4540")
+    t = Fixture({ class = "ROGUE", settings = { food = true }, bags = { 1179 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("rogue out of food: no water", t.Body("NF Food"), "#showtooltip")
+end
+
 -- An off-hand whose use spell is a Drink is never the drink: using it from the bags would equip it.
 do
     local t = Fixture({ settings = { food = true, drink = true }, qol = { foodBar = true }, level = 60,

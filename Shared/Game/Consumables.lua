@@ -75,7 +75,8 @@ end
 local function BestFoodAndDrink()
     local foodName, drinkName = C_Spell.GetSpellName(FOOD_SPELL), C_Spell.GetSpellName(DRINK_SPELL)
     local nutritiousFood, nutritiousDrink = C_Spell.GetSpellName(NUTRITIOUS_FOOD), C_Spell.GetSpellName(NUTRITIOUS_DRINK)
-    local bothBonus = ns.UsesMana() and FOOD_AND_DRINK_BONUS or 0
+    local usesMana = ns.UsesMana()
+    local bothBonus = usesMana and FOOD_AND_DRINK_BONUS or 0
     local conjured = ns.QoLSettings.Get("foodBarConjuredFirst") and CONJURED_BONUS or -CONJURED_BONUS
     local food, drink, foodScore, drinkScore
     for bag = 0, NUM_BAG_SLOTS do
@@ -85,7 +86,7 @@ local function BestFoodAndDrink()
             local both = id and FOOD_AND_DRINK[id]
             local nutritious = spell and (spell == nutritiousFood or spell == nutritiousDrink)
             local isFood = both or (spell and (spell == foodName or spell == nutritiousFood))
-            local isDrink = both or (spell and (spell == drinkName or spell == nutritiousDrink))
+            local isDrink = usesMana and (both or (spell and (spell == drinkName or spell == nutritiousDrink)))
             local bonus = (both and bothBonus or 0) - (nutritious and NUTRITIOUS_PENALTY or 0)
             local s = (isFood or isDrink) and not C_Item.IsEquippableItem(id) and Score(id, bonus, conjured)
             if s and isFood and (not foodScore or s > foodScore) then food, foodScore = id, s end
