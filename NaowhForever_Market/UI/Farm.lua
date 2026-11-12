@@ -56,7 +56,7 @@ local zoneRows, pins, tiles, lines = {}, {}, {}, {}
 local picked = { map = nil, kind = nil, item = nil }
 local active = false
 
-local Page = {}
+local Page = { WIDTH = ZONES_W + PANE_GAP + STRIP_FULL_W + St.WINDOW_PAD * 2 }
 Market.Pages.farm = Page
 
 local KIND_RGB = { herb = St.HERB_RGB, ore = St.ORE_RGB, skin = St.SKIN_RGB, fish = St.FISH_RGB }

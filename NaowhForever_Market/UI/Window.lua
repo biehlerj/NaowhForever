@@ -86,25 +86,30 @@ local function Bar()
     return covering and fullTabs or tabs
 end
 
-local function ShowPage(key)
-    if shown ~= key then Window.HidePage(shown) end
-    shown = key
-    Market.Tabs.Paint(Bar(), key)
-    Window.ShowPageIn(body, key)
-    if covering then fullShown = key end
-    if dockedTo then dockPicked(key) end
-end
-
 local function Chrome()
     if ns.foreverSkin then return St.FOREVER_TITLE_H, St.FOREVER_SIDE end
     return 0, 0
+end
+
+local function PageWidth()
+    return Market.Pages[shown].WIDTH or W
 end
 
 local function DockWidth()
     local _, side = Chrome()
     local room = (UIParent:GetRight() * UIParent:GetEffectiveScale()
         - dockedTo:GetRight() * dockedTo:GetEffectiveScale()) / window:GetEffectiveScale() - dockGap - side * 2
-    return math.max(DOCK_MIN_W, math.min(W, math.floor(room)))
+    return math.max(DOCK_MIN_W, math.min(PageWidth(), math.floor(room)))
+end
+
+local function ShowPage(key)
+    if shown ~= key then Window.HidePage(shown) end
+    shown = key
+    if not covering then window:SetWidth(dockedTo and DockWidth() or PageWidth()) end
+    Market.Tabs.Paint(Bar(), key)
+    Window.ShowPageIn(body, key)
+    if covering then fullShown = key end
+    if dockedTo then dockPicked(key) end
 end
 
 local function Free()

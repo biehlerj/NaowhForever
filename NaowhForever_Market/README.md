@@ -143,7 +143,7 @@ NaowhForever_Market/
   visit opens on the panel. Docked, the window's own tabs move the picked tab.
 - Docked, the window runs from the top to the bottom of Blizzard's window, on its strata, and is as wide as the
   screen leaves to the right of it, worked out in screen pixels from both frames' effective scales, never wider
-  than its own `WINDOW_W` and never narrower than `DOCK_MIN_W` (700), the width its pages still lay out in.
+  than its page's width and never narrower than `DOCK_MIN_W` (700), the width its pages still lay out in.
   Below that (a 16:9 screen at the default scale leaves about 540) it stays 700 and, clamped to the screen,
   overlaps Blizzard's window rather than running off the edge: while docked its clamp insets are zero, as
   a free window's let most of it leave the screen. With the Forever look the window's frame draws its
@@ -152,6 +152,9 @@ NaowhForever_Market/
   drag and each time the panel manager places Blizzard's window (`Window.FitDock`), and the page redraws when it
   changes. Put away, the window goes back to its own spot, size and strata, so `/market`, the key binding and the
   options menu open it free as before; opening it that way while it is docked puts it back free.
+- A page's width is its `WIDTH`, or `WINDOW_W` (1144) without one, set again on each tab. Farm's is its zone list
+  plus `STRIP_FULL_W` (680) of map pane, so the strip keeps its full layout without empty space either side of a
+  map that its height limits. Full Window keeps one size for every page.
 - At 700 wide Farm's picked-item strip has no room for its two weeks of prices: below `STRIP_FULL_W` (680) of map
   pane it drops that line and the "at your last scan" note, narrows its numbers to `KV_NARROW_W` (130) and cuts the
   item's name short. Price Graph's list is `LIST_W` (280) and its buttons `BUTTON_W` (100), so its Watch row, with

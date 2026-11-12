@@ -207,6 +207,16 @@ local count = #picked
 window:Hide()
 check("free, closing it tells no tab", closed == 2 and #picked == count)
 
+Pages.farm.WIDTH = 966
+Window.Open("farm")
+check("Farm opens at its own, narrower width", window.w == 966)
+Window.Open("prices")
+check("and the other pages at the window's", window.w == 1144)
+Window.DockTo(ah, "farm", 4, OnPick, OnClose)
+check("docked with room to spare, Farm keeps its narrower width", window.w == 966)
+window:Hide()
+Pages.farm.WIDTH = nil
+
 -- Over the auction house.
 for _, page in pairs(Pages) do
     local build = page.Build
