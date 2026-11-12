@@ -32,6 +32,7 @@ local S = ns.UI.ModuleSettings("journal", {
     mapPanel = F.mapPanel,
     mapFactions = F.mapFactions,
     mapEntrances = F.mapEntrances,
+    entranceJournal = F.entranceJournal,
     mapEntranceScale = 1,
     usableOnly = true,
     myRecipes = true,

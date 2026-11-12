@@ -458,7 +458,7 @@ in the pull request it opens.
   visible area, so the existing floor order and pin coordinates still apply. Upper Blackrock
   Spire keeps its existing pictures for floors 8 and 9. No other addon is required at runtime.
 
-- The on/off switches' defaults (`enabled`, `mapPanel`, `mapFactions`, `mapEntrances`) are read
+- The on/off switches' defaults (`enabled`, `mapPanel`, `mapFactions`, `mapEntrances`, `entranceJournal`) are read
   from `ns.FEATURES.journal`: one file holds every feature's switch and default.
 - Under Forever's Gamepad interface style (`ns.GamepadStandDown()`) the panel beside the world map
   and Hide the Game's Quest Tracker stay off, and their settings say why. That style opens and
