@@ -48,7 +48,8 @@ local function Fixture(opts)
         roles = opts.roles or {},                   -- unit -> its assigned group role
         mainTanks = opts.mainTanks or {},           -- unit -> true when flagged main tank
         shields = opts.shields or {},               -- slot -> true for a shield in that slot
-        weapons = opts.weapons or {},               -- slot -> enchant seconds left, false for none
+        weapons = opts.weapons or {},               -- slot -> poison or imbue seconds left, false for none
+        stones = opts.stones or {},                 -- slot -> stone or oil seconds left
         worn = opts.worn or {},                     -- slot -> item ID worn there
         subclasses = opts.subclasses or {},         -- itemID -> its subclass
         classes = opts.classes or {},               -- itemID -> its class, when not a weapon
@@ -201,7 +202,7 @@ local function Fixture(opts)
             return color
         end }),
         LOCALIZED_CLASS_NAMES_MALE = setmetatable({}, { __index = function(_, class) return class:lower() end }),
-        Enum = { ItemClass = { Weapon = 2 } },
+        Enum = { ItemClass = { Weapon = 2 }, ItemEnchantType = { Temporary = 2, Imbue = 3 } },
         GetTime = function() return state.now end,
         InCombatLockdown = function() return state.combat end,
         IsResting = function() return state.resting end,
@@ -262,9 +263,10 @@ local function Fixture(opts)
                 return "item", nil, nil, nil, state.levels[id], nil, nil, nil, nil, state.icons[id]
             end,
             GetWeaponEnchantInfo = function(weaponSlot)
-                local left = state.weapons[weaponSlot == 0 and 16 or 17]
-                return { { hasEnchant = false, timeLeft = 0 },
-                    { hasEnchant = left and true or false, timeLeft = left and left * 1000 or 0 } }
+                local slot = weaponSlot == 0 and 16 or 17
+                local stone, left = state.stones[slot], state.weapons[slot]
+                return { { hasEnchant = stone and true or false, enchantType = 2, timeLeft = stone and stone * 1000 or 0 },
+                    { hasEnchant = left and true or false, enchantType = 3, timeLeft = left and left * 1000 or 0 } }
             end,
             GetItemInfoInstant = function(id)
                 local class = state.classes[id] or state.shields[id - 1000] and 4 or 2
@@ -387,6 +389,7 @@ end
 
 local ICONS = "Interface\\Icons\\"
 local ROUGH = ICONS .. "inv_stone_sharpeningstone_01"
+local COARSE = ICONS .. "inv_stone_sharpeningstone_02"
 
 local failures = 0
 local function Check(label, got, want)
@@ -1409,7 +1412,8 @@ do
     Check("and follows the bare hand once combat ends", cell.attributes.macrotext1, "/use item:8928\n/use 17")
 
     t = Fixture({ instance = "raid", units = { player = "MAGE" }, bags = { 20750, 13510 },
-        weapons = { [16] = 1800, [17] = false }, settings = { weaponEnhancements = true, leftClickMainHand = true } })
+        weapons = { [16] = false, [17] = false }, stones = { [16] = 1800 },
+        settings = { weaponEnhancements = true, leftClickMainHand = true } })
     t.Login()
     local oil, flask
     for _, f in ipairs(t.frames) do
@@ -1703,7 +1707,7 @@ do
     t.Set("carriedPicks", {})
     t.Set("onlyIfCarried", false)
     Check("none carried, switch off: a rough sharpening stone", t.Shown(), "spell:1248406 item:13510 item:13452 " .. ROUGH)
-    t.state.weapons[16] = 1800
+    t.state.stones[16] = 1800
     t.Fire("UNIT_INVENTORY_CHANGED", "player")
     t.Advance(0.5)
     Check("main hand enchanted, shield ignored", t.Shown(), "spell:1248406 item:13510 item:13452")
@@ -1788,21 +1792,21 @@ do
     Check("and no gear events", t.Listening("PLAYER_EQUIPMENT_CHANGED"), false)
 end
 
--- A class with its own poison reminder does not get the generic one.
+-- A poison and a stone sit on a weapon side by side: a rogue gets both reminders, and each clears only its own.
 do
     local t = Fixture({ instance = "raid", units = { player = "ROGUE" }, known = { [2842] = true },
-        bags = { 20750 }, weapons = { [16] = false }, settings = { weaponEnhancements = true } })
+        bags = { 2863 }, weapons = { [16] = false, [17] = false }, settings = { weaponEnhancements = true } })
     t.Login()
-    Check("rogue keeps poisons only", t.Shown(), "spell:2842")
-end
-
--- Where poisons do not show, the generic weapon reminder does.
-do
-    local t = Fixture({ instance = "party", units = { player = "ROGUE" }, known = { [2842] = true },
-        bags = { 20750 }, weapons = { [16] = false },
-        settings = { weaponEnhancements = true, personalBuffsDungeon = false } })
-    t.Login()
-    Check("poisons off in dungeons, weapon reminder shown", t.Shown(), ICONS .. "inv_potion_104")
+    Check("rogue with poisons known gets the stone too", t.Shown(), COARSE .. " spell:2842")
+    t.state.stones = { [16] = 1800, [17] = 1800 }
+    t.Fire("UNIT_INVENTORY_CHANGED", "player")
+    t.Advance(0.5)
+    Check("stones on both: poisons still missing", t.Shown(), "spell:2842")
+    t.state.stones = {}
+    t.state.weapons = { [16] = 1800, [17] = 1800 }
+    t.Fire("UNIT_INVENTORY_CHANGED", "player")
+    t.Advance(0.5)
+    Check("poisons on both: stone still missing", t.Shown(), COARSE)
 end
 
 -- A personal buff cast in combat fades its reminder until the row can refresh again.

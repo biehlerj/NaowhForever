@@ -15,6 +15,8 @@ local PARTY_UNITS = MAX_PARTY_MEMBERS or 4
 local RAID_UNITS_MAX = MAX_RAID_MEMBERS or 40
 local CATEGORY_ORDER = A.CATEGORY_ORDER
 local WEAPON_SLOTS = { 16, 17 }
+local IMBUE = Enum.ItemEnchantType.Imbue
+local TEMPORARY = Enum.ItemEnchantType.Temporary
 local CLASS_INDEX = 6
 local REQUIRED_LEVEL = 5
 local ITEM_ICON = 10
@@ -440,16 +442,16 @@ local function Attractor(list, buffs, zone)
     if #list > before then list[#list].items, list[#list].key = D.ATTRACTOR.items, "attractor" end
 end
 
-local function SlotEnchanted(weaponSlot, warn)
+local function SlotEnchanted(weaponSlot, warn, kind)
     for _, enchant in pairs(C_Item.GetWeaponEnchantInfo(weaponSlot)) do
-        if enchant.hasEnchant and Lasts(enchant.timeLeft / 1000, warn) then return true end
+        if enchant.hasEnchant and enchant.enchantType == kind and Lasts(enchant.timeLeft / 1000, warn) then return true end
     end
     return false
 end
 
-local function MissingSlot(slots, warn)
+local function MissingSlot(slots, warn, kind)
     for _, slot in ipairs(slots) do
-        if GetInventoryItemID("player", slot) and not SlotEnchanted(slot == 16 and 0 or 1, warn) then
+        if GetInventoryItemID("player", slot) and not SlotEnchanted(slot == 16 and 0 or 1, warn, kind) then
             return slot
         end
     end
@@ -466,21 +468,9 @@ local function WeaponSlots()
     return slots
 end
 
-local function OwnWeaponBuff(zone)
-    if not (S.Get("personalBuffs") and ShowsHere("personalBuffs", zone)) then return false end
-    local _, class = UnitClass("player")
-    for _, family in ipairs(D.PERSONAL) do
-        if family.weapons and family.class == class and PersonalPicked(family) and Knows(family.spells) then
-            return true
-        end
-    end
-    return false
-end
-
-local function WeaponEnhancement(list, zone)
-    if OwnWeaponBuff(zone) then return end
+local function WeaponEnhancement(list)
     local slots = WeaponSlots()
-    local slot = #slots > 0 and MissingSlot(slots, S.Get("consumablesMinutes") * SECONDS)
+    local slot = #slots > 0 and MissingSlot(slots, S.Get("consumablesMinutes") * SECONDS, TEMPORARY)
     if not slot then return end
     local item = FirstCarried(D.WEAPON_ITEMS)
     if not item and Carried("weapon") then return end
@@ -508,7 +498,7 @@ local function EliteTarget()
 end
 
 local function Has(family, buffs, warn)
-    if family.weapons then return MissingSlot(family.weapons, warn) == nil end
+    if family.weapons then return MissingSlot(family.weapons, warn, IMBUE) == nil end
     if family.target then return not EliteTarget() or TargetHas(family.spells) end
     local aura = Find(buffs, family.spells, family.own)
     local duration = aura and not Secret(aura.duration) and aura.duration or nil
@@ -567,7 +557,7 @@ local function PersonalBuffs(list, buffs)
                 local entry = { icon = C_Spell.GetSpellTexture(spell), aura = aura, key = family }
                 if family.items then
                     entry.items, entry.item = family.items, FirstCarried(family.items)
-                    entry.slot = MissingSlot(family.weapons, warn)
+                    entry.slot = MissingSlot(family.weapons, warn, IMBUE)
                 else
                     entry.spell, entry.unit = spell, family.target and "target" or "player"
                 end
@@ -672,8 +662,8 @@ function Reminders.CastCovers(key, spellID, onSelf)
 end
 
 function Reminders.WeaponCovered(key)
-    if key == "weapon" then return MissingSlot(WeaponSlots(), S.Get("consumablesMinutes") * SECONDS) == nil end
-    return type(key) == "table" and key.weapons ~= nil and MissingSlot(key.weapons, PersonalWarn()) == nil
+    if key == "weapon" then return MissingSlot(WeaponSlots(), S.Get("consumablesMinutes") * SECONDS, TEMPORARY) == nil end
+    return type(key) == "table" and key.weapons ~= nil and MissingSlot(key.weapons, PersonalWarn(), IMBUE) == nil
 end
 
 function Reminders.NoteImbueCast(spellID)
@@ -766,7 +756,7 @@ function Reminders.Collect()
     if ShowsHere("consumables", zone) and not (S.Get("hideResting") and IsResting()) then
         Consumables(list, buffs)
         if S.Get("otherBuffs") then OtherBuffs(list, buffs) end
-        if S.Get("weaponEnhancements") then WeaponEnhancement(list, zone) end
+        if S.Get("weaponEnhancements") then WeaponEnhancement(list) end
     end
     if S.Get("sleepingBag") then SleepingBag(list, buffs, zone) end
     if S.Get("elementalAttractor") then Attractor(list, buffs, zone) end

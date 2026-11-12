@@ -192,11 +192,12 @@ NaowhForever_Combat/AuraBuffs/
   known spell, so families list the best first. Forever adds its own IDs: Trueshot Aura 1299346 and
   1299348, Water Shield 408510 (the TBC IDs do not exist), Fel Armor 403619 (Wowhead dataEnv=16,
   2026-10-11; not yet checked in the client).
-- Poisons and imbues are temporary weapon enchants (`C_Item.GetWeaponEnchantInfo`, which lists
+- Poisons and imbues are weapon enchants (`C_Item.GetWeaponEnchantInfo`, which lists
   several per weapon with the empty ones first: Windfury is its second entry, where the old
-  `GetWeaponEnchantInfo` global reads only the first), so any one counts,
-  a sharpening stone too. Nothing reliable fires when one runs out (Blizzard's own display polls),
-  so its expiry is timed. Poisons check every equipped weapon, imbues the main hand. An enchant
+  `GetWeaponEnchantInfo` global reads only the first). A weapon holds a poison or imbue (`Imbue`) and a
+  stone or oil (`Temporary`) at once, so each reminder counts only its own `enchantType`: counting any
+  enchant let a stone clear Poisons, and Randy's rogue never saw a stone reminder. Nothing reliable fires
+  when one runs out (Blizzard's own display polls), so its expiry is timed. Poisons check every equipped weapon, imbues the main hand. An enchant
   reported with no time left counts as up and times nothing.
 - Weapon Imbue's family lists four different enchants (Windfury, Flametongue, Frostbrand,
   Rockbiter), not ranks of one, so "the first known spell" picked the wrong icon once a shaman
@@ -218,8 +219,8 @@ NaowhForever_Combat/AuraBuffs/
   food, but a click ate nothing. Food's icon is the carried item's, else the last buff
   food eaten (`lastFoodIcon` in the account settings, taken on `UNIT_SPELLCAST_SUCCEEDED` from the bag item
   with that use spell, else the spell's own texture), else Well Fed's. Weapon Enhancement Reminder (off by default) asks for a stone or
-  oil (`D.WEAPON_ITEMS`) on each equipped weapon, an off hand only when it is a weapon, and defers to a class's
-  own poison or imbue reminder. Its icon is the carried item's, else a Rough Sharpening Stone (`D.WEAPON_ICON_ITEM`),
+  oil (`D.WEAPON_ITEMS`) on each equipped weapon, an off hand only when it is a weapon, alongside a class's own
+  poison or imbue reminder. Its icon is the carried item's, else a Rough Sharpening Stone (`D.WEAPON_ICON_ITEM`),
   and each stone, weightstone and oil shows its classic icon (`D.WEAPON_ICONS`, a texture path per item ID, here and in
   the hover menu) rather than the client's item icon: Naowh asked for classic-looking icons, and the first oil in the
   list has a modern one. The IDs and icon names are Wowhead Forever's (2026-10-14), which match Classic's.
