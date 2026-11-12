@@ -17,6 +17,9 @@ scales on the BiS List's title bar), and only their changes are kept, for the ac
 - **On (Healer Mana):** for a healer, Intellect and Spirit are worked out from your own mana instead
   of typed: Spirit from your regen while casting, Intellect from its mana over the Fight Length you
   pick and from its spell crit. Mana every 5 sec stays your number and prices both.
+- **On (Mana Upgrades):** for a healer, a second tooltip line under the upgrade one when gear gives
+  you more mana over a fight: "+6% mana", how much more than your mana gives now. It counts mana
+  only, in Mana every 5 sec: Spirit's regen while casting, Intellect's 15 mana over the Fight Length.
 
 Your spec is Automatic: the talent tree you spent the most points in (Forever keeps one spec
 per class, its three trees as the talent tree's groups, read as its own talent frame reads
@@ -138,4 +141,4 @@ StatWeights/
 
 - `lua Tools/regression/test-stat-weights.lua`: the defaults (every spec, its anchor, ranges,
   ratings), your changes and new defaults, sharing, the gain math, the tooltip line and its
-  hook only once on, the window, Healer Mana and a healer's measured export.
+  hook only once on, the window, Healer Mana, a healer's measured export and Mana Upgrades.

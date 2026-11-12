@@ -109,9 +109,9 @@ function Parts.RankLine(rank, listName)
         .. (listName and ns.Color("muted", PLACE_DOT .. listName) or "")
 end
 
-function Parts.UpgradeLine(gain, specName)
+function Parts.UpgradeLine(gain, specName, word)
     upgradeArrow = upgradeArrow or UPGRADE_ICON:format(St.UPGRADE_ATLAS, -Parts.TOOLTIP_DROP)
-    return upgradeArrow .. " " .. St.UPGRADE_CODE .. "+" .. math.floor(gain + 0.5) .. TEXT_UPGRADE
+    return upgradeArrow .. " " .. St.UPGRADE_CODE .. "+" .. math.floor(gain + 0.5) .. (word or TEXT_UPGRADE)
         .. (specName and ns.Color("muted", PLACE_DOT .. specName) or "")
 end
 

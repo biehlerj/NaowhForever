@@ -150,6 +150,7 @@ ns.FEATURES = {
     statWeights = {
         enabled = false,
         healerMana = false,
+        manaUpgrades = false,
         upgradeMarks = false,
     },
     journeys = {

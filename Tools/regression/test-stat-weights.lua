@@ -21,6 +21,7 @@ local ITEMS = {
     [7] = { "INVTYPE_WEAPON", { ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 20 } },
     [8] = { "INVTYPE_WEAPON", { ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 15 } },
     [9] = { "INVTYPE_HAND", { ITEM_MOD_STAMINA_SHORT = 1 } },
+    [10] = { "INVTYPE_HAND", { ITEM_MOD_MANA_REGENERATION_SHORT = 5 } },
 }
 
 -- A secret number: any arithmetic or comparison on it fails, as in the game.
@@ -730,6 +731,46 @@ do
     check("and its Intellect and Spirit are yours, not worked out", w.int == 0.4 and w.spi == 0.3)
     S.Set("healerMana", false)
     check("off again: your weights as they are", SW.For(key).int == 0.4)
+end
+
+-------------------------------------------------------------------------------
+--  Mana Upgrades: a healer's second tooltip line, how much more mana an item gives over a fight
+-------------------------------------------------------------------------------
+do
+    local ns, state, env = Fixture("PRIEST")
+    local SW = ns.StatWeights
+    local S = ns.StatWeightSettings
+    env.LE_UNIT_STAT_INTELLECT, env.LE_UNIT_STAT_SPIRIT = 4, 5
+    env.MANA_PER_INTELLECT = 15
+    env.UnitLevel = function() return 60 end
+    env.GetManaRegenFromSpirit = function() return 10, 1.5 end
+    -- Every item here is leather; whether a priest can wear it is its own check.
+    ns.ClassCanUse = nil
+    S.Set("spec", "holy-priest")
+    S.Set("enabled", true)
+    local OnItem = state.postCalls[1]
+    local function Lines(id)
+        local tip = { lines = {} }
+        function tip.AddLine(self, text) self.lines[#self.lines + 1] = text end
+        function tip.IsForbidden() return false end
+        function tip.GetItem() return "x", "item:" .. id end
+        OnItem(tip, { id = id })
+        return tip.lines
+    end
+    check("off by default: no mana line", not table.concat(Lines(10), " "):find("mana", 1, true))
+    S.Set("manaUpgrades", true)
+    local mana = SW.ManaWeights()
+    check("mana in Mana every 5 sec: Spirit's regen while casting, Intellect's 15 over two minutes",
+        mana.mp5 == 1 and math.abs(mana.spi - 5 * 0.125 * 0.15) < 1e-9 and math.abs(mana.int - 5 * 15 / 120) < 1e-9)
+    -- 50 Intellect and 50 Spirit, nothing worn: 5 Mana every 5 sec over what they give.
+    local power = 50 * mana.int + 50 * mana.spi
+    check("an item's mana gain over your mana now", math.abs(SW.BestGain(10, "item:10", mana, SW.Power(mana))
+        - 100 * 5 / power) < 1e-9)
+    local lines = table.concat(Lines(10), " ")
+    check("its own line, beside the healing one", lines:find("% mana|r", 1, true) and lines:find("Holy", 1, true))
+    check("nothing for an item with no mana", not table.concat(Lines(1), " "):find("mana", 1, true))
+    S.Set("spec", "shadow-priest")
+    check("not for a damage spec", not table.concat(Lines(10), " "):find("mana", 1, true))
 end
 
 print(("test-stat-weights: %d checks passed"):format(checks))

@@ -62,6 +62,8 @@ Settings.Page("BiS List/Settings"):Card({
           help = "An upgrade arrow and percent on quest rewards, merchants, loot and the auction house." },
         { key = "healerMana", label = "Healer Mana", toggle = true,
           help = "For a healer, works out Intellect and Spirit from your own mana regen and pool." },
+        { key = "manaUpgrades", label = "Mana Upgrades", toggle = true,
+          help = "For a healer, a second tooltip line when gear gives you more mana over a fight." },
         { label = "Fight Length", choice = LengthChoices, get = LengthGet, set = LengthSet,
           help = "How long a healer's mana must last: longer fights favour regen over Intellect." },
         { label = "Your Spec", choice = SpecChoices, get = SpecGet, set = SpecSet,

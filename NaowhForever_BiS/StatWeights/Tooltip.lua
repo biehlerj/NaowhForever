@@ -6,7 +6,16 @@ local S = SW.Settings
 local Items = ns.Shared.Items
 local UpgradeLine = ns.Shared.Parts.UpgradeLine
 
+local TEXT_MANA = ns.L("% mana|r")
+
 local installed = false
+
+local function ManaLine(tooltip, id, link, spec)
+    if not (spec.healer and S.Get("manaUpgrades")) then return end
+    local mana = SW.ManaWeights()
+    local gain = mana and SW.BestGain(id, link, mana, SW.Power(mana))
+    if gain then tooltip:AddLine(UpgradeLine(gain, spec.name, TEXT_MANA)) end
+end
 
 local function TooltipLink(tooltip)
     if not tooltip.GetItem then return nil end
@@ -22,8 +31,11 @@ local function OnItem(tooltip, data)
     local key = Items.SlotsFor(id) and SW.ActiveSpec()
     local weights = key and SW.For(key)
     if not weights then return end
-    local best = SW.BestGain(id, TooltipLink(tooltip), weights, SW.Power(weights))
-    if best then tooltip:AddLine(UpgradeLine(best, SW.Spec(key).name)) end
+    local link = TooltipLink(tooltip)
+    local spec = SW.Spec(key)
+    local best = SW.BestGain(id, link, weights, SW.Power(weights))
+    if best then tooltip:AddLine(UpgradeLine(best, spec.name)) end
+    ManaLine(tooltip, id, link, spec)
 end
 
 local function Install()

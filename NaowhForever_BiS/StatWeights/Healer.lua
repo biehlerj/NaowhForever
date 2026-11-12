@@ -1,4 +1,4 @@
--- Healer.lua: Healer Mana, a healer's Intellect and Spirit worked out from your own mana (SW.Healer).
+-- Healer.lua: a healer's own mana: Healer Mana's Intellect and Spirit (SW.Healer), and Mana Upgrades' weights (SW.ManaWeights).
 local ns = _G.NaowhForever
 
 local SW = ns.StatWeights
@@ -8,9 +8,10 @@ local PER_FIVE = 5
 local REGEN_KNEE, REGEN_LOW, REGEN_HIGH = 50, 0.25, 0.125
 local DERIVED = { int = true, spi = true }
 local EVENTS = { "PLAYER_LEVEL_UP", "PLAYER_EQUIPMENT_CHANGED", "TRAIT_CONFIG_UPDATED" }
-local SETTINGS = { healerMana = true, fightLength = true }
+local SETTINGS = { healerMana = true, manaUpgrades = true, fightLength = true }
 
 local derived = {}
+local manaWeights
 local spiritMp5, critPerInt
 local read = false
 local events
@@ -42,6 +43,7 @@ end
 local function Stale()
     read = false
     wipe(derived)
+    manaWeights = nil
     SW.Notify()
 end
 
@@ -50,7 +52,7 @@ local function Forget()
 end
 
 local function Apply()
-    local on = S.Get("healerMana") == true
+    local on = S.Get("healerMana") == true or S.Get("manaUpgrades") == true
     if on and not events then
         events = CreateFrame("Frame")
         events:SetScript("OnEvent", Stale)
@@ -84,6 +86,14 @@ function SW.Healer(key, weights)
     if not SW.Changed(key, "spi") then mine.spi = mp5 * spiritMp5 end
     derived[key] = mine
     return mine
+end
+
+function SW.ManaWeights()
+    if manaWeights then return manaWeights end
+    if not read then Read() end
+    if not spiritMp5 then return nil end
+    manaWeights = { mp5 = 1, spi = spiritMp5, int = PER_FIVE * MANA_PER_INTELLECT / S.Get("fightLength") }
+    return manaWeights
 end
 
 function SW.Derived(key, stat)
