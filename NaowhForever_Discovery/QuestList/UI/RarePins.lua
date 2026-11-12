@@ -34,6 +34,7 @@ local TEXT_HINT_FOCUSED = ns.L("Click for a waypoint (again to remove it), right
 local provider = CreateFromMixins(MapCanvasDataProviderMixin)
 local added
 local focused
+local hovered
 local shown = {}
 local spot = {}
 local from = {}
@@ -146,12 +147,16 @@ function NaowhForeverRarePinMixin:OnAcquired(data, x, y)
 end
 
 function NaowhForeverRarePinMixin:OnMouseEnter()
+    if self.kind then return end
+    hovered = self
     ShowTip(self)
     ShowMore(self.npc)
     Highlight(self.npc)
 end
 
 function NaowhForeverRarePinMixin:OnMouseLeave()
+    if hovered ~= self then return end
+    hovered = nil
     GameTooltip:Hide()
     Rest()
 end
@@ -177,6 +182,7 @@ local function AddStar(map, mapID, npc)
 end
 
 function provider:RemoveAllData()
+    hovered = nil
     wipe(shown)
     wipe(from)
     self:GetMap():RemoveAllPinsByTemplate(TEMPLATE)

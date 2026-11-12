@@ -1028,6 +1028,40 @@ do
     Check(env.waypoints[1][2] == 1441 and env.waypoints[1][3] == 70, "its waypoint on its own zone's map")
 end
 
+-- Map Pins with the gamepad UI: the map leaves every pin it releases and enters any pin near its cursor.
+do
+    local ns, env = Fixture({ enabled = true, rarePins = false, rarePinsKilled = false, rarePinSize = 18 }, {})
+    ns.CompletoSettings.Set("rarePins", true)
+    local map = env.worldMap
+    local remove, removeAll = map.RemovePin, map.RemoveAllPinsByTemplate
+    function map:RemovePin(pin)
+        remove(self, pin)
+        pin:OnMouseLeave()
+    end
+    function map:RemoveAllPinsByTemplate()
+        local old = self.pins
+        removeAll(self)
+        for _, pin in ipairs(old) do pin:OnMouseLeave() end
+    end
+    local function PinsOf(npc, kind)
+        local out = {}
+        for _, pin in ipairs(map.pins) do
+            if pin.npc == npc and (kind == nil or pin.kind == (kind or nil)) then out[#out + 1] = pin end
+        end
+        return out
+    end
+    local star = PinsOf(10647, false)[1]
+    star:OnMouseEnter()
+    PinsOf(10647, "dot")[1]:OnMouseEnter()
+    Check(#PinsOf(10647, "dot") == 3, "the cursor passing a dot leaves the star's way as it is")
+    star:OnMouseLeave()
+    Check(#PinsOf(10647, "dot") == 0 and #map.pins == 2, "leaving the star takes its way away without a loop")
+    star:OnClick("RightButton")
+    star:OnMouseLeave()
+    env.provider:RefreshAllData()
+    Check(#PinsOf(10647, "dot") == 3 and #map.pins == 5, "a redraw with a focused rare keeps one way, not two")
+end
+
 -- Map Pins: the layer of a rare's last kill
 do
     local ns, env = Fixture({ enabled = true, rarePins = false, rarePinsKilled = true, rarePinSize = 18 }, {})
