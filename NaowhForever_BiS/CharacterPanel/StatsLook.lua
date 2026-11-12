@@ -6,7 +6,7 @@ local CP = ns.CharacterPanel
 local C = CP.C
 
 local STAT_SIZE, CATEGORY_SIZE = C.TEXT_SIZE, C.SECTION_SIZE
-local CATEGORY_X, CATEGORY_Y = 8, 8
+local CATEGORY_Y = 8
 local RULE_X, RULE_Y = 8, 4
 local LABEL_GAP = 4
 local GAME_TITLE_Y = 1
@@ -42,7 +42,7 @@ local function StyleCategory(frame)
     local text = title:GetText()
     if text then title:SetText(Upper(text)) end
     title:ClearAllPoints()
-    title:SetPoint("BOTTOMLEFT", CATEGORY_X, CATEGORY_Y)
+    title:SetPoint("BOTTOM", 0, CATEGORY_Y)
     CategoryRule(frame):Show()
 end
 
@@ -50,8 +50,10 @@ local function FitLabel(label, value)
     if not (label and value) or fitted[label] then return end
     local points = {}
     for i = 1, label:GetNumPoints() do points[i] = { label:GetPoint(i) } end
+    points.justify = label:GetJustifyH()
     fitted[label] = points
     label:SetWordWrap(false)
+    label:SetJustifyH("LEFT")
     label:SetPoint("RIGHT", value, "LEFT", -LABEL_GAP, 0)
 end
 
@@ -60,6 +62,7 @@ local function Unfit()
         label:ClearAllPoints()
         for _, point in ipairs(points) do label:SetPoint(unpack(point)) end
         label:SetWordWrap(true)
+        label:SetJustifyH(points.justify)
     end
     wipe(fitted)
 end

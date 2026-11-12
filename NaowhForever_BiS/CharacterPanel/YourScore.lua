@@ -8,7 +8,7 @@ local C = CP.C
 local B = ns.BiS
 
 local GAP = 10
-local PANE_DROP = 68
+local PANE_DROP = 60
 local BADGE_LIFT = 20
 local GOAL_RGB, TITLE_RGB = C.GOLD_RGB, C.TITLE_RGB
 local TIP_TITLE = "Gear Score"
@@ -99,7 +99,6 @@ local function OnSetting(key)
     if key == "enabled" or key:find("^characterPanel") or key == "naowhScoreCompare" then Apply() end
 end
 
-CP.BADGE_GAP = GAP
 CP.ApplyScore = Apply
 
 S.OnChange(OnSetting)

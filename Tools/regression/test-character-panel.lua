@@ -404,19 +404,21 @@ statLabel.anchors, statLabel.wrap = { { "LEFT", statRow, "LEFT", 11, 0 } }, true
 statLabel.GetNumPoints = function(self) return #self.anchors end
 statLabel.GetPoint = function(self, i) return unpack(self.anchors[i]) end
 statLabel.SetWordWrap = function(self, on) self.wrap = on end
+statLabel.SetJustifyH = function(self, j) self.justify = j end
 statLabel:SetPoint("LEFT", statRow)
 CP.StatsLook.Style(nil, statRow)
 check("a game stat's long name (German Bewegungsgeschwindigkeit) stops short of its number, on one line",
     statLabel.points.LEFT == statRow and statLabel.points.RIGHT == statRow.Value and statLabel.wrap == false)
+check("a game stat's name left-aligned, its number right", statLabel.justify == "LEFT")
 local badge = CP.badge
 check("your Gear Score big under your level, shown", badge and badge.parent == statsList
     and badge.shown ~= false and badge.points.TOP == levelText)
 check("on the game's stats list, its fade for your spec's stats not its own", badge.ignoreParentAlpha == true)
 badge.scripts.OnShow(badge)
 check("painted with your score, in its grade's color, as the panel opens", badge.value.text == "|cff1eff008.3|r")
-check("only the score and the best it is graded against, in the bar's place: no bar on your own card",
-    badge.best.text == "Best 58.8" and badge.bar.shown == false and badge.best.points.TOPRIGHT == badge.bar
-    and badge.h == 58)
+check("only the score and the best it is graded against, centred under it: no bar on your own card",
+    badge.best.text == "Best 58.8" and badge.bar.shown == false and badge.best.points.TOP == badge.value
+    and badge.value.points.TOPLEFT == nil and badge.kicker.points.TOPLEFT == nil and badge.h == 65)
 
 -- Grade Against Both (the default): on a card with a bar (the inspect windows'), the level's goal
 -- as a gold tick on it, with no label (the tooltip names it), while it is short of the best in the
@@ -722,13 +724,13 @@ check("All Stats again: the game's list back", spec.shown == false and statsList
 S.Set("characterPanelScore", true)
 statsList.hooks.OnShow(statsList)
 -- With the score: the list down by what it needs beyond the room the game leaves
--- (10 under your level, the card 46 + 10 + 2 with no bar, less 20).
-check("score on: the game's list down under your score, 10 higher without the bar", statsList.drop == 48)
+-- (the card 13 + 34 + 4 + 12 + 2 with no bar, less 20).
+check("score on: the game's list down under your score", statsList.drop == 45)
 local card = CP.badge
 card.bottom, stoneArt.bottom = 300, 340
 statsList.hooks.OnShow(statsList)
-check("laid out: the list starts its gap under where the card really ends, whatever the game's art",
-    statsList.drop == 50)
+check("laid out: the list starts where the card really ends, whatever the game's art",
+    statsList.drop == 40)
 card.bottom, stoneArt.bottom = nil, nil
 
 -- A slot's update makes no garbage.

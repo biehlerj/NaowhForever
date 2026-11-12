@@ -32,7 +32,7 @@ CharacterPanel/
                        the model's panel and the split (CP.Chrome, CP.ModelPanel, CP.Split)
   Slots.lua            a slot's look over one of the game's slot buttons (CP.SlotOver)
   Score.lua            the Gear Score card: the score big, a bar to its share of the best, or
-                       bare, the best alone in the bar's place (CP.ScoreCard)
+                       bare, centred with the best under the score (CP.ScoreCard)
   Badge.lua            the supporter badge plate and its hover card (CP.BadgePlate)
   StatRows.lua         the stats' heading and rows: each with a bar for its worth against the
                        spec's yardstick ("VS AGI"), your total, and a hover card for what it is
@@ -111,8 +111,8 @@ the game's art comes back and ours hides.
 - The game's slot update sets the icon again, so it is cropped again in our look on each update.
 - A black ring outside the quality's edge (the house's border) makes the edge stand off the dark
   panel round it.
-- Your own score card is bare, the best under the score where the bar was: the stats list below it
-  gets the bar's room. The inspect windows keep the bar, to compare at a glance.
+- Your own score card is bare and centred, the score bigger and the best under it: the stats list
+  below it gets the bar's room. The inspect windows keep the bar, to compare at a glance.
 - The score card is a child of the game's stats list (its fade ignored), so the game hides it with
   the list whenever its gear sets, titles or pet take that room, and it never sits over their rows.
 - Your spec's stats and their switch are children of the game's stats list too (its fade ignored),

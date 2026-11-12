@@ -1,4 +1,4 @@
--- Score.lua: the Gear Score card: the score big, a bar to its share of the best, and the best under it, or in its place on a bare card (CP.ScoreCard).
+-- Score.lua: the Gear Score card: the score big, a bar to its share of the best, and the best under it; a bare card centres it all, bigger (CP.ScoreCard).
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -13,7 +13,8 @@ local SHADOW_ALPHA, SHADOW_X = C.SHADOW_ALPHA, C.SHADOW_X
 local BAR_TOP, BAR_H = 46, 6
 local LEGEND_GAP, LEGEND_SIZE = 4, C.SMALL_SIZE
 local LEGEND_BOTTOM = 2
-local BARE_H = BAR_TOP + LEGEND_SIZE + LEGEND_BOTTOM
+local BARE_VALUE_SIZE, BARE_LEGEND_SIZE = 34, C.TEXT_SIZE
+local BARE_H = VALUE_TOP + BARE_VALUE_SIZE + LEGEND_GAP + BARE_LEGEND_SIZE + LEGEND_BOTTOM
 local TRACK_GREY = C.TRACK_GREY
 local GOAL_RGB, BLACK_RGB = C.GOLD_RGB, C.BLACK_RGB
 local TICK_W, TICK_OUT = 2, 3
@@ -126,7 +127,7 @@ function CP.ScoreCard(parent, width, bare)
     kicker:SetPoint("TOPLEFT")
     kicker:SetText(TEXT_KICKER)
     card.kicker = kicker
-    card.value = ns.Font(card, VALUE_SIZE, nil, T.fg)
+    card.value = ns.Font(card, bare and BARE_VALUE_SIZE or VALUE_SIZE, nil, T.fg)
     card.value:SetPoint("TOPLEFT", 0, -VALUE_TOP)
     card.value:SetShadowColor(BLACK_RGB.r, BLACK_RGB.g, BLACK_RGB.b, SHADOW_ALPHA)
     card.value:SetShadowOffset(SHADOW_X, -SHADOW_X)
@@ -134,8 +135,13 @@ function CP.ScoreCard(parent, width, bare)
     CP.SizeScoreCard(card, width or CARD_W)
     if bare then
         card.bar:Hide()
+        kicker:ClearAllPoints()
+        kicker:SetPoint("TOP")
+        card.value:ClearAllPoints()
+        card.value:SetPoint("TOP", 0, -VALUE_TOP)
+        card.best:SetFont(ns.UIFontPath(), BARE_LEGEND_SIZE, "")
         card.best:ClearAllPoints()
-        card.best:SetPoint("TOPRIGHT", card.bar, "TOPRIGHT")
+        card.best:SetPoint("TOP", card.value, "BOTTOM", 0, -LEGEND_GAP)
         card:SetHeight(BARE_H)
     end
     return card
