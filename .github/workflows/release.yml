@@ -17,14 +17,8 @@ on:
       - main
     tags:
       - "*"
-  schedule:
-    # Daily, half an hour after the US realms' daily reset (15:00 UTC), when the Daily Word changes.
-    - cron: "30 15 * * *"
-    # Nightly, after the daily watch (20:00, up to 75 minutes) has merged the day's data.
-    - cron: "0 22 * * *"
-    # A price release, between the daily release and the nightly beta: CurseForge's beta channel
-    # takes whichever file is newest, so a price release after a beta would take its players back.
-    - cron: "30 20 * * *"
+  # The daily, nightly and price crons are paused: CurseForge warned the account over frequent
+  # uploads with minor changes. Releases go out by Run workflow only.
   workflow_dispatch:
     inputs:
       beta:

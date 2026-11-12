@@ -50,8 +50,7 @@ name: daily-watch
 # workflows may not open one. A check that fails leaves out only its own change.
 # The scheduled run goes further: when the change passes the checks a pull request would run
 # (tests, pre-commit), it is pushed straight to main with its changelog lines in CHANGELOG.md,
-# and released at once (release.yml; a release whose lines all came with the data posts nothing
-# to Discord). Held for a run on our machines, or failing a check: the pull request, as above.
+# for the next release to ship. Held for a run on our machines, or failing a check: the pull request, as above.
 on:
   schedule:
     # New builds and hotfixes come with the US realms' weekly maintenance (Tuesday mornings,
@@ -102,8 +101,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      # Starts release.yml once the data is on main.
-      actions: write
     env:
       # A scheduled run always opens the pull request; a manual one when asked.
       OPEN_PR: ${{ github.event_name == 'schedule' || inputs.open_pr }}
@@ -418,14 +415,6 @@ jobs:
         run: |
           git reset -q --hard HEAD
           $PR merge daily-data
-
-      # Players get the data now, not with the next day's release.
-      - name: Release
-        if: ${{ !cancelled() && steps.merge.outputs.changelog == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh workflow run release.yml --ref main -f bump=patch
 
       - name: Open the pull request
         if: ${{ !cancelled() && env.OPEN_PR == 'true' && steps.merge.outcome != 'success' }}
