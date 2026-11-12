@@ -199,9 +199,11 @@ M.Post.Start()
 M.Sell.Keep()
 local done = {}
 M.Post.onDone = function(key, quantity, each, ok) done[#done + 1] = { key = key, quantity = quantity, price = each, ok = ok } end
+t.heldCommodity = t.env.ItemLocation:CreateFromBagAndSlot(0, 1)
 Check("a post goes up as a commodity with its price, count and duration",
     M.Post.Send(M.Sell.Focus(), 20, 59, 2) and t.posts[1].kind == "commodity" and t.posts[1].quantity == 20
     and t.posts[1].price == 59 and t.posts[1].duration == 2 and t.posts[1].loc.bag == 0)
+Check("posting the item Blizzard's Sell tab holds clears it there", t.heldCommodity == nil)
 Check("nothing else posts until the game answers", not M.Post.Ready() and not M.Post.Send(M.Sell.Focus(), 1, 59, 1))
 t.Fire("AUCTION_HOUSE_AUCTION_CREATED", 77)
 Check("the auction made is the answer", #done == 1 and done[1].ok and done[1].key == 2770 and M.Post.Ready())
@@ -212,8 +214,10 @@ M.Sell.Next()
 Check("Next skips what a vendor should have", M.Sell.Focus().key == 5555)
 
 t.needsConfirm = true
+t.heldCommodity = t.env.ItemLocation:CreateFromBagAndSlot(0, 2)
 Check("a post the game wants confirmed waits", M.Post.Send(M.Sell.Focus(), 2, 9, 1) and #done == 1
     and t.hooks[#t.hooks - 1] == "OnAccept")
+Check("a different item held in Blizzard's Sell tab stays", t.heldCommodity ~= nil)
 t.Fire("AUCTION_HOUSE_AUCTION_CREATED", 78)
 Check("nothing counts before it is confirmed", #done == 1)
 t.dialog.OnAccept(t.dialog, nil)

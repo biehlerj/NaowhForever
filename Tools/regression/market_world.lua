@@ -206,6 +206,11 @@ local function Setup(opts)
         UnitClass = function() return "Mage", "MAGE" end,
         CreateFrame = function() return setmetatable({}, { __index = frameMethods }) end,
         StaticPopupDialogs = { AUCTION_HOUSE_POST_WARNING = dialog },
+        AuctionHouseFrame = {
+            CommoditiesSellFrame = { GetItem = function() return t.heldCommodity end },
+            ItemSellFrame = { GetItem = function() return t.heldItem end },
+            ClearPostItem = function() t.heldCommodity, t.heldItem = nil, nil end,
+        },
         hooksecurefunc = function(target, name, fn)
             local original = target[name]
             target[name] = function(...) original(...) fn(...) end

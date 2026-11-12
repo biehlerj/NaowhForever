@@ -69,6 +69,12 @@ local function OnEvent(_, event, created, total)
     end
 end
 
+local function ReleaseBlizzardItem(entry)
+    local ah = _G.AuctionHouseFrame
+    local held = (entry.commodity and ah.CommoditiesSellFrame or ah.ItemSellFrame):GetItem()
+    if held and held:IsValid() and C_Item.GetItemID(held) == entry.itemID then ah:ClearPostItem() end
+end
+
 function Post.Ready()
     return not waiting and C_AuctionHouse.IsThrottledMessageSystemReady()
 end
@@ -104,6 +110,7 @@ function Post.Send(entry, quantity, price, duration, bid)
     sent.key, sent.quantity, sent.price = entry.key, quantity, price
     sent.itemID, sent.duration = entry.itemID, duration
     sent.multisell = not entry.commodity and quantity > 1
+    ReleaseBlizzardItem(entry)
     waiting = true
     if needsConfirm then
         confirm = { commodity = entry.commodity, location = location, duration = duration, quantity = quantity,

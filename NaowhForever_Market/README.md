@@ -162,6 +162,10 @@ NaowhForever_Market/
   it and picks that item on the panel's Sell page; Blizzard's own Sell tab takes it too. Blizzard's tab
   locks the item with `C_Item.LockItem`, and Sell passes over locked slots, so the hook unlocks it.
   Blizzard's auction house code never reads that lock.
+- Blizzard's Sell tab doesn't watch the bags. Once The Market posts from the stack it holds, its quantity
+  can be more than is left, `CalculateCommodityDeposit` returns nil, and its `CanPostItem` errors comparing
+  it. So a post clears Blizzard's tab with `ClearPostItem` when it holds the same item, as Blizzard does
+  after its own post.
 - `PostCommodity`, `PostItem` and their Confirm calls need a hardware event, so a post only ever runs
   from the Post button or from Space in the panel's OnKeyDown. The key is claimed with
   `SetPropagateKeyboardInput(false)` only for that press, out of combat, as the Dungeon Journal does.
