@@ -1637,6 +1637,8 @@ ns.TownNPCs = {
     },
     [2482] = {
         { 70.8, 50.8, "ammo", "Lenedil Moonwing", "General Goods", nil, "AH" },
+        { 68.6, 44.1, "flight", "Summit of Eternity", "Flight Master", nil, "AH" },
+        { 55.1, 82.5, "flight", "Tainted Foothills", "Flight Master", nil, "AH" },
     },
     [2521] = {
         { 44.9, 44.3, "profession", "Aedi Thriceforged", "Blacksmith", nil, "AH", 251913 },
