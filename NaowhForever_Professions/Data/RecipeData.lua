@@ -35,7 +35,7 @@ ns.RecipeData = {
         },
         recipes = {
             { spell = 1244431, item = 118, skill = 1, yellow = 55, grey = 95, source = "trainer", cost = 100 },
-            { spell = 1230117, item = 279968, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, quest = "Camping 101: First Aid" },
+            { spell = 1230117, item = 279968, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, quest = "Camping 101: First Aid" },
             { spell = 3276, item = 2581, skill = 40, yellow = 50, grey = 100, source = "trainer", cost = 100 },
             { spell = 1244432, item = 858, skill = 55, yellow = 85, grey = 125, source = "trainer", cost = 150 },
             { spell = 3277, item = 3530, skill = 80, yellow = 80, grey = 150, source = "trainer", cost = 250 },
@@ -50,24 +50,36 @@ ns.RecipeData = {
                 { "Razorfen Warden", 491, 25, 26, 3.45 },
                 { "Blood Seeker", 209, 23, 24, 3.12 },
             } },
-            { spell = 1259343, item = 255717, skill = 140, yellow = 160, grey = 220, recipe = 255724, source = "unknown" },
-            { spell = 1262996, item = 279940, skill = 140, yellow = 140, grey = 145, recipe = 273105, source = "vendor", sellers = {
+            { spell = 1259343, item = 255717, skill = 140, yellow = 160, grey = 220, recipe = 255724, source = "drop", bosses = {
+                { "Defias Enchanter", 10 },
+            } },
+            { spell = 1262996, item = 279940, skill = 140, yellow = 140, grey = 140, recipe = 273105, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 7928, item = 6450, skill = 150, yellow = 150, grey = 210, source = "trainer", cost = 5000 },
-            { spell = 1244434, item = 1710, skill = 155, yellow = 175, grey = 215, recipe = 255723, source = "unknown" },
+            { spell = 1244434, item = 1710, skill = 155, yellow = 175, grey = 215, recipe = 255723, source = "drop", bosses = {
+                { "Syndicate Mercenary", 45 },
+            } },
             { spell = 7929, item = 6451, skill = 180, yellow = 180, grey = 240, recipe = 16112, source = "vendor", vendors = {
                 { 2805, "Deneb Walker", "A", 1417, 27, 58.8, 2200 },
                 { 13476, "Balai Lok'Wein", "H", 1445, 36.4, 30.4, 2200 },
             } },
-            { spell = 1259348, item = 255721, skill = 200, yellow = 220, grey = 280, recipe = 255726, source = "unknown" },
+            { spell = 1259348, item = 255721, skill = 200, yellow = 220, grey = 280, recipe = 255726, source = "drop", bosses = {
+                { "Shadowforge Tunneler", 3 },
+            } },
             { spell = 10840, item = 8544, skill = 210, yellow = 210, grey = 270, recipe = 16113, source = "vendor", vendors = {
                 { 2805, "Deneb Walker", "A", 1417, 27, 58.8, 5000 },
                 { 13476, "Balai Lok'Wein", "H", 1445, 36.4, 30.4, 5000 },
             } },
-            { spell = 1259344, item = 255718, skill = 210, yellow = 225, grey = 285, recipe = 255727, source = "unknown" },
-            { spell = 1244435, item = 3928, skill = 215, yellow = 230, grey = 270, recipe = 255725, source = "unknown" },
-            { spell = 1259341, item = 255715, skill = 215, yellow = 230, grey = 290, recipe = 255728, source = "unknown" },
+            { spell = 1259344, item = 255718, skill = 210, yellow = 225, grey = 285, recipe = 255727, source = "drop", bosses = {
+                { "Syndicate Sentry", 36 },
+            } },
+            { spell = 1244435, item = 3928, skill = 215, yellow = 230, grey = 270, recipe = 255725, source = "drop", bosses = {
+                { "Gordunni Shaman", 357 },
+            } },
+            { spell = 1259341, item = 255715, skill = 215, yellow = 230, grey = 290, recipe = 255728, source = "drop", bosses = {
+                { "Lost One Muckdweller", 8 },
+            } },
             { spell = 10841, item = 8545, skill = 240, yellow = 240, grey = 300, source = "teacher", cost = 0 },
             { spell = 18629, item = 14529, skill = 260, yellow = 260, grey = 320, source = "teacher", cost = 0 },
             { spell = 1259349, item = 255722, skill = 265, yellow = 280, grey = 340, recipe = 255730, source = "unknown" },
@@ -134,7 +146,7 @@ ns.RecipeData = {
             { spell = 1245250, item = 247755, skill = 10, yellow = 10, grey = 15, source = "unknown" },
             { spell = 3170, item = 3382, skill = 15, yellow = 60, grey = 100, source = "trainer", cost = 50 },
             { spell = 1250793, item = 250344, skill = 15, yellow = 20, grey = 25, recipe = 250380, source = "drop", world = 1 },
-            { spell = 1230564, item = 279956, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 } },
+            { spell = 1230564, item = 279956, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 } },
             { spell = 2331, item = 2455, skill = 25, yellow = 65, grey = 105, source = "trainer", cost = 100 },
             { spell = 1250788, item = 250339, skill = 25, yellow = 30, grey = 35, recipe = 250375, source = "drop", bosses = {
                 { "Young Wendigo", 1 },
@@ -199,7 +211,9 @@ ns.RecipeData = {
             } },
             { spell = 7841, item = 6372, skill = 100, yellow = 130, grey = 170, source = "trainer", cost = 1000, t = { 3, 6, 7, 8, 10, 12, 13, 14, 15, 16, 17, 19, 21, 25, 29, 30 } },
             { spell = 3172, item = 3384, skill = 110, yellow = 135, grey = 175, recipe = 3393, source = "drop", world = 22 },
-            { spell = 1250795, item = 250346, skill = 115, yellow = 120, grey = 125, recipe = 250382, source = "unknown" },
+            { spell = 1250795, item = 250346, skill = 115, yellow = 120, grey = 125, recipe = 250382, source = "drop", bosses = {
+                { "Bloodfury Harpy", 406 },
+            } },
             { spell = 3173, item = 3385, skill = 120, yellow = 145, grey = 185, source = "trainer", cost = 1500, t = { 3, 6, 7, 8, 10, 12, 13, 14, 15, 16, 17, 19, 21, 25, 29, 30 } },
             { spell = 3174, item = 3386, skill = 120, yellow = 145, grey = 185, recipe = 3394, source = "drop", world = 24 },
             { spell = 3176, item = 3388, skill = 125, yellow = 150, grey = 190, source = "trainer", cost = 1500, t = { 3, 6, 7, 8, 10, 12, 13, 14, 15, 16, 17, 19, 21, 25, 29, 30 } },
@@ -215,7 +229,9 @@ ns.RecipeData = {
                 { 3956, "Harklan Moongrove", "A", 1440, 50.8, 67 },
             } },
             { spell = 1244646, item = 247240, skill = 135, yellow = 135, grey = 175, source = "unknown" },
-            { spell = 1250802, item = 250354, skill = 135, yellow = 140, grey = 145, recipe = 250389, source = "unknown" },
+            { spell = 1250802, item = 250354, skill = 135, yellow = 140, grey = 145, recipe = 250389, source = "drop", bosses = {
+                { "Galak Mauler", 400 },
+            } },
             { spell = 1251731, item = 250934, skill = 135, yellow = 140, grey = 145, recipe = 250978, source = "vendor", vendors = {
                 { 248196, "Apothecary Durelle", "-", 1413, 49.8, 29.4 },
                 { 256729, "Nina Surefire", "-", 1433, 10.8, 72.4 },
@@ -226,7 +242,7 @@ ns.RecipeData = {
                 { 248196, "Apothecary Durelle", "-", 1413, 49.8, 29.4 },
                 { 256729, "Nina Surefire", "-", 1433, 10.8, 72.4 },
             } },
-            { spell = 1263005, item = 279970, skill = 140, yellow = 140, grey = 145, recipe = 273085, source = "vendor", sellers = {
+            { spell = 1263005, item = 279970, skill = 140, yellow = 140, grey = 140, recipe = 273085, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 1250781, item = 250332, skill = 145, yellow = 150, grey = 155, recipe = 250368, source = "unknown" },
@@ -591,7 +607,7 @@ ns.RecipeData = {
             { spell = 2737, item = 2844, skill = 15, yellow = 55, grey = 95, source = "trainer", cost = 50 },
             { spell = 2738, item = 2845, skill = 20, yellow = 60, grey = 100, source = "trainer", cost = 50, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 } },
             { spell = 3319, item = 3469, skill = 20, yellow = 60, grey = 100, source = "trainer", cost = 50 },
-            { spell = 1230171, item = 279944, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 } },
+            { spell = 1230171, item = 279944, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 } },
             { spell = 2739, item = 2847, skill = 25, yellow = 65, grey = 105, source = "trainer", cost = 50 },
             { spell = 3320, item = 3470, skill = 25, yellow = 45, grey = 85, source = "trainer", cost = 100 },
             { spell = 3321, item = 3471, skill = 30, yellow = 70, grey = 110, recipe = 3609, source = "quest", quests = {
@@ -673,7 +689,7 @@ ns.RecipeData = {
             { spell = 7408, item = 6214, skill = 40, yellow = 80, grey = 120, source = "trainer", cost = 300 },
             { spell = 2666, item = 2857, skill = 45, yellow = 85, grey = 125, source = "trainer", cost = 200 },
             { spell = 3294, item = 3489, skill = 45, yellow = 85, grey = 125, source = "trainer", cost = 500 },
-            { spell = 3326, item = 3478, skill = 50, yellow = 50, grey = 75, source = "trainer", cost = 250 },
+            { spell = 3326, item = 3478, skill = 50, yellow = 50, grey = 90, source = "trainer", cost = 250 },
             { spell = 1252238, item = 250489, skill = 80, yellow = 85, grey = 85, recipe = 251341, source = "unknown" },
             { spell = 1252257, item = 250508, skill = 80, yellow = 110, grey = 140, recipe = 251360, source = "vendor", vendors = {
                 { 248197, "Gor'mak", "-", 1413, 49.8, 29.6 },
@@ -745,7 +761,9 @@ ns.RecipeData = {
                 { 248197, "Gor'mak", "-", 1413, 49.8, 29.6 },
                 { 256730, "Stondry Darkhammer", "-", 1433, 10.2, 74.2 },
             } },
-            { spell = 1252352, item = 250603, skill = 95, yellow = 125, grey = 155, recipe = 251455, source = "unknown" },
+            { spell = 1252352, item = 250603, skill = 95, yellow = 125, grey = 155, recipe = 251455, source = "drop", bosses = {
+                { "Dark Strand Enforcer", 331 },
+            } },
             { spell = 3295, item = 3490, skill = 100, yellow = 130, grey = 160, recipe = 2883, source = "drop", world = 25 },
             { spell = 3330, item = 3481, skill = 100, yellow = 130, grey = 160, recipe = 2882, source = "drop", world = 25 },
             { spell = 7818, item = 6338, skill = 75, yellow = 80, grey = 85, source = "trainer", cost = 100, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
@@ -766,7 +784,9 @@ ns.RecipeData = {
             { spell = 2670, item = 2866, skill = 80, yellow = 120, grey = 150, source = "trainer", cost = 500, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 2673, item = 2869, skill = 105, yellow = 135, grey = 165, recipe = 5578, source = "drop", world = 26 },
             { spell = 3491, item = 3848, skill = 75, yellow = 110, grey = 140, source = "trainer", cost = 600, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
-            { spell = 1252233, item = 250484, skill = 105, yellow = 135, grey = 165, recipe = 251336, source = "unknown" },
+            { spell = 1252233, item = 250484, skill = 105, yellow = 135, grey = 165, recipe = 251336, source = "drop", bosses = {
+                { "Skeletal Warrior", 10 },
+            } },
             { spell = 1252234, item = 250485, skill = 105, yellow = 135, grey = 165, recipe = 251337, source = "unknown" },
             { spell = 2740, item = 2848, skill = 85, yellow = 115, grey = 145, source = "trainer", cost = 200, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 3328, item = 3480, skill = 85, yellow = 115, grey = 145, source = "trainer", cost = 500, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
@@ -807,7 +827,9 @@ ns.RecipeData = {
             { spell = 3337, item = 3486, skill = 100, yellow = 100, grey = 125, source = "trainer", cost = 1000, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 7221, item = 6042, skill = 125, yellow = 155, grey = 185, recipe = 6044, source = "drop", world = 30 },
             { spell = 9985, item = 7956, skill = 125, yellow = 155, grey = 185, source = "trainer", cost = 250, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
-            { spell = 1252236, item = 250487, skill = 125, yellow = 155, grey = 185, recipe = 251339, source = "unknown" },
+            { spell = 1252236, item = 250487, skill = 125, yellow = 155, grey = 185, recipe = 251339, source = "drop", bosses = {
+                { "Grimtotem Bandit", 400 },
+            } },
             { spell = 1252272, item = 250523, skill = 125, yellow = 155, grey = 185, recipe = 251375, source = "vendor", vendors = {
                 { 248197, "Gor'mak", "-", 1413, 49.8, 29.6 },
                 { 256730, "Stondry Darkhammer", "-", 1433, 10.2, 74.2 },
@@ -842,7 +864,9 @@ ns.RecipeData = {
             { spell = 1252249, item = 250500, skill = 125, yellow = 130, grey = 130, source = "unknown" },
             { spell = 1252250, item = 250501, skill = 125, yellow = 130, grey = 130, source = "unknown" },
             { spell = 1252251, item = 250502, skill = 125, yellow = 130, grey = 130, source = "unknown" },
-            { spell = 1252353, item = 250604, skill = 130, yellow = 155, grey = 180, recipe = 251456, source = "unknown" },
+            { spell = 1252353, item = 250604, skill = 130, yellow = 155, grey = 180, recipe = 251456, source = "drop", bosses = {
+                { "Bleakheart Hellcaller", 331 },
+            } },
             { spell = 3333, item = 3483, skill = 110, yellow = 140, grey = 170, source = "trainer", cost = 1000, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 3492, item = 3849, skill = 135, yellow = 160, grey = 185, recipe = 12162, source = "vendor", vendors = {
                 { 2843, "Jutak", "AH", 1434, 27.4, 77.4 },
@@ -858,14 +882,16 @@ ns.RecipeData = {
             } },
             { spell = 9987, item = 7958, skill = 110, yellow = 140, grey = 170, source = "trainer", cost = 500, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 7222, item = 6043, skill = 140, yellow = 165, grey = 190, recipe = 6045, source = "drop", world = 33 },
-            { spell = 1263041, item = 279988, skill = 140, yellow = 140, grey = 145, recipe = 273086, source = "vendor", sellers = {
+            { spell = 1263041, item = 279988, skill = 140, yellow = 140, grey = 140, recipe = 273086, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 2675, item = 2870, skill = 120, yellow = 150, grey = 180, source = "trainer", cost = 1000, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
             { spell = 3495, item = 3852, skill = 145, yellow = 170, grey = 195, recipe = 3867, source = "drop", world = 34 },
             { spell = 3507, item = 3843, skill = 145, yellow = 170, grey = 195, recipe = 3872, source = "drop", world = 34 },
             { spell = 439132, skill = 145, yellow = 195, grey = 220, recipe = 3872, source = "drop", world = 34 },
-            { spell = 1252282, item = 250533, skill = 145, yellow = 170, grey = 195, recipe = 251385, source = "unknown" },
+            { spell = 1252282, item = 250533, skill = 145, yellow = 170, grey = 195, recipe = 251385, source = "drop", bosses = {
+                { "Screeching Roguefeather", 400 },
+            } },
             { spell = 3493, item = 3850, skill = 150, yellow = 175, grey = 200, recipe = 3866, source = "drop", world = 35 },
             { spell = 3505, item = 3841, skill = 150, yellow = 175, grey = 200, recipe = 3871, source = "drop", world = 35 },
             { spell = 8768, item = 7071, skill = 125, yellow = 125, grey = 130, source = "trainer", cost = 250, t = { 4, 5, 6, 7, 9, 10, 12, 13, 15, 19, 22, 24, 27 } },
@@ -909,8 +935,12 @@ ns.RecipeData = {
             { spell = 9820, item = 7917, skill = 160, yellow = 185, grey = 210, recipe = 7982, source = "quest", quests = {
                 { id = 2755, name = "Joys of Omosh", side = "H", level = 32, npc = { 7790, "Orokk Omosh", "H", 1454, 78.4, 22.2 } },
             } },
-            { spell = 1252284, item = 250535, skill = 160, yellow = 185, grey = 210, recipe = 251387, source = "unknown" },
-            { spell = 1252354, item = 250605, skill = 160, yellow = 185, grey = 210, recipe = 251457, source = "unknown" },
+            { spell = 1252284, item = 250535, skill = 160, yellow = 185, grey = 210, recipe = 251387, source = "drop", bosses = {
+                { "Slitherblade Naga", 405 },
+            } },
+            { spell = 1252354, item = 250605, skill = 160, yellow = 185, grey = 210, recipe = 251457, source = "drop", bosses = {
+                { "Saltstone Crystalhide", 400 },
+            } },
             { spell = 3501, item = 3835, skill = 140, yellow = 165, grey = 190, source = "trainer", cost = 1000, t = { 5, 9, 12, 22 } },
             { spell = 3503, item = 3837, skill = 165, yellow = 190, grey = 215, recipe = 6047, source = "vendor", vendors = {
                 { 5411, "Krinkle Goodsteel", "A", 1446, 51.4, 28.8 },
@@ -921,7 +951,9 @@ ns.RecipeData = {
             { spell = 439126, skill = 165, yellow = 215, grey = 240, recipe = 6047, source = "vendor", vendors = {
                 { 5411, "Krinkle Goodsteel", "A", 1446, 51.4, 28.8 },
             } },
-            { spell = 1252285, item = 250536, skill = 165, yellow = 190, grey = 215, recipe = 251388, source = "unknown" },
+            { spell = 1252285, item = 250536, skill = 165, yellow = 190, grey = 215, recipe = 251388, source = "drop", bosses = {
+                { "Kurzen Jungle Fighter", 33 },
+            } },
             { spell = 1252355, item = 250606, skill = 165, yellow = 190, grey = 215, recipe = 251458, source = "vendor", vendors = {
                 { 253139, "Gorhak", "-", 1443, 66.2, 79.4 },
             } },
@@ -937,7 +969,9 @@ ns.RecipeData = {
             { spell = 1252287, item = 250538, skill = 175, yellow = 200, grey = 225, recipe = 251390, source = "vendor", vendors = {
                 { 253139, "Gorhak", "-", 1443, 66.2, 79.4 },
             } },
-            { spell = 1252288, item = 250539, skill = 175, yellow = 200, grey = 225, recipe = 251391, source = "unknown" },
+            { spell = 1252288, item = 250539, skill = 175, yellow = 200, grey = 225, recipe = 251391, source = "drop", bosses = {
+                { "Crushridge Ogre", 36 },
+            } },
             { spell = 1252315, item = 250566, skill = 175, yellow = 200, grey = 225, recipe = 251418, source = "vendor", vendors = {
                 { 248197, "Gor'mak", "-", 1413, 49.8, 29.6 },
                 { 256730, "Stondry Darkhammer", "-", 1433, 10.2, 74.2 },
@@ -996,9 +1030,13 @@ ns.RecipeData = {
                 { id = 2762, name = "The Great Silver Deceiver", side = "AH", level = 40, npc = { 7802, "Galvan the Ancient", "AH", 1434, 50.4, 20.4 } },
             } },
             { spell = 9995, item = 7942, skill = 195, yellow = 220, grey = 245, recipe = 7992, source = "drop", world = 44 },
-            { spell = 1252289, item = 250540, skill = 195, yellow = 215, grey = 235, recipe = 251392, source = "unknown" },
+            { spell = 1252289, item = 250540, skill = 195, yellow = 215, grey = 235, recipe = 251392, source = "drop", bosses = {
+                { "Outcast Necromancer", 16651 },
+            } },
             { spell = 1252290, item = 250541, skill = 195, yellow = 215, grey = 235, recipe = 251393, source = "unknown" },
-            { spell = 1252358, item = 250609, skill = 195, yellow = 215, grey = 235, recipe = 251461, source = "unknown" },
+            { spell = 1252358, item = 250609, skill = 195, yellow = 215, grey = 235, recipe = 251461, source = "drop", bosses = {
+                { "Stonevault Bonesnapper", 3 },
+            } },
             { spell = 1252359, item = 250610, skill = 195, yellow = 215, grey = 235, recipe = 251462, source = "unknown" },
             { spell = 1317963, item = 285280, skill = 195, yellow = 200, grey = 205, recipe = 285290, source = "unknown" },
             { spell = 9916, item = 7963, skill = 175, yellow = 200, grey = 225, source = "trainer", cost = 2500, t = { 5, 9, 12, 22 } },
@@ -1047,14 +1085,20 @@ ns.RecipeData = {
                 { 248197, "Gor'mak", "-", 1413, 49.8, 29.6 },
                 { 256730, "Stondry Darkhammer", "-", 1433, 10.2, 74.2 },
             } },
-            { spell = 1252360, item = 250611, skill = 210, yellow = 230, grey = 250, recipe = 251463, source = "unknown" },
+            { spell = 1252360, item = 250611, skill = 210, yellow = 230, grey = 250, recipe = 251463, source = "drop", bosses = {
+                { "Lost One Hunter", 8 },
+            } },
             { spell = 9935, item = 7922, skill = 190, yellow = 210, grey = 230, source = "trainer", cost = 5000, t = { 5, 9, 12, 22 } },
             { spell = 10005, item = 7944, skill = 215, yellow = 240, grey = 265, recipe = 7993, source = "drop", world = 48 },
-            { spell = 1252361, item = 250612, skill = 215, yellow = 235, grey = 255, recipe = 251464, source = "unknown" },
+            { spell = 1252361, item = 250612, skill = 215, yellow = 235, grey = 255, recipe = 251464, source = "drop", bosses = {
+                { "Gordunni Brute", 357 },
+            } },
             { spell = 9970, item = 7934, skill = 220, yellow = 230, grey = 250, recipe = 7990, source = "drop", world = 49 },
             { spell = 10009, item = 7946, skill = 220, yellow = 245, grey = 270, recipe = 8028, source = "drop", world = 49 },
             { spell = 1252293, item = 250544, skill = 220, yellow = 240, grey = 260, recipe = 251396, source = "unknown" },
-            { spell = 1252294, item = 250545, skill = 220, yellow = 240, grey = 260, recipe = 251397, source = "unknown" },
+            { spell = 1252294, item = 250545, skill = 220, yellow = 240, grey = 260, recipe = 251397, source = "drop", bosses = {
+                { "Southsea Pirate", 440 },
+            } },
             { spell = 9954, item = 7938, skill = 200, yellow = 220, grey = 240, source = "unknown" },
             { spell = 16642, item = 12405, skill = 225, yellow = 245, grey = 265, recipe = 12682, source = "drop", world = 50 },
             { spell = 16643, item = 12406, skill = 225, yellow = 245, grey = 265, recipe = 12683, source = "drop", world = 50 },
@@ -1075,7 +1119,9 @@ ns.RecipeData = {
             { spell = 9968, item = 7933, skill = 210, yellow = 230, grey = 250, source = "trainer", cost = 21052, t = { 5 } },
             { spell = 10003, item = 7954, skill = 210, yellow = 235, grey = 260, source = "unknown" },
             { spell = 16645, item = 12416, skill = 235, yellow = 255, grey = 275, recipe = 12685, source = "drop", world = 52 },
-            { spell = 1252292, item = 250543, skill = 215, yellow = 235, grey = 255, source = "unknown" },
+            { spell = 1252292, item = 250543, skill = 215, yellow = 235, grey = 255, recipe = 251395, source = "drop", bosses = {
+                { "Naga Explorer", 33 },
+            } },
             { spell = 9972, item = 7935, skill = 220, yellow = 235, grey = 255, source = "unknown" },
             { spell = 15292, item = 11608, skill = 240, yellow = 260, grey = 280, recipe = 11610, source = "drop", bosses = {
                 { "Grizzle", 1584 },
@@ -1197,7 +1243,9 @@ ns.RecipeData = {
             { spell = 16978, item = 12777, skill = 255, yellow = 280, grey = 305, recipe = 12825, source = "quest", quests = {
                 { id = 5307, name = "Corruption", side = "AH", level = 50, npc = { 11193, "Seril Scourgebane", "AH", 1452, 61.2, 37.2 } },
             } },
-            { spell = 1252338, item = 250589, skill = 255, yellow = 275, grey = 295, recipe = 251441, source = "unknown" },
+            { spell = 1252338, item = 250589, skill = 255, yellow = 275, grey = 295, recipe = 251441, source = "drop", bosses = {
+                { "Blood Elf Reclaimer", 16 },
+            } },
             { spell = 1252339, item = 250590, skill = 255, yellow = 275, grey = 295, recipe = 251442, source = "unknown" },
             { spell = 10015, item = 7960, skill = 235, yellow = 260, grey = 285, source = "unknown" },
             { spell = 15296, item = 11604, skill = 260, yellow = 280, grey = 300, recipe = 11612, source = "drop", bosses = {
@@ -1708,7 +1756,9 @@ ns.RecipeData = {
                 { 340, "Kendor Kabonka", "A", 1453, 77.5, 52.7 },
             } },
             { spell = 2544, item = 2683, skill = 75, yellow = 115, grey = 155, source = "trainer", cost = 200 },
-            { spell = 1250154, item = 250077, skill = 75, yellow = 115, grey = 150, recipe = 250185, source = "unknown" },
+            { spell = 1250154, item = 250077, skill = 75, yellow = 115, grey = 150, recipe = 250185, source = "drop", bosses = {
+                { "Young Stranglethorn Raptor", 33 },
+            } },
             { spell = 1250157, item = 250080, skill = 75, yellow = 80, grey = 95, recipe = 250188, source = "drop", bosses = {
                 { "Dire Condor", 44 },
             } },
@@ -1742,7 +1792,7 @@ ns.RecipeData = {
                 { 4305, "Kriggon Talsone", "A", 1436, 36.2, 90 },
                 { 4307, "Heldan Galesong", "A", 1439, 37, 56.2 },
             } },
-            { spell = 1283400, item = 279961, skill = 90, yellow = 95, grey = 105, recipe = 273087, source = "vendor", sellers = {
+            { spell = 1283400, item = 279961, skill = 90, yellow = 95, grey = 95, recipe = 273087, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 2547, item = 1082, skill = 100, yellow = 135, grey = 175, recipe = 2699, source = "vendor", vendors = {
@@ -1794,7 +1844,9 @@ ns.RecipeData = {
             { spell = 15853, item = 12209, skill = 125, yellow = 165, grey = 205, recipe = 12227, source = "vendor", vendors = {
                 { 12246, "Super-Seller 680", "AH", 1443, 40.4, 79.2 },
             } },
-            { spell = 1249959, item = 249867, skill = 125, yellow = 155, grey = 185, recipe = 249881, source = "unknown" },
+            { spell = 1249959, item = 249867, skill = 125, yellow = 155, grey = 185, recipe = 249881, source = "drop", bosses = {
+                { "Torn Fin Oracle", 267 },
+            } },
             { spell = 1249965, item = 249873, skill = 125, yellow = 135, grey = 145, recipe = 249887, source = "vendor", vendors = {
                 { 248198, "Aza'bek", "-", 1413, 49.6, 29.2 },
                 { 256731, "Kalsey Sanden", "-", 1433, 10.8, 72.4 },
@@ -1804,7 +1856,7 @@ ns.RecipeData = {
                 { 1148, "Nerrist", "H", 1434, 32.6, 29.2 },
                 { 2821, "Keena", "H", 1417, 74, 32.4 },
             } },
-            { spell = 1262978, item = 279957, skill = 140, yellow = 145, grey = 150, recipe = 273102, source = "vendor", sellers = {
+            { spell = 1262978, item = 279957, skill = 140, yellow = 145, grey = 145, recipe = 273102, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 3399, item = 3728, skill = 150, yellow = 190, grey = 230, recipe = 3736, source = "quest", quests = {
@@ -1888,7 +1940,9 @@ ns.RecipeData = {
             { spell = 1250155, item = 250078, skill = 175, yellow = 195, grey = 220, recipe = 250186, source = "drop", bosses = {
                 { "Lost One Cook", 8 },
             } },
-            { spell = 1249960, item = 249868, skill = 180, yellow = 195, grey = 235, recipe = 249882, source = "unknown" },
+            { spell = 1249960, item = 249868, skill = 180, yellow = 195, grey = 235, recipe = 249882, source = "drop", bosses = {
+                { "Woodpaw Mystic", 357 },
+            } },
             { spell = 1249966, item = 249874, skill = 180, yellow = 185, grey = 195, recipe = 249888, source = "vendor", vendors = {
                 { 248198, "Aza'bek", "-", 1413, 49.6, 29.2 },
                 { 256731, "Kalsey Sanden", "-", 1433, 10.8, 72.4 },
@@ -1907,13 +1961,17 @@ ns.RecipeData = {
                 { 12245, "Vendor-Tron 1000", "AH", 1443, 60.2, 38.2 },
             } },
             { spell = 21175, item = 17222, skill = 200, yellow = 240, grey = 280, source = "trainer", cost = 4000 },
-            { spell = 1249961, item = 249869, skill = 200, yellow = 220, grey = 250, recipe = 249883, source = "unknown" },
+            { spell = 1249961, item = 249869, skill = 200, yellow = 220, grey = 250, recipe = 249883, source = "drop", bosses = {
+                { "Marsh Oracle", 8 },
+            } },
             { spell = 1249967, item = 249875, skill = 200, yellow = 215, grey = 225, recipe = 249889, source = "vendor", vendors = {
                 { 248198, "Aza'bek", "-", 1413, 49.6, 29.2 },
                 { 256731, "Kalsey Sanden", "-", 1433, 10.8, 72.4 },
             } },
-            { spell = 1291341, item = 279974, skill = 200, yellow = 205, grey = 220, recipe = 273101, source = "unknown" },
-            { spell = 1295805, item = 274971, skill = 200, yellow = 220, grey = 240, recipe = 274972, source = "unknown" },
+            { spell = 1291341, item = 279974, skill = 200, yellow = 205, grey = 205, recipe = 273101, source = "unknown" },
+            { spell = 1295805, item = 274971, skill = 200, yellow = 220, grey = 240, recipe = 274972, source = "vendor", sellers = {
+                { "Fimbo Greasemitz", "AH", 16591, 2000 },
+            } },
             { spell = 1247741, item = 8957, skill = 210, yellow = 210, grey = 220, source = "unknown" },
             { spell = 15915, item = 12216, skill = 225, yellow = 265, grey = 305, recipe = 16111, source = "vendor", vendors = {
                 { 989, "Banalash", "H", 1435, 44.4, 57 },
@@ -1945,7 +2003,9 @@ ns.RecipeData = {
                 { 255894, "Innkeeper Zizplink", "-", 2548, 78.8, 54 },
             } },
             { spell = 1250142, item = 250065, skill = 225, yellow = 230, grey = 245, recipe = 250173, source = "unknown" },
-            { spell = 1250153, item = 250076, skill = 225, yellow = 230, grey = 245, recipe = 250184, source = "unknown" },
+            { spell = 1250153, item = 250076, skill = 225, yellow = 230, grey = 245, recipe = 250184, source = "drop", bosses = {
+                { "Bloodfen Lashtail", 15 },
+            } },
             { spell = 1319313, item = 286152, skill = 225, yellow = 245, grey = 255, recipe = 286153, source = "unknown" },
             { spell = 18240, item = 13928, skill = 240, yellow = 280, grey = 320, recipe = 13942, source = "vendor", vendors = {
                 { 8137, "Gikkix", "AH", 1446, 66.6, 22 },
@@ -1989,7 +2049,9 @@ ns.RecipeData = {
             { spell = 1250147, item = 250070, skill = 275, yellow = 280, grey = 310, recipe = 250178, source = "unknown" },
             { spell = 1250148, item = 250071, skill = 275, yellow = 280, grey = 310, recipe = 250179, source = "unknown" },
             { spell = 1250149, item = 250072, skill = 275, yellow = 280, grey = 310, recipe = 250180, source = "unknown" },
-            { spell = 1250150, item = 250073, skill = 180, yellow = 280, grey = 310, recipe = 250181, source = "unknown" },
+            { spell = 1250150, item = 250073, skill = 180, yellow = 280, grey = 310, recipe = 250181, source = "drop", bosses = {
+                { "Venomhide Ravasaur", 490 },
+            } },
             { spell = 1250152, item = 250075, skill = 275, yellow = 280, grey = 310, recipe = 250183, source = "unknown" },
             { spell = 1250158, item = 250081, skill = 275, yellow = 280, grey = 310, recipe = 250189, source = "unknown" },
             { spell = 1294014, item = 267341, skill = 275, yellow = 280, grey = 285, recipe = 274415, source = "unknown" },
@@ -2064,7 +2126,7 @@ ns.RecipeData = {
                 { 5158, "Tilli Thistlefuzz", "A", 1455, 60.4, 44.2 },
             } },
             { spell = 13262, skill = 20, source = "unknown" },
-            { spell = 1230643, item = 279976, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21 } },
+            { spell = 1230643, item = 279976, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21 } },
             { spell = 7426, skill = 40, yellow = 90, grey = 130, source = "trainer", cost = 100 },
             { spell = 7454, skill = 45, yellow = 95, grey = 135, source = "trainer", cost = 100 },
             { spell = 7457, skill = 50, yellow = 100, grey = 140, source = "trainer", cost = 250 },
@@ -2163,7 +2225,7 @@ ns.RecipeData = {
                 { 248199, "Beneris", "-", 1413, 49.6, 29.8 },
                 { 256732, "Alynsia", "-", 1433, 11.2, 71.4 },
             } },
-            { spell = 1263056, item = 279985, skill = 140, yellow = 140, grey = 145, recipe = 273103, source = "drop", bosses = {
+            { spell = 1263056, item = 279985, skill = 140, yellow = 140, grey = 140, recipe = 273103, source = "drop", bosses = {
                 { "Rath'mael", 16611 },
                 { "Shade of the Archmage", 16544 },
                 { "Charlga Razorflank", 491 },
@@ -2582,7 +2644,7 @@ ns.RecipeData = {
             { spell = 3918, item = 4357, skill = 1, yellow = 20, grey = 40, source = "unknown" },
             { spell = 3919, item = 4358, skill = 1, yellow = 30, grey = 60, source = "unknown" },
             { spell = 1235244, skill = 1, source = "unknown" },
-            { spell = 1230656, item = 279950, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 2, 3, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19 } },
+            { spell = 1230656, item = 279950, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 2, 3, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19 } },
             { spell = 1266893, item = 260784, skill = 25, yellow = 25, grey = 30, recipe = 264201, source = "vendor", vendors = {
                 { 248200, "Fizzlefuse", "-", 1413, 49.8, 29.6 },
                 { 256733, "Fritz Fizzle", "-", 1433, 10.4, 74.2 },
@@ -2667,7 +2729,7 @@ ns.RecipeData = {
             { spell = 3952, item = 4381, skill = 140, yellow = 165, grey = 190, recipe = 14639, source = "vendor", vendors = {
                 { 1032, "Black Ooze", "-", 1437, 20.2, 51.2 },
             } },
-            { spell = 1263034, item = 279949, skill = 140, yellow = 140, grey = 145, recipe = 273092, source = "vendor", sellers = {
+            { spell = 1263034, item = 279949, skill = 140, yellow = 140, grey = 140, recipe = 273092, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 1286796, item = 269902, skill = 140, yellow = 150, grey = 160, recipe = 269903, source = "vendor", vendors = {
@@ -2876,7 +2938,9 @@ ns.RecipeData = {
             { spell = 12620, item = 10548, skill = 240, yellow = 260, grey = 280, recipe = 10608, source = "drop", world = 10 },
             { spell = 12759, item = 10645, skill = 240, yellow = 260, grey = 280, source = "unknown" },
             { spell = 1266921, item = 260808, skill = 240, yellow = 240, grey = 245, recipe = 264218, source = "unknown" },
-            { spell = 1266922, item = 260809, skill = 240, yellow = 240, grey = 280, recipe = 264219, source = "unknown" },
+            { spell = 1266922, item = 260809, skill = 240, yellow = 240, grey = 280, recipe = 264219, source = "drop", bosses = {
+                { "Dunemaul Brute", 440 },
+            } },
             { spell = 12621, item = 10513, skill = 245, yellow = 245, grey = 285, source = "trainer", cost = 2800, t = { 10 } },
             { spell = 12622, item = 10504, skill = 245, yellow = 265, grey = 285, source = "trainer", cost = 2800, t = { 10 } },
             { spell = 12624, item = 10576, skill = 250, yellow = 270, grey = 290, recipe = 10609, source = "vendor", vendors = {
@@ -2925,7 +2989,9 @@ ns.RecipeData = {
             { spell = 1226207, item = 238734, skill = 260, yellow = 270, grey = 290, recipe = 238783, source = "unknown" },
             { spell = 1226208, item = 238735, skill = 260, yellow = 270, grey = 290, recipe = 238784, source = "unknown" },
             { spell = 1226209, item = 238736, skill = 260, yellow = 270, grey = 290, recipe = 238785, source = "unknown" },
-            { spell = 1317270, item = 284869, skill = 260, yellow = 280, grey = 300, recipe = 284870, source = "unknown" },
+            { spell = 1317270, item = 284869, skill = 260, yellow = 280, grey = 300, recipe = 284870, source = "drop", bosses = {
+                { "Crushridge Warmonger", 36 },
+            } },
             { spell = 12758, item = 10588, skill = 245, yellow = 265, grey = 285, source = "unknown" },
             { spell = 19793, item = 15996, skill = 265, yellow = 285, grey = 305, recipe = 16044, source = "drop", world = 10 },
             { spell = 23078, item = 18587, skill = 265, yellow = 285, grey = 305, recipe = 18653, source = "drop", bosses = {
@@ -3151,7 +3217,7 @@ ns.RecipeData = {
             { spell = 9058, item = 7276, skill = 1, yellow = 40, grey = 70, source = "unknown" },
             { spell = 9059, item = 7277, skill = 1, yellow = 40, grey = 70, source = "unknown" },
             { spell = 2153, item = 2303, skill = 15, yellow = 45, grey = 75, source = "trainer", cost = 50, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27 } },
-            { spell = 1229432, item = 279978, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 21, 22, 23, 24, 26, 27 } },
+            { spell = 1229432, item = 279978, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 21, 22, 23, 24, 26, 27 } },
             { spell = 3753, item = 4237, skill = 25, yellow = 55, grey = 85, source = "trainer", cost = 75, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27 } },
             { spell = 9060, item = 7278, skill = 25, yellow = 55, grey = 85, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27 } },
             { spell = 9062, item = 7279, skill = 25, yellow = 55, grey = 85, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27 } },
@@ -3449,7 +3515,9 @@ ns.RecipeData = {
                 { 248201, "Pawani", "-", 1413, 49.6, 29.6 },
                 { 256734, "Daniel Stitchsong", "-", 1433, 10, 72.4 },
             } },
-            { spell = 1255103, item = 252449, skill = 110, yellow = 135, grey = 160, recipe = 252804, source = "unknown" },
+            { spell = 1255103, item = 252449, skill = 110, yellow = 135, grey = 160, recipe = 252804, source = "drop", bosses = {
+                { "Shadowhorn Stag", 331 },
+            } },
             { spell = 3769, item = 4252, skill = 115, yellow = 140, grey = 165, recipe = 4296, source = "drop", world = 28 },
             { spell = 7135, item = 5961, skill = 90, yellow = 115, grey = 140, source = "trainer", cost = 400, t = { 2, 5, 8, 11, 12, 13, 14, 15, 16, 20, 21, 23, 25, 27 } },
             { spell = 9148, item = 7358, skill = 115, yellow = 140, grey = 165, recipe = 7363, source = "drop", world = 28 },
@@ -3521,7 +3589,7 @@ ns.RecipeData = {
                 { 2816, "Androd Fadran", "A", 1417, 45, 46.8 },
             } },
             { spell = 9195, item = 7373, skill = 140, yellow = 160, grey = 180, recipe = 7449, source = "drop", world = 33 },
-            { spell = 1263031, item = 279941, skill = 140, yellow = 140, grey = 145, recipe = 273096, source = "vendor", sellers = {
+            { spell = 1263031, item = 279941, skill = 140, yellow = 125, grey = 125, recipe = 273096, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 3764, item = 4247, skill = 120, yellow = 145, grey = 170, source = "trainer", cost = 500, t = { 2, 5, 8, 11, 12, 13, 14, 15, 16, 20, 21, 23, 25, 27 } },
@@ -3866,7 +3934,9 @@ ns.RecipeData = {
                 { 248201, "Pawani", "-", 1413, 49.6, 29.6 },
                 { 256734, "Daniel Stitchsong", "-", 1433, 10, 72.4 },
             } },
-            { spell = 1255048, item = 252467, skill = 235, yellow = 255, grey = 275, recipe = 252859, source = "unknown" },
+            { spell = 1255048, item = 252467, skill = 235, yellow = 255, grey = 275, recipe = 252859, source = "drop", bosses = {
+                { "Dark Iron Taskmaster", 51 },
+            } },
             { spell = 1255049, item = 252544, skill = 235, yellow = 255, grey = 275, recipe = 252858, source = "unknown" },
             { spell = 19051, item = 15076, skill = 240, yellow = 260, grey = 280, recipe = 15727, source = "drop", bosses = {
                 { "Portal Seeker", 4 },
@@ -3877,9 +3947,13 @@ ns.RecipeData = {
             { spell = 19053, item = 15074, skill = 240, yellow = 260, grey = 280, recipe = 15729, source = "vendor", vendors = {
                 { 12957, "Blimo Gadgetspring", "AH", 1447, 45.2, 90.8 },
             } },
-            { spell = 1254992, item = 252581, skill = 240, yellow = 260, grey = 280, recipe = 252915, source = "unknown" },
+            { spell = 1254992, item = 252581, skill = 240, yellow = 260, grey = 280, recipe = 252915, source = "drop", bosses = {
+                { "Incendosaur", 51 },
+            } },
             { spell = 1254993, item = 252580, skill = 240, yellow = 260, grey = 280, recipe = 252914, source = "unknown" },
-            { spell = 1255041, item = 252546, skill = 240, yellow = 260, grey = 280, recipe = 252866, source = "unknown" },
+            { spell = 1255041, item = 252546, skill = 240, yellow = 260, grey = 280, recipe = 252866, source = "drop", bosses = {
+                { "Deadwood Warrior", 361 },
+            } },
             { spell = 1255042, item = 252545, skill = 240, yellow = 260, grey = 280, recipe = 252865, source = "unknown" },
             { spell = 16650, item = 12624, skill = 245, yellow = 265, grey = 285, recipe = 12691, source = "drop", world = 54 },
             { spell = 19055, item = 15091, skill = 245, yellow = 265, grey = 285, recipe = 15731, source = "drop", world = 54 },
@@ -4438,13 +4512,13 @@ ns.RecipeData = {
         },
         recipes = {
             { spell = 1235230, skill = 1, source = "unknown" },
-            { spell = 1230161, item = 279960, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
+            { spell = 1230161, item = 279960, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
             { spell = 2657, item = 2840, skill = 1, yellow = 25, grey = 70, source = "unknown" },
             { spell = 2659, item = 2841, skill = 65, yellow = 65, grey = 115, source = "trainer", cost = 200, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
             { spell = 3304, item = 3576, skill = 65, yellow = 50, grey = 75, source = "trainer", cost = 50, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
             { spell = 2658, item = 2842, skill = 75, yellow = 100, grey = 125, source = "trainer", cost = 200, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
             { spell = 3307, item = 3575, skill = 125, yellow = 130, grey = 140, source = "trainer", cost = 500, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
-            { spell = 1262975, item = 279948, skill = 140, yellow = 140, grey = 145, recipe = 273097, source = "vendor", sellers = {
+            { spell = 1262975, item = 279948, skill = 140, yellow = 140, grey = 140, recipe = 273097, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 3569, item = 3859, skill = 165, yellow = 165, grey = 165, source = "trainer", cost = 2500, t = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17 } },
@@ -4511,8 +4585,8 @@ ns.RecipeData = {
             { spell = 2385, item = 2568, skill = 10, yellow = 45, grey = 70, source = "trainer", cost = 50 },
             { spell = 8776, item = 7026, skill = 10, yellow = 50, grey = 85, source = "trainer", cost = 50 },
             { spell = 12045, item = 10046, skill = 20, yellow = 50, grey = 85, source = "trainer", cost = 50 },
-            { spell = 1229504, item = 279972, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 7, 8, 9, 10, 11, 12, 18, 19, 21, 24, 25 } },
-            { spell = 1263425, item = 279973, skill = 20, yellow = 20, grey = 25, source = "trainer", cost = 100, t = { 1, 2, 4, 6, 13, 14, 16, 17, 20, 23, 24, 25 } },
+            { spell = 1229504, item = 279972, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 7, 8, 9, 10, 11, 12, 18, 19, 21, 24, 25 } },
+            { spell = 1263425, item = 279973, skill = 20, yellow = 20, grey = 20, source = "trainer", cost = 100, t = { 1, 2, 4, 6, 13, 14, 16, 17, 20, 23, 24, 25 } },
             { spell = 2389, item = 2572, skill = 25, yellow = 50, grey = 85, recipe = 2598, source = "drop", world = 10 },
             { spell = 3914, item = 4343, skill = 25, yellow = 50, grey = 85, source = "trainer", cost = 50 },
             { spell = 7623, item = 6238, skill = 25, yellow = 50, grey = 85, source = "trainer", cost = 50 },
@@ -4965,7 +5039,7 @@ ns.RecipeData = {
             } },
             { spell = 439097, skill = 140, yellow = 195, grey = 225, recipe = 4352, source = "drop", world = 35 },
             { spell = 1257425, item = 253999, skill = 140, yellow = 160, grey = 190, recipe = 254000, source = "unknown" },
-            { spell = 1263032, item = 279943, skill = 140, yellow = 140, grey = 145, recipe = 273099, source = "vendor", sellers = {
+            { spell = 1263032, item = 279943, skill = 140, yellow = 140, grey = 140, recipe = 273099, source = "vendor", sellers = {
                 { "Happy Camper", "AH", 1, 1500 },
             } },
             { spell = 3863, item = 4328, skill = 145, yellow = 165, grey = 195, recipe = 4353, source = "drop", world = 36 },
@@ -4994,7 +5068,9 @@ ns.RecipeData = {
             { spell = 435848, item = 215365, skill = 150, yellow = 170, grey = 200, recipe = 215370, source = "vendor", vendors = {
                 { 429, "Shadowhide Darkweaver", "-", 1433, 74.2, 35.8 },
             } },
-            { spell = 1257433, item = 254015, skill = 150, yellow = 170, grey = 200, recipe = 254016, source = "unknown" },
+            { spell = 1257433, item = 254015, skill = 150, yellow = 170, grey = 200, recipe = 254016, source = "drop", bosses = {
+                { "Slitherblade Sea Witch", 405 },
+            } },
             { spell = 8793, item = 7059, skill = 155, yellow = 175, grey = 205, recipe = 7084, source = "drop", world = 38 },
             { spell = 8795, item = 7060, skill = 155, yellow = 175, grey = 205, recipe = 7085, source = "drop", world = 38 },
             { spell = 21945, item = 17723, skill = 155, yellow = 165, grey = 175, recipe = 17724, source = "drop", world = 38 },
@@ -5003,7 +5079,9 @@ ns.RecipeData = {
             { spell = 8762, item = 7050, skill = 125, yellow = 135, grey = 145, source = "trainer", cost = 675, t = { 2, 3, 5, 15, 22, 23 } },
             { spell = 8797, item = 7061, skill = 160, yellow = 180, grey = 210, recipe = 7086, source = "drop", world = 39 },
             { spell = 439091, skill = 160, yellow = 215, grey = 245, recipe = 7086, source = "drop", world = 39 },
-            { spell = 1257434, item = 254017, skill = 160, yellow = 180, grey = 210, recipe = 254018, source = "unknown" },
+            { spell = 1257434, item = 254017, skill = 160, yellow = 180, grey = 210, recipe = 254018, source = "drop", bosses = {
+                { "Bloodscalp Mystic", 33 },
+            } },
             { spell = 3862, item = 4327, skill = 165, yellow = 185, grey = 215, recipe = 4355, source = "vendor", vendors = {
                 { 2381, "Micha Yance", "A", 1424, 49, 55 },
                 { 6567, "Ghok'kah", "H", 1445, 35.2, 30.8 },
@@ -5012,7 +5090,9 @@ ns.RecipeData = {
             { spell = 3873, item = 4336, skill = 165, yellow = 175, grey = 185, recipe = 10728, source = "vendor", vendors = {
                 { 2663, "Narkk", "AH", 1434, 28.2, 74.4 },
             } },
-            { spell = 1257435, item = 254019, skill = 165, yellow = 185, grey = 215, recipe = 254020, source = "unknown" },
+            { spell = 1257435, item = 254019, skill = 165, yellow = 185, grey = 215, recipe = 254020, source = "drop", bosses = {
+                { "Mirefin Murloc", 15 },
+            } },
             { spell = 1257436, item = 254021, skill = 165, yellow = 185, grey = 215, recipe = 254022, source = "unknown" },
             { spell = 1257437, item = 254023, skill = 165, yellow = 185, grey = 215, recipe = 254024, source = "vendor", vendors = {
                 { 248202, "Jim'bek", "-", 1413, 49.6, 29.4 },
@@ -5197,9 +5277,13 @@ ns.RecipeData = {
                 { 6568, "Vizzklick", "H", 1446, 51, 27.4 },
                 { 260570, "Stitch Pinwizzle", "-", 2548, 77.2, 51.4 },
             } },
-            { spell = 1257462, item = 254073, skill = 215, yellow = 230, grey = 260, recipe = 254074, source = "unknown" },
+            { spell = 1257462, item = 254073, skill = 215, yellow = 230, grey = 260, recipe = 254074, source = "drop", bosses = {
+                { "Haldarr Trickster", 16 },
+            } },
             { spell = 1257463, item = 254075, skill = 215, yellow = 230, grey = 260, recipe = 254076, source = "unknown" },
-            { spell = 1257464, item = 254077, skill = 215, yellow = 230, grey = 260, recipe = 254078, source = "unknown" },
+            { spell = 1257464, item = 254077, skill = 215, yellow = 230, grey = 260, recipe = 254078, source = "drop", bosses = {
+                { "Vilebranch Soothsayer", 47 },
+            } },
             { spell = 1257465, item = 254079, skill = 215, yellow = 230, grey = 260, recipe = 254080, source = "vendor", vendors = {
                 { 248202, "Jim'bek", "-", 1413, 49.6, 29.4 },
                 { 256735, "Mivin Shadowweave", "-", 1433, 10, 72.2 },

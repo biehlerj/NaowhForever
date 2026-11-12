@@ -1,4 +1,4 @@
--- TrainingGrimoires.lua: the books each warlock demon learns from, built from game build 1.60.1.70862.
+-- TrainingGrimoires.lua: the books each warlock demon learns from, built from game build 1.60.1.70888.
 local ns = _G.NaowhForever
 
 ns.TrainingGrimoires = {

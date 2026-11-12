@@ -24,6 +24,7 @@
   "Dustwallow Marsh": 15,
   "Eastern Plaguelands": 139,
   "Elwynn Forest": 12,
+  "Excavation Site: Wetlands": 16732,
   "Felwood": 361,
   "Feralas": 357,
   "Gnomeregan": 721,
@@ -47,6 +48,7 @@
   "Scholomance": 2057,
   "Searing Gorge": 51,
   "Shadowfang Keep": 209,
+  "Shen'dralas": 16651,
   "Silithus": 1377,
   "Silverpine Forest": 130,
   "Stonetalon Mountains": 406,
@@ -108,13 +110,13 @@
      "Pratt McGrubben",
      "Feralas",
      "a",
-     null
+     3150
     ],
     [
      "Jangdor Swiftstrider",
      "Feralas",
      "h",
-     null
+     3500
     ]
    ]
   },
@@ -125,13 +127,13 @@
      "Nioma",
      "The Hinterlands",
      "a",
-     null
+     4000
     ],
     [
      "Jangdor Swiftstrider",
      "Feralas",
      "h",
-     null
+     4000
     ]
    ]
   },
@@ -331,7 +333,7 @@
      "Deneb Walker",
      "Arathi Highlands",
      "a",
-     null
+     4500
     ],
     [
      "Balai Lok'Wein",
@@ -356,7 +358,7 @@
      "Alchemist Pestlezugg",
      "Tanaris",
      "",
-     null
+     8000
     ]
    ]
   },
@@ -392,13 +394,13 @@
      "Logannas",
      "Feralas",
      "a",
-     null
+     9000
     ],
     [
      "Bronk",
      "Feralas",
      "h",
-     null
+     9000
     ]
    ]
   },
@@ -409,13 +411,13 @@
      "Maria Lumere",
      "Stormwind City",
      "a",
-     null
+     10000
     ],
     [
      "Algernon",
-     "Tirisfal Glades",
+     "Undercity",
      "h",
-     9000
+     10000
     ]
    ]
   },
@@ -432,7 +434,7 @@
      "Rartar",
      "Swamp of Sorrows",
      "h",
-     null
+     9000
     ]
    ]
   },
@@ -443,7 +445,7 @@
      "Alchemist Pestlezugg",
      "Tanaris",
      "",
-     null
+     8000
     ]
    ]
   },
@@ -454,7 +456,7 @@
      "Alchemist Pestlezugg",
      "Tanaris",
      "",
-     null
+     8000
     ]
    ]
   },
@@ -522,9 +524,9 @@
    "vendors": [
     [
      "Outfitter Eric",
-     "Dun Morogh",
+     "Ironforge",
      "a",
-     null
+     4000
     ],
     [
      "Borya",
@@ -543,9 +545,9 @@
    "vendors": [
     [
      "Outfitter Eric",
-     "Dun Morogh",
+     "Ironforge",
      "a",
-     null
+     4000
     ],
     [
      "Borya",
@@ -575,13 +577,13 @@
    "vendors": [
     [
      "Outfitter Eric",
-     "Dun Morogh",
+     "Ironforge",
      "a",
-     null
+     4500
     ],
     [
      "Millie Gregorian",
-     "Tirisfal Glades",
+     "Undercity",
      "h",
      4500
     ]
@@ -603,13 +605,13 @@
    "vendors": [
     [
      "Outfitter Eric",
-     "Dun Morogh",
+     "Ironforge",
      "a",
-     null
+     4500
     ],
     [
      "Millie Gregorian",
-     "Tirisfal Glades",
+     "Undercity",
      "h",
      4500
     ]
@@ -637,13 +639,13 @@
    "vendors": [
     [
      "Outfitter Eric",
-     "Dun Morogh",
+     "Ironforge",
      "a",
-     null
+     5000
     ],
     [
      "Millie Gregorian",
-     "Tirisfal Glades",
+     "Undercity",
      "h",
      5000
     ]
@@ -652,6 +654,24 @@
   "12259": {
    "recipe": 10424,
    "world": true
+  },
+  "1244434": {
+   "bosses": [
+    [
+     "Syndicate Mercenary",
+     "Arathi Highlands"
+    ]
+   ],
+   "recipe": 255723
+  },
+  "1244435": {
+   "bosses": [
+    [
+     "Gordunni Shaman",
+     "Feralas"
+    ]
+   ],
+   "recipe": 255725
   },
   "1244436": {
    "recipe": 255729,
@@ -681,6 +701,33 @@
     ]
    ],
    "recipe": 249880
+  },
+  "1249959": {
+   "bosses": [
+    [
+     "Torn Fin Oracle",
+     "Hillsbrad Foothills"
+    ]
+   ],
+   "recipe": 249881
+  },
+  "1249960": {
+   "bosses": [
+    [
+     "Woodpaw Mystic",
+     "Feralas"
+    ]
+   ],
+   "recipe": 249882
+  },
+  "1249961": {
+   "bosses": [
+    [
+     "Marsh Oracle",
+     "Swamp of Sorrows"
+    ]
+   ],
+   "recipe": 249883
   },
   "1249963": {
    "recipe": 249885,
@@ -784,6 +831,15 @@
     ]
    ]
   },
+  "1250150": {
+   "bosses": [
+    [
+     "Venomhide Ravasaur",
+     "Un'Goro Crater"
+    ]
+   ],
+   "recipe": 250181
+  },
   "1250151": {
    "bosses": [
     [
@@ -792,6 +848,24 @@
     ]
    ],
    "recipe": 250182
+  },
+  "1250153": {
+   "bosses": [
+    [
+     "Bloodfen Lashtail",
+     "Dustwallow Marsh"
+    ]
+   ],
+   "recipe": 250184
+  },
+  "1250154": {
+   "bosses": [
+    [
+     "Young Stranglethorn Raptor",
+     "Stranglethorn Vale"
+    ]
+   ],
+   "recipe": 250185
   },
   "1250155": {
    "bosses": [
@@ -804,6 +878,10 @@
   },
   "1250156": {
    "bosses": [
+    [
+     "Mottled Raptor",
+     "Wetlands"
+    ],
     [
      "Sunscale Screecher",
      "The Barrens"
@@ -1080,6 +1158,15 @@
     ]
    ]
   },
+  "1250795": {
+   "bosses": [
+    [
+     "Bloodfury Harpy",
+     "Stonetalon Mountains"
+    ]
+   ],
+   "recipe": 250382
+  },
   "1250796": {
    "recipe": 250383,
    "vendors": [
@@ -1165,6 +1252,15 @@
     ]
    ]
   },
+  "1250802": {
+   "bosses": [
+    [
+     "Galak Mauler",
+     "Thousand Needles"
+    ]
+   ],
+   "recipe": 250389
+  },
   "1251729": {
    "bosses": [
     [
@@ -1180,6 +1276,10 @@
   },
   "1251730": {
    "bosses": [
+    [
+     "Blackwood Totemic",
+     "Darkshore"
+    ],
     [
      "Witchwing Windcaller",
      "The Barrens"
@@ -1234,6 +1334,10 @@
   },
   "1251735": {
    "bosses": [
+    [
+     "Windmistress Gaedress",
+     "Teldrassil"
+    ],
     [
      "Windfury Wind Witch",
      "Mulgore"
@@ -1301,6 +1405,10 @@
   },
   "1251741": {
    "bosses": [
+    [
+     "Tirisfal Farmer",
+     "Tirisfal Glades"
+    ],
     [
      "Gnarlpine Mystic",
      "Teldrassil"
@@ -1431,6 +1539,33 @@
     ]
    ],
    "recipe": 251335
+  },
+  "1252233": {
+   "bosses": [
+    [
+     "Skeletal Warrior",
+     "Duskwood"
+    ]
+   ],
+   "recipe": 251336
+  },
+  "1252235": {
+   "bosses": [
+    [
+     "Shadowhide Gnoll",
+     "Redridge Mountains"
+    ]
+   ],
+   "recipe": 251338
+  },
+  "1252236": {
+   "bosses": [
+    [
+     "Grimtotem Bandit",
+     "Thousand Needles"
+    ]
+   ],
+   "recipe": 251339
   },
   "1252252": {
    "recipe": 251355,
@@ -1942,6 +2077,15 @@
     ]
    ]
   },
+  "1252282": {
+   "bosses": [
+    [
+     "Screeching Roguefeather",
+     "Thousand Needles"
+    ]
+   ],
+   "recipe": 251385
+  },
   "1252283": {
    "bosses": [
     [
@@ -1950,6 +2094,24 @@
     ]
    ],
    "recipe": 251386
+  },
+  "1252284": {
+   "bosses": [
+    [
+     "Slitherblade Naga",
+     "Desolace"
+    ]
+   ],
+   "recipe": 251387
+  },
+  "1252285": {
+   "bosses": [
+    [
+     "Kurzen Jungle Fighter",
+     "Stranglethorn Vale"
+    ]
+   ],
+   "recipe": 251388
   },
   "1252287": {
    "recipe": 251390,
@@ -1961,6 +2123,42 @@
      null
     ]
    ]
+  },
+  "1252288": {
+   "bosses": [
+    [
+     "Crushridge Ogre",
+     "Alterac Mountains"
+    ]
+   ],
+   "recipe": 251391
+  },
+  "1252289": {
+   "bosses": [
+    [
+     "Outcast Necromancer",
+     "Shen'dralas"
+    ]
+   ],
+   "recipe": 251392
+  },
+  "1252292": {
+   "bosses": [
+    [
+     "Naga Explorer",
+     "Stranglethorn Vale"
+    ]
+   ],
+   "recipe": 251395
+  },
+  "1252294": {
+   "bosses": [
+    [
+     "Southsea Pirate",
+     "Tanaris"
+    ]
+   ],
+   "recipe": 251397
   },
   "1252297": {
    "bosses": [
@@ -2396,6 +2594,15 @@
     ]
    ]
   },
+  "1252338": {
+   "bosses": [
+    [
+     "Blood Elf Reclaimer",
+     "Azshara"
+    ]
+   ],
+   "recipe": 251441
+  },
   "1252344": {
    "recipe": 251447,
    "vendors": [
@@ -2447,6 +2654,42 @@
     ]
    ]
   },
+  "1252351": {
+   "bosses": [
+    [
+     "Gogger Rock Keeper",
+     "Stonetalon Mountains"
+    ]
+   ],
+   "recipe": 251454
+  },
+  "1252352": {
+   "bosses": [
+    [
+     "Dark Strand Enforcer",
+     "Ashenvale"
+    ]
+   ],
+   "recipe": 251455
+  },
+  "1252353": {
+   "bosses": [
+    [
+     "Bleakheart Hellcaller",
+     "Ashenvale"
+    ]
+   ],
+   "recipe": 251456
+  },
+  "1252354": {
+   "bosses": [
+    [
+     "Saltstone Crystalhide",
+     "Thousand Needles"
+    ]
+   ],
+   "recipe": 251457
+  },
   "1252355": {
    "recipe": 251458,
    "vendors": [
@@ -2465,9 +2708,36 @@
      "Martha Wellsworth",
      "Riverglades",
      "",
-     null
+     7500
     ]
    ]
+  },
+  "1252358": {
+   "bosses": [
+    [
+     "Stonevault Bonesnapper",
+     "Badlands"
+    ]
+   ],
+   "recipe": 251461
+  },
+  "1252360": {
+   "bosses": [
+    [
+     "Lost One Hunter",
+     "Swamp of Sorrows"
+    ]
+   ],
+   "recipe": 251463
+  },
+  "1252361": {
+   "bosses": [
+    [
+     "Gordunni Brute",
+     "Feralas"
+    ]
+   ],
+   "recipe": 251464
   },
   "1252362": {
    "recipe": 251465,
@@ -2528,6 +2798,36 @@
      "The Barrens",
      "h",
      null
+    ]
+   ]
+  },
+  "1252566": {
+   "bosses": [
+    [
+     "Greater Tarantula",
+     "Redridge Mountains"
+    ],
+    [
+     "Blackrock Grunt",
+     "Redridge Mountains"
+    ]
+   ],
+   "recipe": 251526
+  },
+  "1254965": {
+   "recipe": 252942,
+   "vendors": [
+    [
+     "Jangdor Swiftstrider",
+     "Feralas",
+     "",
+     5500
+    ],
+    [
+     "Nioma",
+     "The Hinterlands",
+     "",
+     5500
     ]
    ]
   },
@@ -2626,6 +2926,15 @@
      null
     ]
    ]
+  },
+  "1254992": {
+   "bosses": [
+    [
+     "Incendosaur",
+     "Searing Gorge"
+    ]
+   ],
+   "recipe": 252915
   },
   "1254994": {
    "recipe": 252913,
@@ -2927,6 +3236,15 @@
     ]
    ]
   },
+  "1255041": {
+   "bosses": [
+    [
+     "Deadwood Warrior",
+     "Felwood"
+    ]
+   ],
+   "recipe": 252866
+  },
   "1255043": {
    "recipe": 252864,
    "vendors": [
@@ -3011,6 +3329,15 @@
      null
     ]
    ]
+  },
+  "1255048": {
+   "bosses": [
+    [
+     "Dark Iron Taskmaster",
+     "Searing Gorge"
+    ]
+   ],
+   "recipe": 252859
   },
   "1255050": {
    "recipe": 252857,
@@ -3336,12 +3663,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      2000
     ]
    ]
@@ -3351,12 +3672,6 @@
    "vendors": [
     [
      "Granny Finespindle",
-     "Ironforge",
-     "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
      "Ironforge",
      "a",
      2000
@@ -3370,12 +3685,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      2000
     ]
    ]
@@ -3385,12 +3694,6 @@
    "vendors": [
     [
      "Granny Finespindle",
-     "Ironforge",
-     "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
      "Ironforge",
      "a",
      2000
@@ -3404,12 +3707,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      2000
     ]
    ]
@@ -3421,12 +3718,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      2000
     ]
    ]
@@ -3436,12 +3727,6 @@
    "vendors": [
     [
      "Granny Finespindle",
-     "Ironforge",
-     "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
      "Ironforge",
      "a",
      2000
@@ -3685,6 +3970,15 @@
      null
     ]
    ]
+  },
+  "1255103": {
+   "bosses": [
+    [
+     "Shadowhorn Stag",
+     "Ashenvale"
+    ]
+   ],
+   "recipe": 252804
   },
   "1255104": {
    "recipe": 252803,
@@ -4101,12 +4395,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      500
     ]
    ]
@@ -4116,12 +4404,6 @@
    "vendors": [
     [
      "Granny Finespindle",
-     "Ironforge",
-     "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
      "Ironforge",
      "a",
      500
@@ -4135,12 +4417,6 @@
      "Granny Finespindle",
      "Ironforge",
      "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
-     "Ironforge",
-     "a",
      500
     ]
    ]
@@ -4150,12 +4426,6 @@
    "vendors": [
     [
      "Granny Finespindle",
-     "Ironforge",
-     "a",
-     null
-    ],
-    [
-     "Mamie Finfuseau",
      "Ironforge",
      "a",
      500
@@ -4180,12 +4450,6 @@
     [
      "Elynna",
      "Darnassus",
-     "a",
-     150
-    ],
-    [
-     "Ellie Front-de-pierre",
-     "Ironforge",
      "a",
      150
     ],
@@ -4262,10 +4526,16 @@
      150
     ],
     [
+     "Reagent Bot",
+     "Dun Morogh",
+     "a",
+     150
+    ],
+    [
      "Danielle Zipstitch",
      "Duskwood",
      "a",
-     150
+     135
     ],
     [
      "Lohgan Eva",
@@ -4289,6 +4559,12 @@
      "Rann Flamespinner",
      "Loch Modan",
      "a",
+     150
+    ],
+    [
+     "Basket of Textile Supplies",
+     "Redridge Mountains",
+     "h",
      150
     ],
     [
@@ -4322,6 +4598,18 @@
      150
     ],
     [
+     "Jun'ha",
+     "Arathi Highlands",
+     "",
+     150
+    ],
+    [
+     "Sheri Zipstitch",
+     "Duskwood",
+     "",
+     135
+    ],
+    [
      "Ghok'kah",
      "Dustwallow Marsh",
      "",
@@ -4346,6 +4634,12 @@
      150
     ],
     [
+     "Cowardly Crosby",
+     "Stranglethorn Vale",
+     "",
+     150
+    ],
+    [
      "Xizk Goodstitch",
      "Stranglethorn Vale",
      "",
@@ -4354,6 +4648,12 @@
     [
      "Vizzklick",
      "Tanaris",
+     "",
+     150
+    ],
+    [
+     "Repair Bot",
+     "Wetlands",
      "",
      150
     ],
@@ -4387,12 +4687,6 @@
      250
     ],
     [
-     "Ellie Front-de-pierre",
-     "Ironforge",
-     "a",
-     250
-    ],
-    [
      "Ellie Stonebrow",
      "Ironforge",
      "a",
@@ -4465,10 +4759,16 @@
      250
     ],
     [
+     "Reagent Bot",
+     "Dun Morogh",
+     "a",
+     250
+    ],
+    [
      "Danielle Zipstitch",
      "Duskwood",
      "a",
-     250
+     225
     ],
     [
      "Lohgan Eva",
@@ -4492,6 +4792,12 @@
      "Rann Flamespinner",
      "Loch Modan",
      "a",
+     250
+    ],
+    [
+     "Basket of Textile Supplies",
+     "Redridge Mountains",
+     "h",
      250
     ],
     [
@@ -4525,6 +4831,18 @@
      250
     ],
     [
+     "Jun'ha",
+     "Arathi Highlands",
+     "",
+     250
+    ],
+    [
+     "Sheri Zipstitch",
+     "Duskwood",
+     "",
+     225
+    ],
+    [
      "Ghok'kah",
      "Dustwallow Marsh",
      "",
@@ -4549,6 +4867,12 @@
      250
     ],
     [
+     "Cowardly Crosby",
+     "Stranglethorn Vale",
+     "",
+     250
+    ],
+    [
      "Xizk Goodstitch",
      "Stranglethorn Vale",
      "",
@@ -4557,6 +4881,12 @@
     [
      "Vizzklick",
      "Tanaris",
+     "",
+     250
+    ],
+    [
+     "Repair Bot",
+     "Wetlands",
      "",
      250
     ],
@@ -5601,6 +5931,33 @@
     ]
    ]
   },
+  "1257433": {
+   "bosses": [
+    [
+     "Slitherblade Sea Witch",
+     "Desolace"
+    ]
+   ],
+   "recipe": 254016
+  },
+  "1257434": {
+   "bosses": [
+    [
+     "Bloodscalp Mystic",
+     "Stranglethorn Vale"
+    ]
+   ],
+   "recipe": 254018
+  },
+  "1257435": {
+   "bosses": [
+    [
+     "Mirefin Murloc",
+     "Dustwallow Marsh"
+    ]
+   ],
+   "recipe": 254020
+  },
   "1257437": {
    "recipe": 254024,
    "vendors": [
@@ -5907,6 +6264,24 @@
     ]
    ]
   },
+  "1257462": {
+   "bosses": [
+    [
+     "Haldarr Trickster",
+     "Azshara"
+    ]
+   ],
+   "recipe": 254074
+  },
+  "1257464": {
+   "bosses": [
+    [
+     "Vilebranch Soothsayer",
+     "The Hinterlands"
+    ]
+   ],
+   "recipe": 254078
+  },
   "1257465": {
    "recipe": 254080,
    "vendors": [
@@ -6143,6 +6518,42 @@
    "recipe": 10601,
    "world": true
   },
+  "1259341": {
+   "bosses": [
+    [
+     "Lost One Muckdweller",
+     "Swamp of Sorrows"
+    ]
+   ],
+   "recipe": 255728
+  },
+  "1259343": {
+   "bosses": [
+    [
+     "Defias Enchanter",
+     "Duskwood"
+    ]
+   ],
+   "recipe": 255724
+  },
+  "1259344": {
+   "bosses": [
+    [
+     "Syndicate Sentry",
+     "Alterac Mountains"
+    ]
+   ],
+   "recipe": 255727
+  },
+  "1259348": {
+   "bosses": [
+    [
+     "Shadowforge Tunneler",
+     "Badlands"
+    ]
+   ],
+   "recipe": 255726
+  },
   "12597": {
    "recipe": 10602,
    "vendors": [
@@ -6203,92 +6614,76 @@
    ]
   },
   "1262975": {
-   "recipe": 273097,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Relic Guardian",
+     "Excavation Site: Wetlands"
     ]
-   ]
+   ],
+   "recipe": 273097
   },
   "1262978": {
-   "recipe": 273102,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Cookie",
+     "The Deadmines"
     ]
-   ]
+   ],
+   "recipe": 273102
   },
   "1262996": {
-   "recipe": 273105,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Commander Springvale",
+     "Shadowfang Keep"
     ]
-   ]
+   ],
+   "recipe": 273105
   },
   "1263005": {
-   "recipe": 273085,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Rath'mael",
+     "Ruins of Lordaeron"
     ]
-   ]
+   ],
+   "recipe": 273085
   },
   "1263031": {
-   "recipe": 273096,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Razorclaw the Butcher",
+     "Shadowfang Keep"
     ]
-   ]
+   ],
+   "recipe": 273096
   },
   "1263032": {
-   "recipe": 273099,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Unstable Sentinel",
+     "City of Dalaran"
     ]
-   ]
+   ],
+   "recipe": 273099
   },
   "1263034": {
-   "recipe": 273092,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Sneed",
+     "The Deadmines"
     ]
-   ]
+   ],
+   "recipe": 273092
   },
   "1263041": {
-   "recipe": 273086,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Gilnid",
+     "The Deadmines"
     ]
-   ]
+   ],
+   "recipe": 273086
   },
   "1263056": {
    "bosses": [
@@ -6477,6 +6872,15 @@
     ]
    ]
   },
+  "1266922": {
+   "bosses": [
+    [
+     "Dunemaul Brute",
+     "Tanaris"
+    ]
+   ],
+   "recipe": 264219
+  },
   "1266923": {
    "recipe": 264220,
    "vendors": [
@@ -6630,15 +7034,13 @@
    "recipe": 263513
   },
   "1283400": {
-   "recipe": 273087,
-   "vendors": [
+   "bosses": [
     [
-     "Happy Camper",
-     "Dun Morogh",
-     "",
-     1500
+     "Lord Serpentis",
+     "Wailing Caverns"
     ]
-   ]
+   ],
+   "recipe": 273087
   },
   "1286792": {
    "recipe": 269901,
@@ -7419,6 +7821,17 @@
    ],
    "recipe": 274049
   },
+  "1295805": {
+   "recipe": 274972,
+   "vendors": [
+    [
+     "Fimbo Greasemitz",
+     "Riverglades",
+     "",
+     2000
+    ]
+   ]
+  },
   "1295834": {
    "recipe": 274977,
    "vendors": [
@@ -7426,7 +7839,7 @@
      "Martha Wellsworth",
      "Riverglades",
      "",
-     null
+     2000
     ]
    ]
   },
@@ -8009,7 +8422,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8020,7 +8433,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8031,7 +8444,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8042,7 +8455,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8053,7 +8466,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8064,7 +8477,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8075,7 +8488,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8086,7 +8499,7 @@
      "Sutara Plainstalker",
      "Mulgore",
      "h",
-     null
+     100000
     ]
    ]
   },
@@ -8097,7 +8510,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8108,7 +8521,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8119,7 +8532,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8130,7 +8543,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8141,7 +8554,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8152,7 +8565,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8163,7 +8576,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8174,7 +8587,7 @@
      "Archmage Alvareaux",
      "Alterac Mountains",
      "a",
-     null
+     100000
     ]
    ]
   },
@@ -8211,7 +8624,13 @@
      "Saenorion",
      "Darnassus",
      "a",
-     null
+     150
+    ],
+    [
+     "Flakk",
+     "Durotar",
+     "h",
+     150
     ]
    ]
   },
@@ -8333,6 +8752,15 @@
      null
     ]
    ]
+  },
+  "1317270": {
+   "bosses": [
+    [
+     "Crushridge Warmonger",
+     "Alterac Mountains"
+    ]
+   ],
+   "recipe": 284870
   },
   "1317958": {
    "recipe": 285285,
@@ -8493,7 +8921,7 @@
      "Super-Seller 680",
      "Desolace",
      "",
-     null
+     1600
     ]
    ]
   },
@@ -8504,13 +8932,13 @@
      "Hammon Karwn",
      "Arathi Highlands",
      "a",
-     null
+     5000
     ],
     [
      "Keena",
      "Arathi Highlands",
      "h",
-     null
+     5000
     ],
     [
      "Helenia Olden",
@@ -8522,19 +8950,25 @@
      "Ogg'marr",
      "Dustwallow Marsh",
      "h",
-     null
+     5000
     ],
     [
      "Corporal Bluth",
      "Stranglethorn Vale",
      "a",
-     null
+     5000
     ],
     [
      "Nerrist",
      "Stranglethorn Vale",
      "h",
-     null
+     5000
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     5000
     ]
    ]
   },
@@ -8551,7 +8985,13 @@
      "Sheendra Tallgrass",
      "Feralas",
      "h",
-     null
+     5000
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     5000
     ]
    ]
   },
@@ -8562,13 +9002,19 @@
      "Corporal Bluth",
      "Stranglethorn Vale",
      "a",
-     null
+     3000
     ],
     [
      "Nerrist",
      "Stranglethorn Vale",
      "h",
-     null
+     3000
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     3000
     ]
    ]
   },
@@ -8579,19 +9025,25 @@
      "Kireena",
      "Desolace",
      "h",
-     null
+     4500
     ],
     [
      "Ogg'marr",
      "Dustwallow Marsh",
      "h",
-     null
+     5000
     ],
     [
      "Banalash",
      "Swamp of Sorrows",
      "h",
      null
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     5000
     ]
    ]
   },
@@ -8602,13 +9054,19 @@
      "Janet Hommers",
      "Desolace",
      "a",
-     null
+     3000
     ],
     [
      "Helenia Olden",
      "Dustwallow Marsh",
      "a",
      null
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     3000
     ]
    ]
   },
@@ -8636,13 +9094,19 @@
      "Janet Hommers",
      "Desolace",
      "a",
-     null
+     7000
     ],
     [
      "Kireena",
      "Desolace",
      "h",
-     null
+     6300
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     7000
     ]
    ]
   },
@@ -8653,19 +9117,19 @@
      "Kriggon Talsone",
      "Westfall",
      "a",
-     null
+     12000
     ],
     [
      "Uthok",
      "Stranglethorn Vale",
      "h",
-     null
+     12000
     ],
     [
      "Banalash",
      "Swamp of Sorrows",
      "h",
-     null
+     10800
     ]
    ]
   },
@@ -9159,7 +9623,7 @@
      "Alchemist Pestlezugg",
      "Tanaris",
      "",
-     null
+     50000
     ]
    ]
   },
@@ -9179,13 +9643,13 @@
      "Ulthir",
      "Darnassus",
      "a",
-     null
+     12000
     ],
     [
      "Algernon",
-     "Tirisfal Glades",
+     "Undercity",
      "h",
-     10800
+     12000
     ]
    ]
   },
@@ -9194,7 +9658,7 @@
    "vendors": [
     [
      "Soolie Berryfizz",
-     "Dun Morogh",
+     "Ironforge",
      "a",
      13000
     ],
@@ -9422,7 +9886,7 @@
      "Gikkix",
      "Tanaris",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9433,7 +9897,7 @@
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9444,7 +9908,7 @@
      "Gikkix",
      "Tanaris",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9455,7 +9919,7 @@
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9466,7 +9930,7 @@
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9477,7 +9941,7 @@
      "Gikkix",
      "Tanaris",
      "",
-     null
+     20000
     ]
    ]
   },
@@ -9488,7 +9952,7 @@
      "Gikkix",
      "Tanaris",
      "",
-     null
+     20000
     ]
    ]
   },
@@ -9505,7 +9969,7 @@
      "Sheendra Tallgrass",
      "Feralas",
      "h",
-     null
+     20000
     ]
    ]
   },
@@ -9522,7 +9986,7 @@
      "Sheendra Tallgrass",
      "Feralas",
      "h",
-     null
+     20000
     ]
    ]
   },
@@ -9539,7 +10003,7 @@
      "Sheendra Tallgrass",
      "Feralas",
      "h",
-     null
+     20000
     ]
    ]
   },
@@ -9569,7 +10033,7 @@
      "Darnall",
      "Moonglade",
      "",
-     null
+     12000
     ]
    ]
   },
@@ -9593,7 +10057,7 @@
      "Darnall",
      "Moonglade",
      "",
-     null
+     12000
     ]
    ]
   },
@@ -9676,7 +10140,7 @@
      "Lorelae Wintersong",
      "Moonglade",
      "",
-     null
+     16000
     ]
    ]
   },
@@ -9709,7 +10173,7 @@
      "Darnall",
      "Moonglade",
      "",
-     null
+     20000
     ]
    ]
   },
@@ -9907,13 +10371,13 @@
      "Leonard Porter",
      "Western Plaguelands",
      "a",
-     null
+     10800
     ],
     [
      "Werg Thickblade",
      "Tirisfal Glades",
      "h",
-     null
+     12000
     ]
    ]
   },
@@ -10362,7 +10826,7 @@
    "vendors": [
     [
      "Gearcutter Cogspinner",
-     "Dun Morogh",
+     "Ironforge",
      "a",
      12000
     ],
@@ -10370,7 +10834,7 @@
      "Sovik",
      "Orgrimmar",
      "h",
-     null
+     12000
     ]
    ]
   },
@@ -10379,7 +10843,7 @@
    "vendors": [
     [
      "Gearcutter Cogspinner",
-     "Dun Morogh",
+     "Ironforge",
      "a",
      12000
     ],
@@ -10387,7 +10851,7 @@
      "Sovik",
      "Orgrimmar",
      "h",
-     null
+     12000
     ]
    ]
   },
@@ -10411,6 +10875,12 @@
   "19795": {
    "recipe": 16047,
    "vendors": [
+    [
+     "Kor'gar",
+     "Riverglades",
+     "",
+     16000
+    ],
     [
      "Xizzer Fizzbolt",
      "Winterspring",
@@ -10444,6 +10914,12 @@
   "19814": {
    "recipe": 16046,
    "vendors": [
+    [
+     "Kor'gar",
+     "Riverglades",
+     "",
+     16000
+    ],
     [
      "Xizzer Fizzbolt",
      "Winterspring",
@@ -10507,10 +10983,16 @@
    "recipe": 16767,
    "vendors": [
     [
+     "Grizzek",
+     "Riverglades",
+     "",
+     3000
+    ],
+    [
      "Jabbey",
      "Tanaris",
      "",
-     null
+     3000
     ]
    ]
   },
@@ -10639,8 +11121,20 @@
    "recipe": 17062,
    "vendors": [
     [
+     "Tansy Puddlefizz",
+     "Ironforge",
+     "a",
+     2200
+    ],
+    [
      "Shankys",
      "Orgrimmar",
+     "h",
+     2200
+    ],
+    [
+     "Lizbeth Cromwell",
+     "Undercity",
      "h",
      2200
     ],
@@ -10648,49 +11142,37 @@
      "Wik'Tar",
      "Ashenvale",
      "h",
-     null
+     2200
     ],
     [
      "Heldan Galesong",
      "Darkshore",
      "a",
-     null
+     2200
     ],
     [
      "Wulan",
      "Desolace",
      "h",
-     null
-    ],
-    [
-     "Tansy Puddlefizz",
-     "Dun Morogh",
-     "a",
-     null
+     2200
     ],
     [
      "Lindea Rabonne",
      "Hillsbrad Foothills",
      "a",
-     null
-    ],
-    [
-     "Lizbeth Cromwell",
-     "Tirisfal Glades",
-     "h",
      2200
     ],
     [
      "Stuart Fleming",
      "Wetlands",
      "a",
-     null
+     2200
     ],
     [
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     2200
     ]
    ]
   },
@@ -10775,6 +11257,117 @@
    ],
    "recipe": 18592
   },
+  "2158": {
+   "bosses": [
+    [
+     "Gnarlpine Augur",
+     "Teldrassil"
+    ],
+    [
+     "Snow Leopard",
+     "Dun Morogh"
+    ],
+    [
+     "Pygmy Tide Crawler",
+     "Darkshore"
+    ],
+    [
+     "Moonrage Whitescalp",
+     "Silverpine Forest"
+    ],
+    [
+     "Prairie Stalker",
+     "Mulgore"
+    ],
+    [
+     "Ravaged Corpse",
+     "Tirisfal Glades"
+    ],
+    [
+     "Darkeye Bonecaster",
+     "Tirisfal Glades"
+    ],
+    [
+     "Savannah Prowler",
+     "The Barrens"
+    ]
+   ],
+   "recipe": 2406
+  },
+  "2163": {
+   "bosses": [
+    [
+     "Ravenous Darkhound",
+     "Tirisfal Glades"
+    ],
+    [
+     "Minor Ice Elemental",
+     "Dun Morogh"
+    ],
+    [
+     "Kolkar Outrunner",
+     "Durotar"
+    ],
+    [
+     "Palemane Poacher",
+     "Mulgore"
+    ],
+    [
+     "Galak Centaur",
+     "Mulgore"
+    ],
+    [
+     "Kolkar Bloodcharger",
+     "The Barrens"
+    ],
+    [
+     "Forest Lurker",
+     "Loch Modan"
+    ],
+    [
+     "Razormane Geomancer",
+     "The Barrens"
+    ]
+   ],
+   "recipe": 2407
+  },
+  "2164": {
+   "bosses": [
+    [
+     "Swoop",
+     "Mulgore"
+    ],
+    [
+     "Dalaran Apprentice",
+     "Silverpine Forest"
+    ],
+    [
+     "Lightning Hide",
+     "Durotar"
+    ],
+    [
+     "Reef Crawler",
+     "Darkshore"
+    ],
+    [
+     "Murloc Forager",
+     "Elwynn Forest"
+    ],
+    [
+     "Dire Mottled Boar",
+     "Durotar"
+    ],
+    [
+     "Venture Co. Supervisor",
+     "Mulgore"
+    ],
+    [
+     "Riverpaw Scout",
+     "Westfall"
+    ]
+   ],
+   "recipe": 2408
+  },
   "2169": {
    "recipe": 2409,
    "world": true
@@ -10813,19 +11406,25 @@
      "Truk Wildbeard",
      "The Hinterlands",
      "a",
-     null
+     12000
+    ],
+    [
+     "Innkeeper Zizplink",
+     "Riverglades",
+     "",
+     12000
     ],
     [
      "Dirge Quikcleave",
      "Tanaris",
      "",
-     null
+     12000
     ],
     [
      "Innkeeper Fizzgrimble",
      "Tanaris",
      "",
-     null
+     12000
     ]
    ]
   },
@@ -11010,7 +11609,7 @@
      "Sovik",
      "Orgrimmar",
      "h",
-     null
+     1800
     ]
    ]
   },
@@ -11018,16 +11617,16 @@
    "recipe": 18649,
    "vendors": [
     [
+     "Gearcutter Cogspinner",
+     "Ironforge",
+     "a",
+     1800
+    ],
+    [
      "Darian Singh",
      "Stormwind City",
      "a",
      null
-    ],
-    [
-     "Gearcutter Cogspinner",
-     "Dun Morogh",
-     "a",
-     1800
     ]
    ]
   },
@@ -11052,10 +11651,16 @@
    "recipe": 18650,
    "vendors": [
     [
+     "Fizzix Boomshot",
+     "Riverglades",
+     "",
+     5000
+    ],
+    [
      "Blizrik Buckshot",
      "Tanaris",
      "",
-     null
+     5000
     ]
    ]
   },
@@ -11066,7 +11671,7 @@
      "Mazk Snipeshot",
      "Stranglethorn Vale",
      "",
-     null
+     12000
     ]
    ]
   },
@@ -11151,7 +11756,7 @@
    "vendors": [
     [
      "Bombus Finespindle",
-     "Dun Morogh",
+     "Ironforge",
      "a",
      2000
     ],
@@ -11166,6 +11771,43 @@
   "2333": {
    "recipe": 3396,
    "world": true
+  },
+  "2335": {
+   "bosses": [
+    [
+     "Moonstalker Runt",
+     "Darkshore"
+    ],
+    [
+     "Adult Plainstrider",
+     "Mulgore"
+    ],
+    [
+     "Vile Fin Muckdweller",
+     "Tirisfal Glades"
+    ],
+    [
+     "Elder Crag Boar",
+     "Dun Morogh"
+    ],
+    [
+     "Shadowvale Mystic",
+     "Tirisfal Glades"
+    ],
+    [
+     "Snow Leopard",
+     "Dun Morogh"
+    ],
+    [
+     "Young Fleshripper",
+     "Westfall"
+    ],
+    [
+     "Windfury Harpy",
+     "Mulgore"
+    ]
+   ],
+   "recipe": 2555
   },
   "23399": {
    "recipe": 18949,
@@ -11568,8 +12210,36 @@
   "2389": {
    "bosses": [
     [
+     "Zalazane",
+     "Durotar"
+    ],
+    [
+     "Bloodfeather Fury",
+     "Teldrassil"
+    ],
+    [
+     "Worg",
+     "Silverpine Forest"
+    ],
+    [
+     "Al'Aketh Healer",
+     "Zephras Isle"
+    ],
+    [
+     "Bael'dun Appraiser",
+     "Mulgore"
+    ],
+    [
+     "Al'Aketh Pillager",
+     "Zephras Isle"
+    ],
+    [
      "Windfury Harpy",
      "Mulgore"
+    ],
+    [
+     "Razormane Scout",
+     "Durotar"
     ]
    ],
    "recipe": 2598
@@ -11816,7 +12486,7 @@
      "Ogg'marr",
      "Dustwallow Marsh",
      "h",
-     null
+     2000
     ]
    ]
   },
@@ -11858,7 +12528,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     400
     ]
    ]
   },
@@ -11869,7 +12539,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     200
     ]
    ]
   },
@@ -11880,7 +12550,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     400
     ]
    ]
   },
@@ -11891,7 +12561,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     800
     ]
    ]
   },
@@ -11902,7 +12572,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     400
     ]
    ]
   },
@@ -11913,7 +12583,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     1600
     ]
    ]
   },
@@ -11935,12 +12605,18 @@
      "Fyldan",
      "Darnassus",
      "a",
-     null
+     500
     ],
     [
      "Xen'to",
      "Orgrimmar",
      "h",
+     500
+    ],
+    [
+     "Emrul Riknussun",
+     "Ironforge",
+     "a",
      500
     ],
     [
@@ -11956,34 +12632,40 @@
      500
     ],
     [
+     "Ronald Burch",
+     "Undercity",
+     "h",
+     500
+    ],
+    [
      "Wulan",
      "Desolace",
      "h",
-     null
+     500
     ],
     [
-     "Emrul Riknussun",
+     "Reagent Bot",
      "Dun Morogh",
      "a",
-     null
+     500
     ],
     [
      "Derak Nightfall",
      "Hillsbrad Foothills",
      "h",
-     null
+     500
     ],
     [
      "Micha Yance",
      "Hillsbrad Foothills",
      "a",
-     null
+     500
     ],
     [
      "Gloria Femmel",
      "Redridge Mountains",
      "a",
-     null
+     500
     ],
     [
      "Nyoma",
@@ -12007,12 +12689,6 @@
      "Otho Moji'ko",
      "The Hinterlands",
      "h",
-     null
-    ],
-    [
-     "Ronald Burch",
-     "Tirisfal Glades",
-     "h",
      500
     ],
     [
@@ -12022,10 +12698,34 @@
      500
     ],
     [
+     "Fimbo Greasemitz",
+     "Riverglades",
+     "",
+     500
+    ],
+    [
+     "Miranda Turner",
+     "Riverglades",
+     "",
+     500
+    ],
+    [
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     500
+    ],
+    [
+     "Qujo",
+     "The Hinterlands",
+     "",
+     500
+    ],
+    [
+     "Repair Bot",
+     "Wetlands",
+     "",
+     500
     ],
     [
      "Zerril Softbreeze",
@@ -12042,12 +12742,18 @@
      "Fyldan",
      "Darnassus",
      "a",
-     null
+     5000
     ],
     [
      "Xen'to",
      "Orgrimmar",
      "h",
+     5000
+    ],
+    [
+     "Emrul Riknussun",
+     "Ironforge",
+     "a",
      5000
     ],
     [
@@ -12063,34 +12769,40 @@
      5000
     ],
     [
+     "Ronald Burch",
+     "Undercity",
+     "h",
+     5000
+    ],
+    [
      "Wulan",
      "Desolace",
      "h",
-     null
+     5000
     ],
     [
-     "Emrul Riknussun",
+     "Reagent Bot",
      "Dun Morogh",
      "a",
-     null
+     5000
     ],
     [
      "Derak Nightfall",
      "Hillsbrad Foothills",
      "h",
-     null
+     5000
     ],
     [
      "Micha Yance",
      "Hillsbrad Foothills",
      "a",
-     null
+     5000
     ],
     [
      "Gloria Femmel",
      "Redridge Mountains",
      "a",
-     null
+     5000
     ],
     [
      "Nyoma",
@@ -12114,12 +12826,6 @@
      "Otho Moji'ko",
      "The Hinterlands",
      "h",
-     null
-    ],
-    [
-     "Ronald Burch",
-     "Tirisfal Glades",
-     "h",
      5000
     ],
     [
@@ -12129,10 +12835,34 @@
      5000
     ],
     [
+     "Fimbo Greasemitz",
+     "Riverglades",
+     "",
+     5000
+    ],
+    [
+     "Miranda Turner",
+     "Riverglades",
+     "",
+     5000
+    ],
+    [
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     5000
+    ],
+    [
+     "Qujo",
+     "The Hinterlands",
+     "",
+     5000
+    ],
+    [
+     "Repair Bot",
+     "Wetlands",
+     "",
+     5000
     ],
     [
      "Zerril Softbreeze",
@@ -12146,10 +12876,16 @@
    "recipe": 21358,
    "vendors": [
     [
+     "Stitch Pinwizzle",
+     "Riverglades",
+     "",
+     12000
+    ],
+    [
      "Vizzklick",
      "Tanaris",
      "",
-     null
+     12000
     ]
    ]
   },
@@ -12292,7 +13028,13 @@
      "Kithas",
      "Orgrimmar",
      "h",
-     null
+     6000
+    ],
+    [
+     "Tilli Thistlefuzz",
+     "Ironforge",
+     "a",
+     6000
     ],
     [
      "Jessara Cordell",
@@ -12307,10 +13049,16 @@
      6000
     ],
     [
-     "Tilli Thistlefuzz",
-     "Dun Morogh",
-     "a",
-     null
+     "Thaddeus Webb",
+     "Undercity",
+     "h",
+     6000
+    ],
+    [
+     "Crate of Enchanting Supplies",
+     "Redridge Mountains",
+     "h",
+     6000
     ],
     [
      "Leo Sarn",
@@ -12322,13 +13070,7 @@
      "Lilly",
      "Silverpine Forest",
      "h",
-     null
-    ],
-    [
-     "Thaddeus Webb",
-     "Tirisfal Glades",
-     "h",
-     5400
+     6000
     ],
     [
      "Kania",
@@ -12467,7 +13209,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     240
     ]
    ]
   },
@@ -12547,6 +13289,34 @@
     [
      "Ursal the Mauler",
      "Teldrassil"
+    ],
+    [
+     "Mother Fang",
+     "Elwynn Forest"
+    ],
+    [
+     "Frostmane Hideskinner",
+     "Dun Morogh"
+    ],
+    [
+     "Palemane Poacher",
+     "Mulgore"
+    ],
+    [
+     "Dustwind Storm Witch",
+     "Durotar"
+    ],
+    [
+     "Razormane Hunter",
+     "The Barrens"
+    ],
+    [
+     "Elder Wendigo",
+     "Dun Morogh"
+    ],
+    [
+     "Riverpaw Scout",
+     "Westfall"
     ]
    ],
    "recipe": 2553
@@ -12562,11 +13332,76 @@
   "3321": {
    "bosses": [
     [
-     "Gnarlpine Defender",
-     "Teldrassil"
+     "Ridgeshade Lurker",
+     "Durotar"
+    ],
+    [
+     "Captain Perrine",
+     "Tirisfal Glades"
+    ],
+    [
+     "Bael'dun Appraiser",
+     "Mulgore"
+    ],
+    [
+     "Swoop",
+     "Mulgore"
+    ],
+    [
+     "Al'Aketh Pillager",
+     "Zephras Isle"
+    ],
+    [
+     "Makrura Clacker",
+     "Durotar"
+    ],
+    [
+     "Elder Snow Leopard",
+     "Dun Morogh"
+    ],
+    [
+     "Palemane Skinner",
+     "Mulgore"
     ]
    ],
    "recipe": 3609
+  },
+  "3325": {
+   "bosses": [
+    [
+     "Corrupted Dreadmaw Crocolisk",
+     "Durotar"
+    ],
+    [
+     "Nightlash",
+     "Silverpine Forest"
+    ],
+    [
+     "Nimsy",
+     "Elwynn Forest"
+    ],
+    [
+     "Wiry Swoop",
+     "Mulgore"
+    ],
+    [
+     "Lasher Sproutling",
+     "Teldrassil"
+    ],
+    [
+     "Grimtotem Brute",
+     "Stonetalon Mountains"
+    ],
+    [
+     "Thunder Lizard",
+     "Durotar"
+    ],
+    [
+     "Flatland Prowler",
+     "Mulgore"
+    ]
+   ],
+   "recipe": 3610
   },
   "3330": {
    "recipe": 2882,
@@ -12587,7 +13422,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     400
     ]
    ]
   },
@@ -12598,7 +13433,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     400
     ]
    ]
   },
@@ -12609,7 +13444,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     1600
     ]
    ]
   },
@@ -12620,7 +13455,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     1600
     ]
    ]
   },
@@ -12631,19 +13466,19 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     1600
     ],
     [
      "Keena",
      "Arathi Highlands",
      "h",
-     null
+     1600
     ],
     [
      "Nerrist",
      "Stranglethorn Vale",
      "h",
-     null
+     1600
     ]
    ]
   },
@@ -12654,7 +13489,7 @@
      "Kendor Kabonka",
      "Stormwind City",
      "a",
-     null
+     1600
     ]
    ]
   },
@@ -12665,7 +13500,13 @@
      "Ulthaan",
      "Ashenvale",
      "a",
-     null
+     1600
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1600
     ]
    ]
   },
@@ -12676,7 +13517,13 @@
      "Zargh",
      "The Barrens",
      "h",
-     null
+     1800
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     1800
     ]
    ]
   },
@@ -12715,13 +13562,19 @@
      "Montarr",
      "Thousand Needles",
      "h",
-     null
+     1500
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     1500
     ],
     [
      "Bliztik",
      "Duskwood",
      "",
-     null
+     1500
     ]
    ]
   },
@@ -12744,7 +13597,7 @@
      "Bro'kin",
      "Alterac Mountains",
      "",
-     null
+     2500
     ]
    ]
   },
@@ -12767,7 +13620,7 @@
      "Jutak",
      "Stranglethorn Vale",
      "",
-     null
+     3000
     ]
    ]
   },
@@ -12782,19 +13635,19 @@
      "Jannos Ironwill",
      "Arathi Highlands",
      "a",
-     null
+     3000
     ],
     [
      "Muuran",
      "Desolace",
      "h",
-     null
+     3000
     ],
     [
      "Jazzrik",
      "Badlands",
      "",
-     null
+     3000
     ]
    ]
   },
@@ -12824,13 +13677,13 @@
      "Vharr",
      "Stranglethorn Vale",
      "h",
-     null
+     4400
     ],
     [
      "Jaquilina Dramet",
      "Stranglethorn Vale",
      "",
-     null
+     4400
     ]
    ]
   },
@@ -12845,7 +13698,7 @@
      "Krinkle Goodsteel",
      "Tanaris",
      "",
-     null
+     4400
     ]
    ]
   },
@@ -12904,13 +13757,19 @@
      "Wenna Silkbeard",
      "Wetlands",
      "a",
-     null
+     2000
     ],
     [
      "George Candarte",
      "Hillsbrad Foothills",
      "h",
      null
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     2000
     ]
    ]
   },
@@ -12964,13 +13823,13 @@
      "Wenna Silkbeard",
      "Wetlands",
      "a",
-     null
+     1000
     ],
     [
      "Kireena",
      "Desolace",
      "h",
-     null
+     900
     ]
    ]
   },
@@ -12982,10 +13841,16 @@
    "recipe": 14630,
    "vendors": [
     [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1000
+    ],
+    [
      "Xizk Goodstitch",
      "Stranglethorn Vale",
      "",
-     null
+     1000
     ]
    ]
   },
@@ -13033,7 +13898,7 @@
      "Danielle Zipstitch",
      "Duskwood",
      "a",
-     null
+     720
     ]
    ]
   },
@@ -13044,13 +13909,19 @@
      "Sheri Zipstitch",
      "Duskwood",
      "a",
-     null
+     990
     ],
     [
      "Mallen Swain",
      "Hillsbrad Foothills",
      "h",
-     null
+     1100
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1100
     ]
    ]
   },
@@ -13065,9 +13936,42 @@
      "Narkk",
      "Stranglethorn Vale",
      "",
-     null
+     1500
     ]
    ]
+  },
+  "3928": {
+   "bosses": [
+    [
+     "Juvenile Snow Leopard",
+     "Dun Morogh"
+    ],
+    [
+     "Deth'ryll Satyr",
+     "Darkshore"
+    ],
+    [
+     "Cracked Skull Soldier",
+     "Tirisfal Glades"
+    ],
+    [
+     "Razormane Geomancer",
+     "The Barrens"
+    ],
+    [
+     "Ravaged Corpse",
+     "Tirisfal Glades"
+    ],
+    [
+     "Rot Hide Graverobber",
+     "Tirisfal Glades"
+    ],
+    [
+     "Harvest Watcher",
+     "Westfall"
+    ]
+   ],
+   "recipe": 4408
   },
   "3933": {
    "recipe": 4409,
@@ -13080,13 +13984,13 @@
      "Fradd Swiftgear",
      "Wetlands",
      "a",
-     null
+     1000
     ],
     [
      "Jinky Twizzlefixxit",
      "Thousand Needles",
      "",
-     null
+     1000
     ]
    ]
   },
@@ -13137,7 +14041,13 @@
      "Rizz Loosebolt",
      "Alterac Mountains",
      "",
-     null
+     1800
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1800
     ]
    ]
   },
@@ -13192,10 +14102,16 @@
    "recipe": 13310,
    "vendors": [
     [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     2000
+    ],
+    [
      "Mazk Snipeshot",
      "Stranglethorn Vale",
      "",
-     null
+     2000
     ]
    ]
   },
@@ -13206,7 +14122,13 @@
      "Narj Deepslice",
      "Arathi Highlands",
      "a",
-     null
+     1000
+    ],
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1000
     ]
    ]
   },
@@ -13284,6 +14206,12 @@
      "Durotar",
      "h",
      140
+    ],
+    [
+     "Naluk",
+     "Riverglades",
+     "",
+     140
     ]
    ]
   },
@@ -13349,7 +14277,13 @@
      "Ulthaan",
      "Ashenvale",
      "a",
-     null
+     1200
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     1200
     ]
    ]
   },
@@ -13360,13 +14294,13 @@
      "Heldan Galesong",
      "Darkshore",
      "a",
-     null
+     800
     ],
     [
      "Kriggon Talsone",
      "Westfall",
      "a",
-     null
+     800
     ]
    ]
   },
@@ -13381,13 +14315,13 @@
      "Xandar Goodbeard",
      "Loch Modan",
      "a",
-     null
+     100
     ],
     [
      "Hagrus",
      "Orgrimmar",
      "h",
-     null
+     100
     ],
     [
      "Ranik",
@@ -13399,7 +14333,7 @@
      "Defias Profiteer",
      "Westfall",
      "",
-     null
+     100
     ]
    ]
   },
@@ -13410,13 +14344,19 @@
      "Ulthir",
      "Darnassus",
      "a",
-     null
+     2000
     ],
     [
      "Hagrus",
      "Orgrimmar",
      "h",
-     null
+     2000
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     2000
     ]
    ]
   },
@@ -13427,7 +14367,7 @@
      "Ulthir",
      "Darnassus",
      "a",
-     null
+     1800
     ],
     [
      "Kor'geld",
@@ -13437,8 +14377,14 @@
     ],
     [
      "Soolie Berryfizz",
-     "Dun Morogh",
+     "Ironforge",
      "a",
+     1800
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
      1800
     ]
    ]
@@ -13450,7 +14396,7 @@
      "Valdaron",
      "Darkshore",
      "a",
-     null
+     200
     ],
     [
      "Mahu",
@@ -13479,7 +14425,7 @@
      "Valdaron",
      "Darkshore",
      "a",
-     null
+     500
     ],
     [
      "Borya",
@@ -13490,6 +14436,12 @@
     [
      "Mahu",
      "Thunder Bluff",
+     "h",
+     500
+    ],
+    [
+     "Millie Gregorian",
+     "Undercity",
      "h",
      500
     ],
@@ -13515,19 +14467,13 @@
      "Yonada",
      "The Barrens",
      "h",
-     null
-    ],
-    [
-     "Millie Gregorian",
-     "Tirisfal Glades",
-     "h",
      500
     ],
     [
      "Jennabink Powerseam",
      "Wetlands",
      "a",
-     null
+     500
     ],
     [
      "Zixil",
@@ -13539,7 +14485,7 @@
      "Kiknikle",
      "The Barrens",
      "",
-     null
+     500
     ]
    ]
   },
@@ -13584,7 +14530,7 @@
      "Mavralyn",
      "Darkshore",
      "a",
-     495
+     550
     ],
     [
      "Andrew Hilbert",
@@ -13607,7 +14553,7 @@
      "Mavralyn",
      "Darkshore",
      "a",
-     540
+     600
     ],
     [
      "Andrew Hilbert",
@@ -13630,19 +14576,19 @@
      "Micha Yance",
      "Hillsbrad Foothills",
      "a",
-     null
+     650
     ],
     [
      "Christoph Jeffcoat",
      "Hillsbrad Foothills",
      "h",
-     null
+     650
     ],
     [
      "Blixrez Goodstitch",
      "Stranglethorn Vale",
      "",
-     null
+     650
     ]
    ]
   },
@@ -13659,7 +14605,7 @@
      "Blixrez Goodstitch",
      "Stranglethorn Vale",
      "",
-     null
+     2800
     ]
    ]
   },
@@ -13674,13 +14620,13 @@
      "Hammon Karwn",
      "Arathi Highlands",
      "a",
-     null
+     650
     ],
     [
      "Keena",
      "Arathi Highlands",
      "h",
-     null
+     650
     ],
     [
      "Lardan",
@@ -13692,7 +14638,13 @@
      "Jandia",
      "Thousand Needles",
      "h",
-     null
+     650
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     650
     ]
    ]
   },
@@ -13703,7 +14655,7 @@
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     5000
     ]
    ]
   },
@@ -13726,7 +14678,7 @@
      "Xandar Goodbeard",
      "Loch Modan",
      "a",
-     null
+     800
     ],
     [
      "Hula'mahi",
@@ -13749,13 +14701,13 @@
      "Harklan Moongrove",
      "Ashenvale",
      "a",
-     null
+     900
     ],
     [
      "Christoph Jeffcoat",
      "Hillsbrad Foothills",
      "h",
-     null
+     900
     ]
    ]
   },
@@ -13766,13 +14718,13 @@
      "Nandar Branson",
      "Hillsbrad Foothills",
      "a",
-     null
+     1500
     ],
     [
      "Jeeda",
      "Stonetalon Mountains",
      "h",
-     null
+     1500
     ]
    ]
   },
@@ -13783,13 +14735,13 @@
      "Drovnar Strongbrew",
      "Arathi Highlands",
      "a",
-     null
+     2000
     ],
     [
      "Glyx Brewright",
      "Stranglethorn Vale",
      "",
-     null
+     2000
     ]
    ]
   },
@@ -13800,27 +14752,64 @@
      "Logannas",
      "Feralas",
      "a",
-     null
+     2000
     ],
     [
      "Bronk",
      "Feralas",
      "h",
-     null
+     2000
     ],
     [
      "Glyx Brewright",
      "Stranglethorn Vale",
      "",
-     null
+     2000
     ],
     [
      "Alchemist Pestlezugg",
      "Tanaris",
      "",
-     null
+     2000
     ]
    ]
+  },
+  "7629": {
+   "bosses": [
+    [
+     "Hippogryph Matriarch",
+     "Zephras Isle"
+    ],
+    [
+     "Webwood Silkspinner",
+     "Teldrassil"
+    ],
+    [
+     "Devlin Agamand",
+     "Tirisfal Glades"
+    ],
+    [
+     "Mine Spider",
+     "Elwynn Forest"
+    ],
+    [
+     "Gnarlpine Mystic",
+     "Teldrassil"
+    ],
+    [
+     "Cracked Skull Soldier",
+     "Tirisfal Glades"
+    ],
+    [
+     "Moonstalker",
+     "Darkshore"
+    ],
+    [
+     "Venture Co. Worker",
+     "Mulgore"
+    ]
+   ],
+   "recipe": 6271
   },
   "7630": {
    "recipe": 6270,
@@ -13829,7 +14818,7 @@
      "Valdaron",
      "Darkshore",
      "a",
-     null
+     200
     ],
     [
      "Borya",
@@ -13911,7 +14900,13 @@
      "Mallen Swain",
      "Hillsbrad Foothills",
      "h",
-     null
+     400
+    ],
+    [
+     "Yonada",
+     "The Barrens",
+     "h",
+     400
     ],
     [
      "Gina MacGregor",
@@ -13931,8 +14926,8 @@
      800
     ],
     [
-     "Ranik",
-     "The Barrens",
+     "Millie Gregorian",
+     "Undercity",
      "h",
      800
     ],
@@ -13940,7 +14935,7 @@
      "Sheri Zipstitch",
      "Duskwood",
      "a",
-     null
+     720
     ],
     [
      "Rann Flamespinner",
@@ -13949,8 +14944,8 @@
      800
     ],
     [
-     "Millie Gregorian",
-     "Tirisfal Glades",
+     "Ranik",
+     "The Barrens",
      "h",
      800
     ],
@@ -13958,7 +14953,7 @@
      "Jennabink Powerseam",
      "Wetlands",
      "a",
-     null
+     800
     ]
    ]
   },
@@ -13974,6 +14969,12 @@
     [
      "Sewa Mistrunner",
      "Thunder Bluff",
+     "h",
+     40
+    ],
+    [
+     "Lizbeth Cromwell",
+     "Undercity",
      "h",
      40
     ],
@@ -14008,12 +15009,6 @@
      40
     ],
     [
-     "Lizbeth Cromwell",
-     "Tirisfal Glades",
-     "h",
-     40
-    ],
-    [
      "Martine Tramblay",
      "Tirisfal Glades",
      "h",
@@ -14031,16 +15026,16 @@
    "recipe": 6326,
    "vendors": [
     [
+     "Tansy Puddlefizz",
+     "Ironforge",
+     "a",
+     40
+    ],
+    [
      "Zansoa",
      "Durotar",
      "h",
      40
-    ],
-    [
-     "Tansy Puddlefizz",
-     "Dun Morogh",
-     "a",
-     null
     ],
     [
      "Nessa Shadowsong",
@@ -14058,7 +15053,7 @@
      "Kriggon Talsone",
      "Westfall",
      "a",
-     null
+     40
     ],
     [
      "Nyalah Brightfire",
@@ -14072,16 +15067,22 @@
    "recipe": 6328,
    "vendors": [
     [
+     "Tansy Puddlefizz",
+     "Ironforge",
+     "a",
+     400
+    ],
+    [
      "Naal Mistrunner",
      "Thunder Bluff",
      "h",
      400
     ],
     [
-     "Tansy Puddlefizz",
-     "Dun Morogh",
-     "a",
-     null
+     "Lizbeth Cromwell",
+     "Undercity",
+     "h",
+     400
     ],
     [
      "Tharynn Bouden",
@@ -14111,12 +15112,6 @@
      "Nyoma",
      "Teldrassil",
      "a",
-     400
-    ],
-    [
-     "Lizbeth Cromwell",
-     "Tirisfal Glades",
-     "h",
      400
     ],
     [
@@ -14160,21 +15155,27 @@
      1200
     ],
     [
+     "Ronald Burch",
+     "Undercity",
+     "h",
+     1200
+    ],
+    [
      "Derak Nightfall",
      "Hillsbrad Foothills",
      "h",
-     null
+     1200
     ],
     [
      "Lindea Rabonne",
      "Hillsbrad Foothills",
      "a",
-     null
+     1200
     ],
     [
-     "Ronald Burch",
-     "Tirisfal Glades",
-     "h",
+     "Gritta Chumwater",
+     "Riverglades",
+     "",
      1200
     ],
     [
@@ -14201,10 +15202,16 @@
      400
     ],
     [
+     "Ronald Burch",
+     "Undercity",
+     "h",
+     400
+    ],
+    [
      "Heldan Galesong",
      "Darkshore",
      "a",
-     null
+     400
     ],
     [
      "Zansoa",
@@ -14225,22 +15232,22 @@
      400
     ],
     [
-     "Ronald Burch",
-     "Tirisfal Glades",
-     "h",
-     400
-    ],
-    [
      "Kriggon Talsone",
      "Westfall",
      "a",
-     null
+     400
     ],
     [
      "Stuart Fleming",
      "Wetlands",
      "a",
-     null
+     400
+    ],
+    [
+     "Gritta Chumwater",
+     "Riverglades",
+     "",
+     400
     ],
     [
      "Kilxx",
@@ -14254,8 +15261,20 @@
    "recipe": 6369,
    "vendors": [
     [
+     "Tansy Puddlefizz",
+     "Ironforge",
+     "a",
+     2200
+    ],
+    [
      "Shankys",
      "Orgrimmar",
+     "h",
+     2200
+    ],
+    [
+     "Lizbeth Cromwell",
+     "Undercity",
      "h",
      2200
     ],
@@ -14263,49 +15282,37 @@
      "Wik'Tar",
      "Ashenvale",
      "h",
-     null
+     2200
     ],
     [
      "Heldan Galesong",
      "Darkshore",
      "a",
-     null
+     2200
     ],
     [
      "Wulan",
      "Desolace",
      "h",
-     null
-    ],
-    [
-     "Tansy Puddlefizz",
-     "Dun Morogh",
-     "a",
-     null
+     2200
     ],
     [
      "Lindea Rabonne",
      "Hillsbrad Foothills",
      "a",
-     null
-    ],
-    [
-     "Lizbeth Cromwell",
-     "Tirisfal Glades",
-     "h",
      2200
     ],
     [
      "Stuart Fleming",
      "Wetlands",
      "a",
-     null
+     2200
     ],
     [
      "Kelsey Yance",
      "Stranglethorn Vale",
      "",
-     null
+     2200
     ]
    ]
   },
@@ -14324,7 +15331,7 @@
      "Deneb Walker",
      "Arathi Highlands",
      "a",
-     null
+     1980
     ],
     [
      "Balai Lok'Wein",
@@ -14452,13 +15459,13 @@
      "Brienna Starglow",
      "Feralas",
      "a",
-     null
+     1500
     ],
     [
      "Jun'ha",
      "Arathi Highlands",
      "h",
-     null
+     1500
     ]
    ]
   },
@@ -14466,10 +15473,16 @@
    "recipe": 7087,
    "vendors": [
     [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     1200
+    ],
+    [
      "Xizk Goodstitch",
      "Stranglethorn Vale",
      "",
-     null
+     1200
     ]
    ]
   },
@@ -14489,12 +15502,55 @@
    "recipe": 7088,
    "vendors": [
     [
+     "Stitch Pinwizzle",
+     "Riverglades",
+     "",
+     5000
+    ],
+    [
      "Vizzklick",
      "Tanaris",
      "",
-     null
+     5000
     ]
    ]
+  },
+  "9064": {
+   "bosses": [
+    [
+     "Dark Sprite",
+     "Teldrassil"
+    ],
+    [
+     "Geosculptor Yip",
+     "Elwynn Forest"
+    ],
+    [
+     "Scarlet Vanguard",
+     "Tirisfal Glades"
+    ],
+    [
+     "Hexed Troll",
+     "Durotar"
+    ],
+    [
+     "Dustwind Savage",
+     "Durotar"
+    ],
+    [
+     "Dalaran Mage",
+     "Silverpine Forest"
+    ],
+    [
+     "Rattlecage Soldier",
+     "Tirisfal Glades"
+    ],
+    [
+     "Scarlet Friar",
+     "Tirisfal Glades"
+    ]
+   ],
+   "recipe": 7288
   },
   "9070": {
    "recipe": 7289,
@@ -14563,7 +15619,7 @@
      "Saenorion",
      "Darnassus",
      "a",
-     null
+     2800
     ],
     [
      "Joseph Moore",
@@ -14575,13 +15631,19 @@
      "Jangdor Swiftstrider",
      "Feralas",
      "h",
-     null
+     2800
     ],
     [
      "Pratt McGrubben",
      "Feralas",
      "a",
-     null
+     2520
+    ],
+    [
+     "Vendor-Tron 1000",
+     "Desolace",
+     "",
+     2800
     ]
    ]
   },
@@ -14598,7 +15660,7 @@
    "vendors": [
     [
      "Gearcutter Cogspinner",
-     "Dun Morogh",
+     "Ironforge",
      "a",
      1200
     ],
@@ -14606,13 +15668,19 @@
      "Jinky Twizzlefixxit",
      "Thousand Needles",
      "",
-     null
+     1200
     ]
    ]
   },
   "9273": {
    "recipe": 7561,
    "vendors": [
+    [
+     "Super-Seller 680",
+     "Desolace",
+     "",
+     2000
+    ],
     [
      "Kzixx",
      "Duskwood",
@@ -14699,13 +15767,13 @@
      "Harggan",
      "The Hinterlands",
      "a",
-     null
+     6000
     ],
     [
      "Gharash",
      "Swamp of Sorrows",
      "h",
-     null
+     6000
     ]
    ]
   },
