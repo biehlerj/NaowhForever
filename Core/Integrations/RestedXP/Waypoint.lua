@@ -6,10 +6,10 @@ local MAX_LINES = 6
 local PERCENT = 100
 local TEXT_GUIDE = ns.L("Guide destination")
 
-local hooked, settingsHooked, active
+local hooked, settingsHooked, dismissHooked, active
 local lastMap, lastX, lastY
 local lastGuide, lastStep
-local details, lastTitle
+local details, lastTitle, dismissed
 local lines = {}
 local events
 local OnSetting, OnEvent
@@ -62,7 +62,7 @@ end
 
 local function Stop()
     if details then ns.ClearGuideWaypoint(details) end
-    lastMap, lastX, lastY, lastTitle, details = nil, nil, nil, nil, nil
+    lastMap, lastX, lastY, lastTitle, details, dismissed = nil, nil, nil, nil, nil, nil
     lastGuide, lastStep = nil, nil
 end
 
@@ -93,12 +93,15 @@ local function Sync(force)
     end
     local changed = map ~= lastMap or x ~= lastX or y ~= lastY
     local routing = details ~= nil and ns.JourneyDetails and ns.JourneyDetails() == details
-    if not force and not changed and not routing and not ns.GuideWaypointIsCurrent() then return end
+    if not force and not changed and not routing and not ns.GuideWaypointIsCurrent() then
+        if dismissed or not ns.NoWaypoint() then return end
+        force = true
+    end
     local title, quest, objectives = ReadDetails(element)
     if force or changed then
         local replacement = { guide = true, quest = quest, objectives = objectives, title = title }
         if not ns.SetGuideWaypoint(title, map, x, y, replacement) then Stop() return end
-        details = replacement
+        details, dismissed = replacement, nil
         lastMap, lastX, lastY, lastTitle = map, x, y, title
     elseif details.quest ~= quest or details.objectives ~= objectives or lastTitle ~= title then
         details.quest, details.objectives, details.title = quest, objectives, title
@@ -130,6 +133,10 @@ local function HookGuide()
     hooksecurefunc(rxp, "UpdateGotoSteps", OnGuideUpdate)
 end
 
+local function OnDismiss(gone)
+    if gone ~= nil and gone == details then dismissed = true end
+end
+
 local function Apply()
     local S = ns.QoLSettings
     if S and not settingsHooked then
@@ -142,6 +149,10 @@ local function Apply()
         if active then Stop() end
         active = false
         return
+    end
+    if not dismissHooked then
+        dismissHooked = true
+        hooksecurefunc(ns, "DismissGuideWaypoint", OnDismiss)
     end
     if not events then
         events = CreateFrame("Frame")

@@ -4,7 +4,7 @@ local function Check(value, label) assert(value, label); checks = checks + 1 end
 local frames, hooks = {}, 0
 local settings = { enabled = true, waypoints = true, waypointRestedXP = false }
 local current, writes, clears, refreshes, available = nil, 0, 0, 0, true
-local tracking = true
+local tracking, free = true, false
 local S = { Get = function(k) return settings[k] end, Set = function(k, v) settings[k] = v end }
 local ns = { QoLSettings = S, L = function(s) return s end, Apply = function() end,
     WaypointPinOn = function() return settings.waypoints end,
@@ -15,6 +15,8 @@ local ns = { QoLSettings = S, L = function(s) return s end, Apply = function() e
         end
     end,
     RefreshWaypointPin = function() refreshes = refreshes + 1 end,
+    NoWaypoint = function() return free end,
+    DismissGuideWaypoint = function() current = nil end,
 }
 -- A closure in the initializer cannot capture the local being declared.
 ns.SetGuideWaypoint = function(title, map, x, y, details)
@@ -132,6 +134,19 @@ local beforeUntrack = writes
 tracking = false
 rxp.UpdateGotoSteps()
 Check(writes == beforeUntrack, "ending native navigation does not repeatedly recreate the same destination")
+current, free = nil, true
+rxp.UpdateGotoSteps()
+Check(writes == beforeUntrack + 1 and current and current.x == 40,
+    "a guide pin something else cleared comes back while nothing else is on the map")
+rxp.UpdateGotoSteps()
+Check(writes == beforeUntrack + 1, "a returned pin is placed once")
+ns.DismissGuideWaypoint(current.details)
+rxp.UpdateGotoSteps()
+Check(current == nil and writes == beforeUntrack + 1, "a pin dismissed by hand stays gone for the same step")
+arrow.element.x = 41
+rxp.UpdateMap()
+Check(current and current.x == 41, "the next destination is followed again after a dismiss")
+free, tracking = false, false
 S.Set("enabled", false)
 Check(current and not tracking and next(frames[1].events) == nil, "module off releases events without clearing an untracked pin")
 rxp.UpdateGotoSteps()

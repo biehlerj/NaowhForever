@@ -274,6 +274,11 @@ function ns.GuideWaypointIsCurrent()
     return placed and placed.details and placed.details.guide == true and StillPlaced() or false
 end
 
+function ns.NoWaypoint()
+    if pending or C_Map.HasUserWaypoint() or C_SuperTrack.GetHighestPrioritySuperTrackingType() then return false end
+    return not (ns.JourneyDestination and ns.JourneyDestination())
+end
+
 function ns.SetGuideWaypoint(title, map, x, y, details)
     if not C_Map.CanSetUserWaypointOnMap(map) then return false end
     if ns.JourneyCancel then ns.JourneyCancel() end
