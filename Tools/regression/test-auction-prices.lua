@@ -16,6 +16,7 @@ local function Setup(buttonOn, captureOn, withFrame, cratesOn, tooltipOn, feed, 
     local loads, skew, faction = 0, 0, "Alliance"
     local npc, decodes, territory = nil, 0, "contested"
     local card, button
+    local ahShown = true
     local frame = {}
     function frame:RegisterEvent(event) registered[event] = true end
     function frame:UnregisterEvent(event) registered[event] = nil end
@@ -31,6 +32,7 @@ local function Setup(buttonOn, captureOn, withFrame, cratesOn, tooltipOn, feed, 
         AccountSettings = function() return account end,
         ConfirmReload = function() reloads = reloads + 1 end,
         GamepadStandDown = function() return false end,
+        AuctionHouseShown = function() return ahShown end,
         Print = function(text) messages[#messages + 1] = text end,
         ProfWindowRefresh = function() refreshes = refreshes + 1 end,
         Apply = Noop,
@@ -152,6 +154,7 @@ local function Setup(buttonOn, captureOn, withFrame, cratesOn, tooltipOn, feed, 
     function t.Now() return now end
     function t.Clock(seconds) skew = seconds end
     function t.Faction(value) faction = value end
+    function t.AhShown(value) ahShown = value end
     function t.Npc(value) npc = value end
     function t.Territory(value) territory = value end
     function t.Decodes() return decodes end
@@ -710,6 +713,16 @@ t.Fire("AUCTION_HOUSE_SHOW")
 t.Fire("AUCTION_HOUSE_CLOSED")
 t.Run(1)
 Check("closing before the moment is up scans nothing", t.Requests() == 2 and t.Browses() == 1)
+t.Advance(1200)
+t.AhShown(false)
+t.Fire("AUCTION_HOUSE_SHOW")
+t.Run(1)
+Check("behind another addon's own auction window it scans nothing", t.Requests() == 2 and t.Browses() == 1)
+t.AhShown(true)
+t.Fire("AUCTION_HOUSE_CLOSED")
+t.Fire("AUCTION_HOUSE_SHOW")
+t.Run(1)
+Check("and on Blizzard's own window it scans", t.Requests() == 3)
 
 local BAY = {}
 for i = 1, 25 do BAY[2000 + i] = 300 + i end
@@ -781,5 +794,39 @@ t = Setup(true, false, true)
 t.Faction(nil)
 Check("before your faction is known there is no other house", t.ns.AuctionOtherHouse() == nil
     and t.ns.AuctionOtherPrice(10) == nil)
+
+t = Setup(true, false, true, nil, true)
+t.Priced({ [10] = 49, [20] = 70 }, 300)
+local tsmAsked = {}
+local tsm = { GetCustomPriceValue = function(source, item)
+    tsmAsked[#tsmAsked + 1] = source .. " " .. item
+    if item == "i:10" then return 555 end
+    return nil, "no price"
+end }
+local tsmRow
+for _, row in ipairs(t.card.rows) do if row.key == "ahTsm" then tsmRow = row end end
+Check("TSM Prices is the card's last row, unavailable without TSM", tsmRow == t.card.rows[#t.card.rows]
+    and tsmRow.needs() == false)
+t.env.TSM_API = tsm
+Check("with TSM loaded it is free, and off it asks TSM nothing", tsmRow.needs() == true
+    and t.ns.AuctionPrice(10) == 49 and #tsmAsked == 0)
+t.settings.Set("ahTsm", true)
+local tsmPrice, tsmAt = t.ns.AuctionPrice(10)
+Check("on, an item TSM prices is its lowest buyout, with no age", tsmPrice == 555 and tsmAt == nil
+    and tsmAsked[1] == "dbminbuyout i:10")
+Check("an item TSM has no price for keeps the scan's", t.ns.AuctionPrice(20) == 70)
+lines = t.Tooltip(10)
+Check("its tooltip line says TSM in place of an age", #lines == 1 and lines[1].right == "555c |cff808080each, TSM|r")
+lines = t.Tooltip(20)
+Check("and a scanned one keeps its age", #lines == 1 and lines[1].right == "70c |cff808080each, 5m ago|r")
+tsm.GetCustomPriceValue = function() error("TSM failed") end
+Check("an error inside TSM falls back to the scan", t.ns.AuctionPrice(10) == 49)
+t.env.TSM_API = nil
+Check("and TSM gone again is the scan", t.ns.AuctionPrice(10) == 49)
+t = Setup(true, false, true, nil, true)
+t.env.TSM_API = { GetCustomPriceValue = function() return 555 end }
+t.settings.Set("ahTsm", true)
+lines = t.Tooltip(10)
+Check("with no scan at all a TSM price still shows", #lines == 1 and lines[1].right == "555c |cff808080each, TSM|r")
 
 print("auction prices: " .. checks .. " checks passed")

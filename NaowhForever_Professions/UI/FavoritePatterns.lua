@@ -439,8 +439,7 @@ local function RenderManual(list, scanned)
 end
 
 Render = function()
-    local ah = _G.AuctionHouseFrame
-    if not (On() and ah and ah:IsShown()) then return market and market:Hide() end
+    if not (On() and ns.AuctionHouseShown()) then return market and market:Hide() end
     local list = Patterns.List()
     if #list == 0 then return market and market:Hide() end
     if not market then market = Popup.New(TEXT_TITLE) end
@@ -563,6 +562,7 @@ end
 events:SetScript("OnEvent", OnEvent)
 hooksecurefunc(S, "Set", OnSettingChanged)
 hooksecurefunc(ns, "Apply", Apply)
+ns.OnAuctionHouseMoved(Queue)
 if ns.ProfFavorites then hooksecurefunc(ns.ProfFavorites, "Toggle", OnStarred) end
 
 local boot = CreateFrame("Frame")

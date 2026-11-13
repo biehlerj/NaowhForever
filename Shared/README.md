@@ -48,6 +48,9 @@ Shared/
   Game/Towns.lua   town service NPCs by world map (ns.TownNPCs) and the capitals (ns.TownCapitals), by hand:
                    QoL's town pins, the Training Planner's trainers and Professions' rank alerts read it
   Game/Played.lua  the character's /played time, asked for once with the chat print muted (XP Bar, XP per Hour)
+  Game/AuctionHouse.lua whether Blizzard's auction house window is open and on screen (ns.AuctionHouseShown),
+                   and a call when it is moved away or back (ns.OnAuctionHouseMoved): The Market's dock,
+                   Professions' side panels and QoL's Scan on Opening
   UI/Parts.lua     the small parts: icons in text (Parts.Inline), smooth textures, hover cards (Parts.Tip,
                    Parts.TipLines), the chevron, links (Parts.FlipLink puts the chevron first, pointing
                    back: the Action Bars window's back link), icon buttons, the flat hover and pressed look
@@ -334,6 +337,11 @@ Colors and sizes come from `ns.THEME` and `Style.lua`, never written as numbers 
 
 ## Why
 
+- An addon that shows its own auction window can keep Blizzard's open behind it: TradeSkillMaster's TSM tab sets
+  `AuctionHouseFrame` to scale 0.001 and moves it off screen, leaving it shown, and its Switch to Default UI sets
+  scale 1 back. `ns.AuctionHouseShown` is false below `AWAY_SCALE` (0.01), far under any scale the game fits a
+  window to, so a panel docked beside Blizzard's window is not left squashed on screen over the other addon's.
+  The call runs only when the window crosses that scale, not on each `SetScale`.
 - A toast is drawn like the game's own level-up banner, in the accent: no window, a band whose fill and lines
   fade to both sides, the line small over the title. It shows in the same place as the game's banner
   (EventToastManagerFrame), so a toast waits for that to close, and for any other toast shown, then takes its

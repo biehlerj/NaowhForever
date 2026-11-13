@@ -18,6 +18,7 @@
     <Script file="Game\Layers.lua"/>
     <Script file="Game\Towns.lua"/>
     <Script file="Game\Played.lua"/>
+    <Script file="Game\AuctionHouse.lua"/>
     <Script file="UI\Parts.lua"/>
     <Script file="UI\Menus.lua"/>
     <Script file="UI\GamepadNav.lua"/>

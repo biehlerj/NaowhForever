@@ -125,8 +125,7 @@ local function SetEnabled(button, enabled)
 end
 
 local function AuctionHouseOpen()
-    local frame = _G.AuctionHouseFrame
-    return frame and frame:IsShown()
+    return ns.AuctionHouseShown()
 end
 
 local function MaterialLabel(result)
@@ -718,6 +717,7 @@ function Deals.Frames()
 end
 
 Deals.SetListener(Render)
+ns.OnAuctionHouseMoved(Render)
 S.OnChange(function(key)
     if key == "enabled" or key == "disenchantDeals" then Apply() end
     if key == "enabled" or key == "disenchantDeals" or key == "disenchantDealsTooltip" then InstallTooltip() end

@@ -217,7 +217,7 @@ local function ShowBack()
 end
 
 function Activate()
-    if not (Market.On() and ah and ah:IsShown()) then return end
+    if not (Market.On() and ah and ns.AuctionHouseShown()) then return end
     if S.Get("fullWindow") and not stepped then return Cover() end
     Uncover()
     ShowRow()
@@ -253,6 +253,11 @@ local function OnBlizzardShow()
     closed = false
     Activate()
     C_Timer.After(NEXT_FRAME, StyleRow)
+end
+
+local function OnMoved()
+    if ns.AuctionHouseShown() then return C_Timer.After(NEXT_FRAME, Activate) end
+    Deactivate()
 end
 
 local function OnBlizzardHide()
@@ -332,6 +337,7 @@ local function Hook()
     ah:HookScript("OnHide", OnBlizzardHide)
     hooksecurefunc(ah, "SetPostItem", OnPostItem)
     hooksecurefunc(ah, "SetDisplayMode", OnDisplayMode)
+    ns.OnAuctionHouseMoved(OnMoved)
     Market.Move.Hook(ah)
 end
 

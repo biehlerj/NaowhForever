@@ -32,6 +32,8 @@ local WHITE = ns.QoLConstants.WHITE_RGB
 local REALM_JOIN = "-"
 local BLACKWATER = "Blackwater"
 local FRIENDLY = "friendly"
+local TSM_SOURCE = "dbminbuyout"
+local TSM_ITEM = "i:"
 local function Tag() return ns.Color("accent", "Naowh AH") end
 local TEXT_SCAN = ns.L("Scan Prices")
 local TEXT_SCANNING = ns.L("Scanning...")
@@ -51,6 +53,7 @@ local TEXT_STARTED = ns.L("please wait while the auction house scan completes.")
 local TEXT_TIP = ns.L("Keeps the lowest buyout of every item on the auction house, shown on item tooltips. "
     .. "Blizzard allows one fast scan every 15 minutes; between them it reads page by page.\n\n")
 local TEXT_EACH = ns.L(" |cff808080each, %s ago|r")
+local TEXT_EACH_TSM = ns.L(" |cff808080each, TSM|r")
 local TEXT_FILLING = "%d %s"
 local TEXT_CHEAPEST = ns.L("cheapest")
 local TEXT_REQUESTED = ns.L("Requested: %s")
@@ -243,8 +246,20 @@ local function Lookup(itemID, other)
     if at then return own, at, house.listed and house.listed[itemID], true end
 end
 
+local function TsmLoaded()
+    return TSM_API ~= nil
+end
+
+local function TsmPrice(itemID)
+    if not (TSM_API and S.Get("ahTsm")) then return end
+    local ok, value = pcall(TSM_API.GetCustomPriceValue, TSM_SOURCE, TSM_ITEM .. itemID)
+    if ok then return value end
+end
+
 function ns.AuctionPrice(itemID)
     if not itemID then return end
+    local tsm = TsmPrice(itemID)
+    if tsm then return tsm end
     local price, at = Lookup(itemID)
     return price, at
 end
@@ -545,7 +560,7 @@ local function OnReplicate()
 end
 
 local function AutoScan()
-    if not (houseOpen and S.Get("ahAutoScan")) or scanning or ns.GamepadStandDown() then return end
+    if not (houseOpen and ns.AuctionHouseShown() and S.Get("ahAutoScan")) or scanning or ns.GamepadStandDown() then return end
     local house = House()
     local at = house and house.time
     if at and GetServerTime() - at < S.Get("ahAutoScanMinutes") * SECONDS_PER_MINUTE then return end
@@ -676,15 +691,22 @@ local function OnItemTooltip(tooltip, data)
     local market = ns.Market
     if own and not (market and market.ShowsPrice(tooltip, id)) then price, priceAt = ns.AuctionPrice(id) end
     local at = ns.AuctionScanTime() or priceAt
-    if not at then return end
+    if not (at or price or S.Get("ahTsm")) then return end
     local bundles = crates and ns.WaylaidCrates[id]
     local cheapest = bundles and Cheapest(bundles)
     local requested = writs and ns.WritRequests[id]
     local requestedPrice = requested and ns.AuctionPrice(requested)
     if not (price or cheapest or requestedPrice) then return end
-    local age = Age(GetServerTime() - (priceAt or at))
-    local right = price and C_CurrencyInfo.GetCoinTextureString(price, COIN_SIZE) .. TEXT_EACH:format(age)
-        or at == feedTime and TEXT_FEED_AGE:format(age) or TEXT_AGE:format(age, "")
+    local age = at and Age(GetServerTime() - (priceAt or at))
+    local right
+    if price then
+        right = C_CurrencyInfo.GetCoinTextureString(price, COIN_SIZE)
+            .. (priceAt and TEXT_EACH:format(age) or TEXT_EACH_TSM)
+    elseif age then
+        right = at == feedTime and TEXT_FEED_AGE:format(age) or TEXT_AGE:format(age, "")
+    else
+        right = ""
+    end
     tooltip:AddDoubleLine(ns.Color("accent", TEXT_TOOLTIP_TAG), right, WHITE.r, WHITE.g, WHITE.b, WHITE.r, WHITE.g, WHITE.b)
     if cheapest then AddBundles(tooltip, bundles, cheapest) end
     if requestedPrice then
@@ -703,6 +725,11 @@ local function OnSettingChanged(key)
     if key == "ahPrices" and button then button:SetShown(S.Get("ahPrices")) end
     if key == "ahCapture" then HookReplicate() end
     if key == "ahTooltip" or key == "ahCrates" or key == "ahWrits" then HookTooltip() end
+    if key == "ahTsm" then
+        if ns.ProfWindowRefresh then ns.ProfWindowRefresh() end
+        if ns.MarketRefresh then ns.MarketRefresh() end
+        if ns.AuctionPricesChanged then ns.AuctionPricesChanged() end
+    end
 end
 
 events:SetScript("OnEvent", OnEvent)
@@ -740,5 +767,9 @@ ns.Shared.Settings.Page("QoL/Loot & Items", S):Card({
         { key = "ahShare", label = "Prices for Other Addons", toggle = true,
           needs = ns.PriceShareFree, why = "Auctionator is installed",
           help = "Addons that read Auctionator's prices get these prices while Auctionator is not installed." },
+        { key = "ahTsm", label = "TSM Prices", toggle = true,
+          needs = TsmLoaded, why = "Needs TradeSkillMaster",
+          help = "Tooltips, The Market and Professions use TradeSkillMaster's lowest buyout for an item, "
+              .. "and your own scans and Naowh's prices for an item TSM has no price for." },
     },
 })

@@ -125,6 +125,8 @@ function methods.Hide(self)
 end
 function methods.SetShown(self, on) if on then self:Show() else self:Hide() end end
 function methods.IsShown(self) return self.shown end
+function methods.SetScale(self, s) self.scale = s end
+function methods.GetScale(self) return self.scale or 1 end
 function methods.IsVisible(self) return self.shown end
 function methods.SetText(self, v) self.text = v end
 function methods.SetTextColor(self, r, g, b) self.textR, self.textG, self.textB = r, g, b end
@@ -491,7 +493,7 @@ setmetatable(env, { __index = _G })
 -------------------------------------------------------------------------------
 -- Every file Professions.xml lists, in its order, after the feature switches they read.
 local xml = assert(io.open(DIR .. "/Professions.xml", "rb")):read("*a"):gsub("<!%-%-.-%-%->", "")
-local paths = { "Core/Features.lua" }
+local paths = { "Core/Features.lua", "Shared/Game/AuctionHouse.lua" }
 for file in xml:gmatch("<Script%s+file=\"([^\"]+)\"") do paths[#paths + 1] = DIR .. "/" .. file:gsub("\\", "/") end
 Load(paths, env)
 local recipes = api.Build(ns.RecipeData)
@@ -561,6 +563,14 @@ for _, row in ipairs(patternWindow.rows) do
     check("favorite pattern names show whether they are learnable now",
         row.name.textR == expected.r and row.name.textG == expected.g and row.name.textB == expected.b)
 end
+ah:SetScale(0.001)
+Advance(0.5)
+check("shrunk away by another addon's own auction window, the auction house counts as closed",
+    not ns.Professions.AH.Open() and not patternWindow:IsShown())
+ah:SetScale(1)
+Advance(0.5)
+check("and the favourite patterns come back with Blizzard's window", ns.Professions.AH.Open()
+    and patternWindow:IsShown())
 patternWindow.hooks.OnMouseWheel[1](patternWindow, -1)
 check("the mouse wheel reaches the next pattern page", patternWindow.pager.label.text == "2 / 2")
 patternWindow.hooks.OnMouseWheel[1](patternWindow, 1)

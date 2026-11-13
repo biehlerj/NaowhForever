@@ -663,6 +663,15 @@ NaowhForever_QoL/
   agrees with one that looks again. With Auctionator installed the row is unavailable (`ns.PriceShareFree`):
   turned on, it would change nothing. `PriceShare.lua` loads before `AuctionPrices.lua` so the row's card
   can name that function.
+- TSM Prices (`ahTsm`, off) makes `ns.AuctionPrice` ask TradeSkillMaster first, through its public
+  `TSM_API.GetCustomPriceValue` with `dbminbuyout` (the source Bag Space and the Loot Feed already read), and fall
+  back to the scans and Naowh's prices for an item TSM has no price for. Every single-item price goes through
+  `ns.AuctionPrice`, so tooltips, The Market and Professions follow it. `ns.AuctionPriceList` stays our own
+  data: the price history records it, other addons are answered from it, and TSM has no call for a whole list.
+  A TSM price has no age, so the tooltip line reads "each, TSM". The row is unavailable without TSM loaded.
+- Scan on Opening waits for Blizzard's window on screen (`ns.AuctionHouseShown`). TradeSkillMaster opens its own
+  window instead and keeps Blizzard's hidden or shrunk away; a scan behind it would spend the 15-minute fast
+  scan its own scans want and replace its searches.
 - Age is whole days since the price's scan or the release's prices, never below 0 (the release's time can
   run a little ahead of the realm's clock), and nil past 21 days, as Auctionator's is. A price is per item
   ID, so a link's price ignores a random suffix ("of the Bear"); for that reason a weapon or armour link is

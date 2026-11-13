@@ -102,6 +102,7 @@ local made, timers = {}, {}
 local window = Frame()
 local docking, covering, lastButton
 local ns
+local onMoved
 local Window = {
     PAGES = { { key = "farm", label = "Farm" }, { key = "reagents", label = "Reagents" },
         { key = "prices", label = "Price Graph" } },
@@ -141,6 +142,8 @@ function Window.Hide()
     if was then was.onClose() end
 end
 ns = {
+    AuctionHouseShown = function() return ah.shown and not ah.away end,
+    OnAuctionHouseMoved = function(fn) onMoved = fn end,
     Market = {
         Settings = { Get = function(k) return settings[k] end, OnChange = function() end },
         On = function() return marketOn end,
@@ -359,6 +362,30 @@ ah:Open()
 check("another addon's tabs after Blizzard's are followed, not covered", row.after == lib.internalState.Tabs[2])
 ah:Close()
 lib = nil
+
+ah:Open()
+RunTimers()
+row.click("farm")
+check("Blizzard's window moved away is heard", onMoved ~= nil and docking and window.shown)
+ah.away = true
+onMoved()
+check("shrunk away by another addon's own auction window, the panel and the docked window go",
+    not Dock.Shown() and not window.shown and not row.shown and docking == nil
+    and ns.MarketAuctionWindow() == nil)
+ah:SetDisplayMode({})
+check("and stay gone", not Dock.Shown() and not window.shown)
+ah.away = false
+onMoved()
+check("put back, they wait a frame for it to reach its place", not Dock.Shown())
+RunTimers()
+check("then the panel and the tabs return", Dock.Shown() and row.shown and ns.MarketAuctionWindow() == panel)
+ah.away = true
+onMoved()
+ah:Close()
+ah.away = false
+ah:Open()
+check("closed while away, the next visit opens as usual", Dock.Shown() and row.shown)
+ah:Close()
 
 settings.postKeys = true
 ah:Open()

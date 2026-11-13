@@ -55,6 +55,7 @@ ns.FEATURES = {
         ahCrates = false,
         ahWrits = false,
         ahShare = false,
+        ahTsm = false,
         altCounts = false,
         mailAlts = false,
         mailQuickAttach = false,

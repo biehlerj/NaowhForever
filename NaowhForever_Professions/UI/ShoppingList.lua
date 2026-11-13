@@ -98,8 +98,7 @@ local function On()
 end
 
 local function AuctionHouseOpen()
-    local ah = _G.AuctionHouseFrame
-    return ah and ah:IsShown()
+    return ns.AuctionHouseShown()
 end
 
 local function Current()
@@ -608,6 +607,7 @@ end
 events:SetScript("OnEvent", OnEvent)
 hooksecurefunc(S, "Set", OnSettingChanged)
 hooksecurefunc(ns, "Apply", Apply)
+ns.OnAuctionHouseMoved(Render)
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")

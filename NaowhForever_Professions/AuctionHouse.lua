@@ -27,8 +27,7 @@ function ns.AuctionWindowChanged()
 end
 
 local function AuctionHouseOpen()
-    local ah = _G.AuctionHouseFrame
-    return ah and ah:IsShown() and ah.SearchBar ~= nil
+    return ns.AuctionHouseShown() and _G.AuctionHouseFrame.SearchBar ~= nil
 end
 
 local function SearchAuctionHouse(name)

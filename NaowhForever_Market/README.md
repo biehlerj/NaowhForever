@@ -125,6 +125,10 @@ NaowhForever_Market/
   plain buttons, never made from Blizzard's tab templates: `PanelTabButtonTemplate` puts each button in its
   parent's `Tabs` list (`parentArray`) and runs Blizzard's tab code on it. Nothing of Blizzard's is written to or
   called: no `PanelTemplates_*`, no `SetScript`, no field on its frames.
+- An addon with its own auction window can keep Blizzard's shown but shrunk away (TradeSkillMaster's TSM tab;
+  see `Shared/README.md`). The panel, a docked window and Full Window step aside while `ns.AuctionHouseShown` is
+  false and come back a frame after it is true again, once the other addon has put Blizzard's window back where it
+  was, so the panel's width is measured beside it. TSM's tab is made through LibAHTab, so the tabs follow it.
 - They look like Blizzard's tabs beside them by copying, each time the auction house shows and again a frame
   later (a skin restyles on the same show), what Blizzard's last tab reads back: its height and frame level, the
   seam between its tabs, its idle and picked label offsets, and its font objects (normal, highlight on hover,
@@ -1191,3 +1195,10 @@ Sell's Up Next column:
      form in one-line rows, its count beside "Up Next", and a row's price each in its tooltip. Drag it back: the
      column returns. The panel never covers Blizzard's window.
 148. With Full Window on, Sell has the column on the right, at the window's width.
+149. With TradeSkillMaster on, open the auction house: TSM's window opens and none of The Market's panel, tabs
+     or window shows over it. Scan on Opening does not scan.
+150. Click TSM's Switch to Default UI: Blizzard's window shows with the panel beside it, and Farm, Price Graph
+     and Reagents after TSM's tab. Dock Farm, then click the TSM tab: the docked window and the panel go, and
+     TSM's window shows alone. Switch back: the panel returns at its full width.
+151. Turn on TSM Prices: an item TSM has priced shows its TSM lowest buyout on its tooltip as "each, TSM", and
+     The Market's Sell and Bag Worth use it. An item TSM has not priced shows our scan's price and age.
