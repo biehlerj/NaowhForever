@@ -722,6 +722,41 @@ do
     Check("a lower Agility elixir counts for Mongoose, the Arcane Elixir reminds", t.Shown(), "item:13454")
 end
 
+-- An Agility scroll stronger than the carried Agility elixir blocks it in game, so that elixir does not remind.
+do
+    local MINOR_AGILITY, AGILITY, SCROLL_II, SCROLL_IV = 2457, 8949, 8116, 12174
+    local t = Fixture({ settings = { personalBuffs = false }, instance = "raid", bags = { MINOR_AGILITY },
+        auras = { player = { { SCROLL_II, 1700, 1800 } } } })
+    t.Login()
+    Check("Scroll of Agility II (+9) up: Minor Agility (+4) does not remind", t.Shown(), "")
+    t.state.bags = { AGILITY }
+    t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
+    Check("Elixir of Agility (+15) beats it and still reminds", t.Shown(), "item:" .. AGILITY)
+    t.state.auras.player = { { SCROLL_IV, 1700, 1800 } }
+    t.Fire("UNIT_AURA", "player"); t.Advance(0.5)
+    Check("Scroll of Agility IV (+17) up: Elixir of Agility does not remind", t.Shown(), "")
+    t.state.auras.player = {}
+    t.Fire("UNIT_AURA", "player"); t.Advance(0.5)
+    Check("the scroll gone: the elixir reminds again", t.Shown(), "item:" .. AGILITY)
+end
+
+-- The other way round: a scroll weaker than the same stat's elixir that is up does not remind, and the next
+-- stat's scroll is offered instead. Armor elixirs pair with Protection scrolls.
+do
+    local AGILITY_IV, STRENGTH_IV, MONGOOSE, PROTECTION_IV, SUPERIOR_DEFENSE = 10309, 10310, 17538, 10305, 11348
+    local t = Fixture({ settings = { personalBuffs = false }, instance = "raid", bags = { AGILITY_IV },
+        auras = { player = { { MONGOOSE, 3000, 3600 } } } })
+    t.Login()
+    Check("Mongoose (+25) up: Scroll of Agility IV (+17) does not remind", t.Shown(), "")
+    t.state.bags = { AGILITY_IV, STRENGTH_IV }
+    t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
+    Check("the Strength scroll is offered instead", t.Shown(), "item:" .. STRENGTH_IV)
+    t.state.bags = { PROTECTION_IV }
+    t.state.auras.player = { { SUPERIOR_DEFENSE, 3000, 3600 } }
+    t.Fire("BAG_UPDATE_DELAYED"); t.Advance(0.5)
+    Check("Superior Defense (450 armor) up: Scroll of Protection IV (240) does not remind", t.Shown(), "")
+end
+
 -- A carried scroll reminds one stat at a time, the class buff it does not stack with counts as
 -- its buff, and a scroll you do not carry never reminds, with Only If I Carry One on or off.
 do

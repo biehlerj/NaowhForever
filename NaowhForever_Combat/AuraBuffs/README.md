@@ -259,6 +259,11 @@ NaowhForever_Combat/AuraBuffs/
   scroll whose stat is missing, not any scroll. A scroll does not stack with the class buff of its
   stat (`raid` on `D.SCROLLS`: Arcane Intellect, Power Word: Fortitude, Divine Spirit), so
   `D.SCROLL_AURAS` counts that buff as the scroll's.
+- An elixir does not remind while a stronger scroll of its stat is up, nor a scroll while a stronger elixir is
+  (`D.OUTRANKED_BY`, from the `amounts` on both lists; Armor elixirs pair with Protection scrolls through `scroll`):
+  ren0m could not drink a +4 Minor Agility elixir over a +9 Scroll of Agility II, as the game refuses the weaker
+  buff. Only Agility was seen in game; Strength, Intellect, Spirit and Armor are assumed to follow the same rule.
+  The amounts are the client's SpellEffect base points (build 1.60.1.70938).
 - Other Buffs Reminder (`otherBuffs`, off by default) is Robin's ask: Kreeg's Stout Beatdown, the stamina drinks
   (Gordok Green Grog and the Rumsey Rums), Juju Power, Might and Guile, Zanza and the five Blasted Lands items
   (`D.OTHER`). They stack with elixirs, so they are a kind of their own: in the elixir group, Kreeg's would have

@@ -15,9 +15,10 @@ D.FLASKS = {
 }
 
 D.ELIXIRS = {
-    { stat = "Agility", items = { 13452, 9187, 8949, 3390, 2457 }, auras = { 17538, 11334, 11328, 3160, 2374 } },
+    { stat = "Agility", items = { 13452, 9187, 8949, 3390, 2457 }, auras = { 17538, 11334, 11328, 3160, 2374 },
+        amounts = { 25, 25, 15, 8, 4 } },
     { stat = "Strength", items = { 250351, 250349, 13453, 9206, 3391, 2454 },
-        auras = { 1250986, 1250984, 17537, 11405, 3164, 2367 } },
+        auras = { 1250986, 1250984, 17537, 11405, 3164, 2367 }, amounts = { 25, 10, 18, 25, 8, 4 } },
     { stat = "Strength and Agility", items = { 250350 }, auras = { 1250985 } },
     { stat = "Agility and Intellect", items = { 250328 }, auras = { 1250918 } },
     { stat = "Attack Power", items = { 12820, 246948 }, auras = { 17038 } },
@@ -31,10 +32,11 @@ D.ELIXIRS = {
     { stat = "Nature Power", items = { 250343 }, auras = { 1250972 } },
     { stat = "Healing", items = { 250333, 250332, 250331, 250330 }, auras = { 1250926, 1250925, 1250924, 1250922 } },
     { stat = "Intellect", items = { 250337, 250354, 13447, 9179, 250353, 3383 },
-        auras = { 1250940, 1250989, 17535, 11396, 1250988, 3166 } },
+        auras = { 1250940, 1250989, 17535, 11396, 1250988, 3166 }, amounts = { 25, 10, 18, 25, 6, 3 } },
     { stat = "Spirit", items = { 250348, 250338, 250347, 250346, 250345, 250344 },
-        auras = { 1250981, 1250941, 1250979, 1250978, 1250976, 1250974 } },
-    { stat = "Armor", items = { 13445, 8951, 3389, 5997 }, auras = { 11348, 11349, 3220, 673 } },
+        auras = { 1250981, 1250941, 1250979, 1250978, 1250976, 1250974 }, amounts = { 25, 25, 18, 10, 6, 3 } },
+    { stat = "Armor", items = { 13445, 8951, 3389, 5997 }, auras = { 11348, 11349, 3220, 673 },
+        amounts = { 450, 250, 150, 50 }, scroll = "Protection" },
     { stat = "Health", items = { 250335, 250334, 3825, 2458 }, auras = { 1250931, 1250928, 3593, 2378 } },
     { stat = "Health and Armor", items = { 250329 }, auras = { 1250920 } },
     { stat = "Shadow Resistance", items = { 9088 }, auras = { 11371 } },
@@ -63,12 +65,17 @@ D.WEAPON_ICONS = {
 for id, name in pairs(D.WEAPON_ICONS) do D.WEAPON_ICONS[id] = ICON_PATH .. name end
 
 D.SCROLLS = {
-    { stat = "Agility", items = { 3012, 1477, 4425, 10309 }, auras = { 8115, 8116, 8117, 12174 } },
-    { stat = "Intellect", items = { 955, 2290, 4419, 10308 }, auras = { 8096, 8097, 8098, 12176 }, raid = "intellect" },
-    { stat = "Protection", items = { 3013, 1478, 4421, 10305 }, auras = { 8091, 8094, 8095, 12175 } },
-    { stat = "Spirit", items = { 1181, 1712, 4424, 10306 }, auras = { 8112, 8113, 8114, 12177 }, raid = "spirit" },
+    { stat = "Agility", items = { 3012, 1477, 4425, 10309 }, auras = { 8115, 8116, 8117, 12174 },
+        amounts = { 5, 9, 13, 17 } },
+    { stat = "Intellect", items = { 955, 2290, 4419, 10308 }, auras = { 8096, 8097, 8098, 12176 }, raid = "intellect",
+        amounts = { 4, 8, 12, 16 } },
+    { stat = "Protection", items = { 3013, 1478, 4421, 10305 }, auras = { 8091, 8094, 8095, 12175 },
+        amounts = { 60, 120, 180, 240 } },
+    { stat = "Spirit", items = { 1181, 1712, 4424, 10306 }, auras = { 8112, 8113, 8114, 12177 }, raid = "spirit",
+        amounts = { 3, 7, 11, 15 } },
     { stat = "Stamina", items = { 1180, 1711, 4422, 10307 }, auras = { 8099, 8100, 8101, 12178 }, raid = "stamina" },
-    { stat = "Strength", items = { 954, 2289, 4426, 10310 }, auras = { 8118, 8119, 8120, 12179 } },
+    { stat = "Strength", items = { 954, 2289, 4426, 10310 }, auras = { 8118, 8119, 8120, 12179 },
+        amounts = { 5, 9, 13, 17 } },
 }
 
 D.DEFAULT_GROUPS = { food = { items = {}, auras = {}, wellFed = true }, flask = { items = D.FLASKS.items, auras = D.FLASKS.auras },
@@ -108,6 +115,26 @@ for _, scroll in ipairs(D.SCROLLS) do
     for _, id in ipairs(scroll.items) do
         D.SCROLL_AURAS[id] = auras
         table.insert(D.DEFAULT_GROUPS.scroll.items, id)
+    end
+end
+
+D.OUTRANKED_BY = {}
+local function AddOutranked(items, amounts, others, otherAmounts)
+    for i, id in ipairs(items) do
+        local auras = D.OUTRANKED_BY[id] or {}
+        for j, aura in ipairs(others) do
+            if otherAmounts[j] > amounts[i] then auras[#auras + 1] = aura end
+        end
+        if #auras > 0 then D.OUTRANKED_BY[id] = auras end
+    end
+end
+
+for _, elixir in ipairs(D.ELIXIRS) do
+    for _, scroll in ipairs(D.SCROLLS) do
+        if elixir.amounts and scroll.amounts and scroll.stat == (elixir.scroll or elixir.stat) then
+            AddOutranked(elixir.items, elixir.amounts, scroll.auras, scroll.amounts)
+            AddOutranked(scroll.items, scroll.amounts, elixir.auras, elixir.amounts)
+        end
     end
 end
 

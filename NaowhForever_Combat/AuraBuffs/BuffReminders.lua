@@ -229,10 +229,15 @@ local function CarriedBuiltIn(category, builtIn)
     return { items = items, auras = builtIn.auras, wellFed = builtIn.wellFed }, items[1]
 end
 
+local function Outranked(item, buffs)
+    local auras = D.OUTRANKED_BY[item]
+    return auras and Find(buffs, auras)
+end
+
 local function FamilyGroup(items, buffs, byItem)
     local auras = byItem[items[1]]
     for _, id in ipairs(items) do
-        if not Find(buffs, byItem[id]) then
+        if not (Find(buffs, byItem[id]) or Outranked(id, buffs)) then
             auras = byItem[id]
             break
         end
@@ -261,7 +266,7 @@ local function Elixirs(list, buffs, last, carriedItems)
             end
             local group, item = FamilyGroup(same, buffs, D.ELIXIR_AURAS)
             local before = #list
-            Consumable(list, buffs, group, item, nil, last, true)
+            if not Outranked(item, buffs) then Consumable(list, buffs, group, item, nil, last, true) end
             if #list > before then
                 list[#list].items, list[#list].key = group.items, "battle"
                 shown = shown + 1
@@ -280,6 +285,7 @@ local function Consumables(list, buffs)
             group, item = CarriedBuiltIn(category, builtIn)
             if item and category == "scroll" then
                 group, item = FamilyGroup(group.items, buffs, D.SCROLL_AURAS)
+                if Outranked(item, buffs) then group = nil end
             elseif item and category == "battle" then
                 Elixirs(list, buffs, LastIcon(category), group.items)
                 group = nil
