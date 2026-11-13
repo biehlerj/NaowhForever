@@ -70,21 +70,22 @@ local function Typed()
     return saved and saved[Me()]
 end
 
-local function Matches(claim, battletag, listed)
-    return type(claim) == "string" and Confirm.Hash(claim, battletag, Me()) == listed
+local function Matches(claim, battletag)
+    if type(claim) ~= "string" then return false end
+    local hash = Confirm.Hash(claim, battletag, Me())
+    return hash == myEntry.claim or hash == myEntry.extraClaim
 end
 
 local function Check()
-    local listed = myEntry and myEntry.claim
-    if type(listed) ~= "string" then return nil end
+    if type(myEntry and myEntry.claim) ~= "string" then return nil end
     local _, battletag = BNGetInfo()
     if not Readable(battletag) then return nil end
     local written = ns.BADGE_CLAIMS and ns.BADGE_CLAIMS[Me()]
     local typed = Typed()
-    if Matches(typed, battletag, listed) then return CONFIRMED end
+    if Matches(typed, battletag) then return CONFIRMED end
     if type(written) == "table" then
         for i = 1, #written do
-            if Matches(written[i], battletag, listed) then return CONFIRMED end
+            if Matches(written[i], battletag) then return CONFIRMED end
         end
     end
     if typed == nil and type(written) ~= "table" then return UNCLAIMED end

@@ -60,6 +60,12 @@ class SyncBadges(unittest.TestCase):
         self.assertIn('["Player-4613-006EB819"] = { since = "2026-09", tier = "epic", claim = "8c39fddd" },\r\n', text)
         self.assertIn('["Player-4618-0000AAAA"] = { claim = "04bb847a" },\r\n', text)
 
+    def test_a_second_battletag_claim_follows_the_claim(self):
+        text = sync_badges.render(sync_badges.validated({"patrons": {"90": {
+            "Player-4613-006EB819": {"claim": "8c39fddd", "extraClaim": "04bb847a"},
+        }}}))
+        self.assertIn('["Player-4613-006EB819"] = { claim = "8c39fddd", extraClaim = "04bb847a" },\r\n', text)
+
     def test_anything_unexpected_stops_the_sync(self):
         for bad in (
             [],
@@ -75,6 +81,8 @@ class SyncBadges(unittest.TestCase):
             {"patrons": {"90": {"Player-1-0000AAAA": {"claim": "8C39FDDD"}}}},
             {"patrons": {"90": {"Player-1-0000AAAA": {"claim": "8c39fdd"}}}},
             {"patrons": {"90": {"Player-1-0000AAAA": {"claim": "K7P2-9XQM"}}}},
+            {"patrons": {"90": {"Player-1-0000AAAA": {"claim": "8c39fddd", "extraClaim": "K7P2-9XQM"}}}},
+            {"patrons": {"90": {"Player-1-0000AAAA": {"extraClaim": "8c39fddd"}}}},
         ):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 sync_badges.validated(bad)

@@ -918,6 +918,16 @@ do  -- your own badge and your answers
     answer(t, "Asker", "1 Q")
     check("self: a stranger asking gets a no", t.sent[1] and t.sent[1].message == "1 N")
 
+    local w = fixture(true)
+    w.me = DIE
+    w.patron(w.me, "2026-01", nil, nil, true, DIE_HASH)
+    w.ns.BADGE_PATRONS[3][DIE].extraClaim = w.ns.BadgeConfirm.Hash(DIE_CLAIM, "Second#4321", DIE)
+    w.battletag = "Second#4321"
+    w.ns.BADGE_CLAIMS = { [DIE] = { DIE_CLAIM } }
+    w.fire("PLAYER_ENTERING_WORLD")
+    check("self: the patron's approved second BattleTag shows the badge too",
+        say(w.nameFilters[1], "Die", 1, w.me):find("BadgeLegendary", 1, true) and #w.printed == 0)
+
     local u = fixture(true)
     u.me = DIE
     u.patron(u.me, "2026-01", nil, nil, true, DIE_HASH)

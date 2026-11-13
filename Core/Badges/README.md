@@ -129,9 +129,10 @@ add: "90:Player-4613-006EB819" goes under `[90]`. A staff entry wins over a patr
   Naowh Forever app writes it into its own `NaowhForever_Claims` addon (`ns.BADGE_CLAIMS`), or
   they type `/nf badges claim` with it, kept in `badgeClaims`. The list carries `claim`, a 32-bit
   FNV-1a hash of "claim|BattleTag|GUID" with the BattleTag saved on their naowh.gg account (patrons
-  with none are left out), and a patron badge shows to its own faction only once that character's
-  client gets the same hash from its claim and its own `BNGetInfo()` BattleTag. A character added
-  for someone else never gets its claim typed or written on that character, and a claim handed to
+  with none are left out), plus `extraClaim`, the same hash with the approved second BattleTag on
+  their account, and a patron badge shows to its own faction only once that character's client gets
+  the same hash from its claim and its own `BNGetInfo()` BattleTag. A character added for someone
+  else never gets its claim typed or written on that character, and a claim handed to
   a friend fails on the friend's BattleTag. The random claim in the hash keeps the BattleTag from
   being guessed from the public list. A patron whose claim does not match is told so, once.
 - The confirmation is an addon whisper: seeing an unconfirmed patron (chat, tooltip, guild list,
