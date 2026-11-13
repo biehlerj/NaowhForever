@@ -16,6 +16,7 @@ local ROUND_HALF = J.C.ROUND_HALF
 local ORDER_FIRST, ORDER_THIRD, ORDER_FOURTH, ORDER_LAST = 10, 20, 30, 90
 
 local TEXT_JOURNAL_OFF = ns.L("Turn on the Dungeon Journal")
+local TEXT_AUTO_OFF = ns.L("Needs %s", ns.L("Open Tracker in Dungeons"))
 local TEXT_BIS_OFF = ns.L("Needs the BiS List")
 local TEXT_ENTRANCES_OFF = ns.L("Turn on Dungeon and Raid Entrances")
 local TEXT_EVERY_DUNGEON = ns.L("Every dungeon and raid: what drops, your quests, and more.")
@@ -35,6 +36,8 @@ local MAP_SUMMARY = { both = ns.L("Dungeons and zones"), panel = ns.L("In dungeo
 local SHARE_SUMMARY = { both = ns.L("Asks and accepts shared quests"), ask = ns.L("Asks for shared quests"),
     accept = ns.L("Accepts shared quests") }
 local TRACKER_EVERYWHERE, TRACKER_INSIDE, TRACKER_OUTSIDE = ns.L("everywhere"), ns.L("in dungeons"), ns.L("outside dungeons")
+local TRACKER_EVERYWHERE_LOW, TRACKER_INSIDE_LOW = ns.L("outside, and in dungeons below max level"),
+    ns.L("in dungeons below max level")
 local TEXT_TRACKER, TEXT_AND_TRACKER = ns.L("Tracker "), ns.L(", tracker ")
 
 local function ForYou()
@@ -68,6 +71,14 @@ end
 
 local function JournalOn()
     return S.Get("enabled") == true
+end
+
+local function AutoOn()
+    return JournalOn() and S.Get("trackerAuto") == true
+end
+
+local function AutoWhy()
+    return JournalOn() and TEXT_AUTO_OFF or TEXT_JOURNAL_OFF
 end
 
 local function PadFree()
@@ -146,6 +157,9 @@ end
 
 local function TrackerWhere(store)
     local outside = store.Get("trackerOutside")
+    if store.Get("trackerAuto") and store.Get("trackerSkipMaxLevel") then
+        return outside and TRACKER_EVERYWHERE_LOW or TRACKER_INSIDE_LOW
+    end
     if store.Get("trackerAuto") then return outside and TRACKER_EVERYWHERE or TRACKER_INSIDE end
     return outside and TRACKER_OUTSIDE
 end
@@ -211,6 +225,8 @@ local function DeclareTracker()
         rows = {
             Toggle("trackerAuto", "Open Tracker in Dungeons",
                 "Opens the quest tracker when you enter a dungeon with quests for you."),
+            { key = "trackerSkipMaxLevel", label = "Skip at Max Level", toggle = true, needs = AutoOn, why = AutoWhy,
+              help = "Leaves the quest tracker closed in dungeons once you are max level." },
             Toggle("trackerOutside", "Show Outside Dungeons",
                 "Opens the quest tracker out in the world, on the dungeon your quests are for."),
             { key = "hideGameTracker", label = "Hide the Game's Quest Tracker", toggle = true, needs = PadFree,

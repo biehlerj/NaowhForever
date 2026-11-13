@@ -95,7 +95,7 @@ NaowhForever_DungeonJournal/
     Popup.lua          Boss Loot at Cursor (a key binding)
     QuestTracker.lua   a dungeon's quests in a small window, one row each
     GameTrackerFade.lua Hide the Game's Quest Tracker
-    TrackerAuto.lua    Open Tracker in Dungeons and Show Outside Dungeons
+    TrackerAuto.lua    Open Tracker in Dungeons (Skip at Max Level) and Show Outside Dungeons
     MapView.lua        a dungeon's map drawn into a frame: art, pins, entrance, floor switch (J.DungeonMap)
     MapList.lua        the bosses beside the map window, in kill order
     MapWindow.lua      the map's own window: the map, the list, the picked boss's page

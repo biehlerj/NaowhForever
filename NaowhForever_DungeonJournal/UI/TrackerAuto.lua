@@ -30,6 +30,7 @@ end
 
 local function OpenInside(dungeon)
     if not S.Get("trackerAuto") or dungeon == Tracker.closedIn then return end
+    if S.Get("trackerSkipMaxLevel") and UnitLevel("player") >= GetMaxLevelForPlayerExpansion() then return end
     local data = dungeon.quests
     if not data then return end
     local toPickUp, inLog = J.Quests.Count(data)
@@ -61,7 +62,9 @@ local function SyncAuto()
 end
 
 local function OnSettingChanged(key)
-    if key == "enabled" or key == "trackerAuto" or key == "trackerOutside" then SyncAuto() end
+    if key == "enabled" or key == "trackerAuto" or key == "trackerOutside" or key == "trackerSkipMaxLevel" then
+        SyncAuto()
+    end
 end
 
 hooksecurefunc(ns, "Apply", SyncAuto)

@@ -311,6 +311,7 @@ local function fixture(settings, noBis, language)
         GetNumGroupMembers = function() return state.party and #state.party + 1 or 0 end,
         C_ClassColor = { GetClassColor = function() return CLASS_COLOR end },
         UnitLevel = function() return state.level end,
+        GetMaxLevelForPlayerExpansion = function() return state.maxLevel or 60 end,
         GetBuildInfo = function() return "1.60.1", "70205" end,
         UnitFactionGroup = function() return "Alliance" end,
         UnitRace = function() return "Human", "Human", 1 end,
@@ -1689,6 +1690,29 @@ do
     state.instance = { id = 36, name = "The Deadmines" }
     EnterWorld()
     check("until you leave and come back", tracker:IsShown())
+    -- Skip at Max Level: off by default; on, a max-level character enters with it closed.
+    check("Skip at Max Level is off by default", state.defaults.trackerSkipMaxLevel == false)
+    tracker:Hide()
+    tracker.scripts.OnHide(tracker)
+    state.instance = nil
+    EnterWorld()
+    S.Set("trackerSkipMaxLevel", true)
+    state.maxLevel = state.level
+    state.instance = { id = 36, name = "The Deadmines" }
+    EnterWorld()
+    check("on, at max level, entering a dungeon leaves it closed", not tracker:IsShown())
+    S.Set("trackerSkipMaxLevel", false)
+    check("switched off in there, it opens straight away", tracker:IsShown())
+    tracker:Hide()
+    tracker.scripts.OnHide(tracker)
+    S.Set("trackerSkipMaxLevel", true)
+    state.instance = nil
+    EnterWorld()
+    state.maxLevel = nil
+    state.instance = { id = 36, name = "The Deadmines" }
+    EnterWorld()
+    check("below max level it still opens", tracker:IsShown())
+    S.Set("trackerSkipMaxLevel", false)
     -- A /reload inside: the settings are applied during that loading screen's own event, so
     -- applying them has to look where you are.
     tracker:Hide()
