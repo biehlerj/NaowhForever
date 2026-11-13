@@ -231,6 +231,7 @@ local function DrawFocus()
         local done = #Sell.postedOrder > 0
         message.title:SetText(done and TEXT_DONE or TEXT_EMPTY)
         message.sub:SetText(done and TEXT_DONE_SUB:format(Coins((Sell.Totals()))) or TEXT_EMPTY_SUB)
+        page.chart:Hide()
         return
     end
     local price, why, ref = Sell.Price(entry)
@@ -245,6 +246,9 @@ local function DrawFocus()
     DrawForm(entry, price)
     DrawPost(entry, price)
     listPane:SetHeight(listPane:Paint(entry, price))
+    local on = queuePane.split and Market.Window.Covering()
+    page.chart:SetShown(on)
+    if on then page.chart:Paint(entry.itemID) end
 end
 
 local function Line(n, kind, entry, text)
@@ -789,6 +793,10 @@ function Page.Build(parent)
     listPane:SetPoint("TOPLEFT", focusPane, "BOTTOMLEFT", 0, -SECTION_GAP)
     listPane:SetPoint("RIGHT", focusPane, "RIGHT")
     BuildQueue()
+    page.chart = Market.Chart.New(page)
+    page.chart:SetPoint("TOPLEFT", listPane, "BOTTOMLEFT", 0, -SECTION_GAP)
+    page.chart:SetPoint("BOTTOMRIGHT", queuePane, "BOTTOMLEFT", -SECTION_GAP, 0)
+    page.chart:Hide()
     page:HookScript("OnSizeChanged", Page.Fit)
     Post.onDone = Posted
     events = CreateFrame("Frame")

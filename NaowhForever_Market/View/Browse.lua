@@ -12,7 +12,7 @@ local GAP, PANE_GAP, SECTION_GAP, SUB_GAP = St.GAP, 12, 10, 4
 local CATEGORY_W, COLUMNS_H = 200, 16
 local ROW_H, ROW_ICON, ROW_IN, ICON_GAP = 28, 20, 8, 8
 local LOWEST_W, LISTED_W, SCROLL_IN, MORE_ROWS = 120, 70, 4, 10
-local NAME_SIZE, NAME_H, LISTED_H = 15, 22, 110
+local NAME_SIZE, NAME_H, LISTED_H, CHART_W = 15, 22, 110, 280
 local DETAIL_H = NAME_H + SUB_GAP + LISTED_H
 local ALL = "all"
 local PATH_JOIN = "."
@@ -27,7 +27,7 @@ local TEXT_PATH = ns.L("%s / %s")
 local TEXT_ITEM, TEXT_LOWEST, TEXT_LISTED = ns.L("Item"), ns.L("Lowest"), ns.L("Listed")
 local TEXT_PICK = ns.L("Pick an item to see its listings.")
 
-local pane, search, picker, sorter, scroll, list, note, detail, nameText, pickNote, listPane, events
+local pane, search, picker, sorter, scroll, list, note, detail, nameText, pickNote, listPane, chart, events
 local rows, results = {}, {}
 local labels = { [ALL] = TEXT_ALL_CATEGORIES }
 local picked = {}
@@ -148,11 +148,13 @@ local function DrawPicked()
     pickNote:SetShown(not on)
     nameText:SetShown(on)
     listPane:SetShown(on)
+    chart:SetShown(on)
     if not on then return end
     local name, color = KeyLook(picked.itemKey)
     nameText:SetTextColor(color.r, color.g, color.b)
     nameText:SetText(name)
     listPane:SetHeight(listPane:Paint(picked))
+    chart:Paint(picked.itemID)
 end
 
 function Browse.Draw()
@@ -264,8 +266,11 @@ local function BuildDetail()
     detail:SetPoint("BOTTOMRIGHT")
     detail:SetHeight(DETAIL_H)
     nameText = ns.Font(detail, NAME_SIZE, nil, T.fg, true)
+    chart = Market.Chart.New(detail)
+    chart:SetPoint("TOPRIGHT")
+    chart:SetSize(CHART_W, DETAIL_H)
     nameText:SetPoint("TOPLEFT")
-    nameText:SetPoint("RIGHT")
+    nameText:SetPoint("RIGHT", chart, "LEFT", -PANE_GAP, 0)
     nameText:SetJustifyH("LEFT")
     nameText:SetWordWrap(false)
     pickNote = ns.Font(detail, St.TEXT_SIZE, nil, T.muted)
@@ -273,7 +278,7 @@ local function BuildDetail()
     pickNote:SetText(TEXT_PICK)
     listPane = Market.Listed.New(detail, Browse.Draw, Focus)
     listPane:SetPoint("TOPLEFT", 0, -(NAME_H + SUB_GAP))
-    listPane:SetPoint("RIGHT")
+    listPane:SetPoint("RIGHT", chart, "LEFT", -PANE_GAP, 0)
 end
 
 local function Build()

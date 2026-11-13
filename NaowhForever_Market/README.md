@@ -63,7 +63,7 @@ NaowhForever_Market/
   View/
     Style.lua        The Market's own look, over Shared/Style.lua (Market.Style)
     Spark.lua        an item's last two weeks of prices as a small line, for Farm (Market.Spark)
-    Chart.lua        an item's lowest price each day as a chart you can hover for the day's price and how many were listed, for Price Graph (Market.Chart)
+    Chart.lua        an item's lowest price each day as a chart you can hover for the day's price and how many were listed, for Price Graph, and in the full window Sell, Buy and Shopping List (Market.Chart)
     Finder.lua       an item list searched by name across your scans, and the Watch price box, for Buy, Shopping List and Price Graph (Market.Finder)
     Listed.lua       the listings of the item on Sell or the full window's Buy, where your price lands, and Buy and Cancel on a row (Market.Listed)
     Quantity.lua     the chips over Sell's quantity box: 1, a number and All, kept as the default for that type of item (Market.Quantity)
@@ -191,6 +191,10 @@ NaowhForever_Market/
   the panel fits beside it on a 16:9 screen at the default UI scale. Its pages drop the old full-size
   Sell page's chart for that; the chart moved to Price Graph. The listings ladder came back as the short
   list under Sell's form (below).
+- Full Window has the height the panel lacks, so the chart is back there: on Sell under the listings, to the
+  bottom of the left column, and on Buy and Shopping List `CHART_W` (280) wide beside the picked item's
+  listings. Sell shows it only in the full window, not whenever the page is tall enough: at the widened
+  panel's height it would come and go between items as Starting Bid and Last post rows show.
 - With the Forever look, only about 27 of a rail row's 36 pixels of art are visible. A page name in the
   heading font with that note under it is as tall as that and sat high, so the name ran over the top
   edge. Those rows are `FOREVER_ROW_H` (48) tall, and the two lines sit `FOREVER_DROP` (3) lower.
@@ -1202,3 +1206,12 @@ Sell's Up Next column:
      TSM's window shows alone. Switch back: the panel returns at its full width.
 151. Turn on TSM Prices: an item TSM has priced shows its TSM lowest buyout on its tooltip as "each, TSM", and
      The Market's Sell and Bag Worth use it. An item TSM has not priced shows our scan's price and age.
+
+The price chart in the full window:
+
+152. With Full Window on, open Sell: the item's price chart fills the left column under its listings, down to
+     the posted bar. Skip: the chart shows the next item. Fold and open the listings: the chart grows and
+     shrinks with them. An item with Starting Bid and Last post rows still has a readable chart.
+153. On Buy, pick a search result: its price chart is beside its listings, and the listings' buttons still fit.
+     Hover the chart: the day and price. Do the same on Shopping List.
+154. Turn Full Window off: the panel's Sell, widened or narrow, has no chart, and Price Graph is as before.

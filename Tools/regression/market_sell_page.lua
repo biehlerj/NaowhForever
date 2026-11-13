@@ -174,6 +174,14 @@ local function Setup(opts)
         ColorPill = function(pill, color) pill.color = color end,
     }
     t.M.Pages = {}
+    t.charts = {}
+    t.M.Window = { Covering = function() return t.covering end }
+    t.M.Chart = { New = function(parent)
+        local chart = Frame("Frame", parent)
+        function chart.Paint(self, itemID) self.item = itemID end
+        t.charts[#t.charts + 1] = chart
+        return chart
+    end }
     Load({ "NaowhForever_Market/View/Style.lua", "NaowhForever_Market/View/Listed.lua",
         "NaowhForever_Market/View/Quantity.lua", "NaowhForever_Market/UI/Sell.lua" }, env)
     t.page = t.M.Pages.sell

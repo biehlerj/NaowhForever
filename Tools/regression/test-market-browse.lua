@@ -74,6 +74,8 @@ local function Notes()
     return found
 end
 check("before a search it says how to search", Notes()["Type a name and press Enter, or pick a category."])
+local chart = t.charts[#t.charts]
+check("with nothing picked there is no price chart", chart and not chart.shown)
 
 search.scripts.OnEnterPressed(search)
 check("an empty name in All Categories sends nothing", #ran == 0)
@@ -145,6 +147,7 @@ rows[3].scripts.OnClick(rows[3])
 check("a row picked asks for its listings, as a commodity", #t.searches == searches + 1
     and t.searches[#t.searches].key.itemID == LINEN)
 check("and is marked", Rows()[3].picked.shown and not Rows()[1].picked.shown)
+check("and its price chart shows beside its listings", chart.shown and chart.item == LINEN)
 t.results.commodity[LINEN] = { { unitPrice = 40, quantity = 3, numOwnerItems = 0 },
     { unitPrice = 45, quantity = 10, numOwnerItems = 0 } }
 t.Fire("COMMODITY_SEARCH_RESULTS_UPDATED", LINEN)

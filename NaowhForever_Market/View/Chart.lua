@@ -1,4 +1,4 @@
--- Chart.lua: an item's lowest price each day over the past two weeks as a chart you can hover for the day's price and how many were listed, for Price Graph (Market.Chart).
+-- Chart.lua: an item's lowest price each day over the past two weeks as a chart you can hover for the day's price and how many were listed, for Price Graph, and in the full window Sell, Buy and Shopping List (Market.Chart).
 local ns = _G.NaowhForever
 
 local T = ns.THEME
