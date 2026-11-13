@@ -1,9 +1,30 @@
 # Changelog
 
-## Unreleased
+## 1.2.30
+
+### Added
+- Stat Weights: Mana Upgrades, a second tooltip line for healers showing how much more mana a piece
+  of gear gives over a fight (BiS List settings).
+- Auction Prices: TSM Prices uses TradeSkillMaster's lowest buyout for tooltips, The Market and
+  Professions (off by default).
+- The Market: with Full Window on, Sell, Buy and Shopping List show the item's price chart again.
+- Badges: a patron's badge also shows on characters on their approved second BattleTag from
+  naowh.gg.
 
 ### Changed
 - Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70938.
+- Items, quests and NPCs new in WoW Forever: 123 more carry the Forever mark.
+- Bag Space (QoL, Loot & Items): Protect Needed Items keeps profession tools and fishing poles off
+  the row.
+
+### Fixed
+- Professions: 42 recipes that had no known source now say where they drop or who sells them.
+- Professions: reagent counts and recipe skill colours follow the game's latest hotfixes.
+- PvP Auras: knows the crowd control and debuffs added in the latest build.
+- The Market: with TradeSkillMaster, The Market's and Professions' panels no longer sit over TSM's
+  auction window.
+- Auction Prices: Scan on Opening no longer scans while TradeSkillMaster's auction window is open
+  instead of Blizzard's.
 
 ## 1.2.29
 
