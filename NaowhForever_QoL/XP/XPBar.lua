@@ -879,7 +879,7 @@ local STAGE = {
     H = 140, MARGIN = ns.Shared.Style.STAGE_MARGIN, NOTE_Y = ns.Shared.Style.STAGE_NOTE_Y,
     NOTE_SIZE = ns.Shared.Style.STAGE_NOTE_SIZE, NOTE_LINE = 15, MAX_SCALE = 1, FALLBACK_W = 870,
     CHIP = 12, CHIP_ICON = 8, CHIP_BG_ALPHA = 0.6, CHIP_LEVEL = 2, HOVER_ALPHA = 0.15, ZONE_PAD = 4,
-    PICK_BUTTON = "LeftButton", MENU_BUTTON = "RightButton", PLUS = ns.Shared.Style.PLUS,
+    MENU_BUTTON = "RightButton", PLUS = ns.Shared.Style.PLUS,
     TIP = { anchor = "cursor", justify = "LEFT" },
     ROWS = {
         { l = TOP_LEFT, m = TOP, r = TOP_RIGHT, point = "BOTTOMLEFT", rel = "TOPLEFT", x = 0, y = SLOT_DROP },
@@ -1021,10 +1021,6 @@ local function ZoneHidden(zone)
     if zone._menu then zone._menu:Close(); zone._menu = nil end
 end
 
-local function ZoneHandles(_, button, event)
-    return event == "GLOBAL_MOUSE_DOWN" and button == STAGE.PICK_BUTTON
-end
-
 local function NewZone(preview, fs, spot, spots, choices, hint)
     local b = preview.bar
     local zone = CreateFrame("Button", nil, b)
@@ -1037,7 +1033,6 @@ local function NewZone(preview, fs, spot, spots, choices, hint)
     zone.hover:Hide()
     zone.border = ns.Border(zone, T.accent)
     zone.border._frame:Hide()
-    zone.HandlesGlobalMouseEvent = ZoneHandles
     zone:SetScript("OnMouseDown", ZoneDown)
     zone:SetScript("OnEnter", ZoneEnter)
     zone:SetScript("OnLeave", ZoneLeave)

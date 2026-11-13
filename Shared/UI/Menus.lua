@@ -1,4 +1,4 @@
--- Menus.lua: every Naowh right-click menu and dropdown (ns.ContextMenu, ns.DropdownMenu, ns.MenuOpen): the game's menus with keyboard and mouse, Naowh's own list under the Gamepad interface style.
+-- Menus.lua: every Naowh right-click menu and dropdown (ns.ContextMenu, ns.DropdownMenu, ns.MenuOpen): Naowh's own list, never the game's menus.
 local ns = _G.NaowhForever
 local T = ns.THEME
 local St = ns.Shared.Style
@@ -257,6 +257,13 @@ local function OnHide()
     open = nil
 end
 
+local function OnShow(self)
+    if not InCombatLockdown() then
+        self:EnableKeyboard(true)
+        self:SetPropagateKeyboardInput(true)
+    end
+end
+
 local function Build()
     list = CreateFrame("Frame")
     list:SetFrameStrata(STRATA)
@@ -267,7 +274,9 @@ local function Build()
     list.bg:SetAllPoints()
     list.edge = ns.Border(list, T.line)
     list:Hide()
+    list:SetScript("OnShow", OnShow)
     list:SetScript("OnHide", OnHide)
+    list:SetScript("OnKeyDown", ns.UI.CloseOnEscape)
     list:SetScript("OnEvent", OnGlobalMouseDown)
     rows = {}
     ns.PadWindow(list, { initial = PadFirst, back = PadBack })
@@ -300,23 +309,12 @@ local function AtCursor(frame)
 end
 
 function ns.ContextMenu(owner, generator)
-    if not ns.GamepadStandDown() then return MenuUtil.CreateContextMenu(owner, generator) end
     local root = NewElement("root")
     generator(owner, root)
     return Show(owner, root, AtCursor)
 end
 
 function ns.DropdownMenu(owner, fill, height)
-    if not ns.GamepadStandDown() then
-        if not (MenuUtil and MenuUtil.CreateRootMenuDescription and MenuVariants
-            and Menu and Menu.GetManager and AnchorUtil) then return end
-        local desc = MenuUtil.CreateRootMenuDescription(MenuVariants.GetDefaultMenuMixin())
-        if not desc then return end
-        if height and desc.SetScrollMode then desc:SetScrollMode(height) end
-        fill(desc)
-        return Menu.GetManager():OpenMenu(owner, desc,
-            AnchorUtil.CreateAnchor("TOPLEFT", owner, "BOTTOMLEFT", 0, -DROP))
-    end
     local root = NewElement("root")
     root.height = height
     fill(root)

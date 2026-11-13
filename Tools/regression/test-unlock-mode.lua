@@ -257,7 +257,6 @@ local env = setmetatable({
     IsAltKeyDown = function() return alt end,
     IsControlKeyDown = function() return ctrl end,
     GetCurrentKeyBoardFocus = function() return nil end,
-    MenuUtil = { CreateContextMenu = function(owner, gen) menu = { owner = owner, gen = gen } end },
     strtrim = function(text) return (text:gsub("^%s+", ""):gsub("%s+$", "")) end,
     GetCursorPosition = function() return cursor.x, cursor.y end,
     GetTime = function() return 0 end,
@@ -272,6 +271,7 @@ local env = setmetatable({
 }, { __index = _G })
 env._G = env
 dofile("Tools/regression/menus.lua")(ns, env)
+function ns.ContextMenu(owner, gen) menu = { owner = owner, gen = gen } end
 -- The HUD Editor is several files (Core/Options.xml lists them in load order).
 for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^Core/Unlock/.-%.lua$")) do
     local f = assert(io.open(path, "rb"))

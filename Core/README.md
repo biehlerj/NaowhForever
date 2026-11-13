@@ -283,9 +283,8 @@ Widgets
 - The pill switch is antialiased art (`toggle_track.tga`, 128x64 for the 2:1 ratio) tinted with
   SetVertexColor; WoW has no rounded rectangle and a mask gets about one pixel of gradient.
   Pixel snapping is turned off on it, as Blizzard's NineSlice does.
-- Dropdowns open with `OpenMenu` anchored to the button and answer `HandlesGlobalMouseEvent`, or
-  the menu manager's GLOBAL_MOUSE_DOWN close made OnClick reopen it. Scrolling is opt-in on
-  Blizzard's menu; unset, a long list ran off the screen.
+- Dropdowns open Naowh's own list (`ns.DropdownMenu`) under the button; a click on the button
+  itself is left to its OnMouseDown, which toggles the list.
 - A slider drag ends when the button comes up anywhere; while it runs `UI.sliderDrag` is set so a
   page that redraws on change waits for the release.
 - `UI.Keep` hands back what a call site made last build, in build order, on pages that reuse rows.

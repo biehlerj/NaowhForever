@@ -155,11 +155,6 @@ local env = setmetatable({
     GetNormalizedRealmName = function() return "Forever" end,
     GetRealmName = function() return "Forever" end,
     LOCALIZED_CLASS_NAMES_MALE = { WARRIOR = "Warrior", PRIEST = "Priest", ROGUE = "Rogue", MAGE = "Mage" },
-    MenuUtil = { CreateContextMenu = function(owner, generate)
-        menu = Root()
-        menu.owner = owner
-        generate(owner, menu)
-    end },
     IsShiftKeyDown = function() return shift end,
     GetCursorPosition = function() return cursorX, cursorY end,
 }, { __index = _G })
@@ -171,6 +166,11 @@ local function Load(path)
     fn("NaowhForever", ns)
 end
 dofile("Tools/regression/menus.lua")(ns, env)
+function ns.ContextMenu(owner, generate)
+    menu = Root()
+    menu.owner = owner
+    generate(owner, menu)
+end
 Load("Shared/UI/ItemBar.lua")
 for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_Combat/Blessings/.*%.lua$")) do
     if not path:find("/UI/Window%.lua$") then Load(path) end

@@ -241,10 +241,6 @@ local function DropdownKeys(btn)
     return out
 end
 
-local function DropdownHandlesMouse(_, buttonName, event)
-    return event == "GLOBAL_MOUSE_DOWN" and buttonName == "LeftButton"
-end
-
 local function FillDropdown(btn, desc)
     if btn._menuFill then
         btn._menuFill(desc)
@@ -312,7 +308,6 @@ function UI.BuildDropdownControl(parent, ddW, fLevel, values, order, get, set)
         local v = btn._get()
         lbl:SetText(ns.L(btn._values[v] or tostring(v or "")))
     end
-    btn.HandlesGlobalMouseEvent = DropdownHandlesMouse
     btn:SetScript("OnMouseDown", OnDropdownMouseDown)
     btn.padClick = OnDropdownMouseDown
     if not ns.foreverSkin then

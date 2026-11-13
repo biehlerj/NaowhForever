@@ -327,7 +327,7 @@ local ORDER = { "/GroupInspect%.lua$", "/Constants%.lua$", "/Data/Preview%.lua$"
     "/PreviewGroup%.lua$", "/Stats%.lua$", "/OwnStats%.lua$", "/Message%.lua$", "/Share%.lua$", "/View/Style%.lua$",
     "/View/Texts%.lua$", "/View/Parts%.lua$", "/View/Pill%.lua$", "/View/Gear%.lua$", "/View/Card%.lua$",
     "/View/CardPaint%.lua$", "/View/Party%.lua$", "/View/RaidOrder%.lua$", "/View/RaidBar%.lua$", "/View/Row%.lua$",
-    "/View/Raid%.lua$", "/View/Solo%.lua$", "/UI/Window%.lua$", "/UI/Menu%.lua$", "/UI/SettingsPage%.lua$" }
+    "/View/Raid%.lua$", "/View/Solo%.lua$", "/UI/Window%.lua$", "/UI/SettingsPage%.lua$" }
 check("GroupInspect.xml loads its files in the contract's order", #mine == #ORDER and (function()
     for i, pattern in ipairs(ORDER) do
         if not mine[i]:find(pattern) then return false end
@@ -376,8 +376,7 @@ check("then Share Your Stats, the Preview and Key Binding, in that order, and no
 check("Share Your Stats is its switch", pageCards.share.switch == "groupInspectShare" and #pageCards.share.rows == 0)
 local card = pageCards.preview
 check("the preview: a party and a raid", card.studio.states[1].key == "party" and card.studio.states[2].key == "raid")
-check("the key binding, found by the right-click menu too", pageCards.binding.rows[1].binding == "NAOWHFOREVER_GROUPINSPECT"
-    and pageCards.binding.search:find("right-click", 1, true))
+check("the key binding", pageCards.binding.rows[1].binding == "NAOWHFOREVER_GROUPINSPECT")
 check("the banner says you are not in a group", banner.headline() == "Not in a group" and banner.detail():find("preview"))
 check("nothing hooks the unit menus while off", #menus.modified == 0)
 
@@ -436,9 +435,7 @@ end
 -------------------------------------------------------------------------------
 env.NaowhForever_ToggleGroupInspect()
 local window = UI.Window()
-check("turning it on hooks the party and raid unit menus, once", #menus.modified == 3
-    and menus.modified[1].tag == "MENU_UNIT_PARTY" and menus.modified[2].tag == "MENU_UNIT_RAID_PLAYER"
-    and menus.modified[3].tag == "MENU_UNIT_RAID")
+check("turning it on adds nothing to the game's unit menus", #menus.modified == 0)
 check("opening turns it on and says so", S.Get("groupInspect") == true and printed[1]:find("turned on", 1, true))
 check("opening starts the scan once (GI.Open), and listens to changes once", GI.opened == 1 and #GI.fns == 1)
 check("solo: the note, no cards, no rows", window.solo:IsShown() and not window.scroll:IsShown()
@@ -702,21 +699,8 @@ window:Hide()
 check("closing stops the scan (GI.Close)", GI.closed == 1 and GI.open == false)
 ns.ToggleGroupInspect()
 check("opening again starts it again", GI.opened == 2 and window:IsShown())
-local menuRoot = { added = {} }
-function menuRoot:CreateDivider() self.added[#self.added + 1] = "-" end
-function menuRoot:CreateButton(text, fn) self.added[#self.added + 1] = text; self.click = fn end
-window:Hide()
-menus.modified[1].fn(nil, menuRoot, {})
-check("in a group, the menu gets Group Inspect under a divider", menuRoot.added[1] == "-"
-    and menuRoot.added[2] == "Group Inspect")
-menuRoot.click()
-check("which opens the window", window:IsShown())
 S.Set("groupInspect", false)
-check("turned off: the window closes", not window:IsShown() and GI.closed == 3)
-check("and the menu hooks come off", menus.modified[1].gone and menus.modified[3].gone)
-local addedBefore = #menuRoot.added
-menus.modified[1].fn(nil, menuRoot, {})
-check("an old menu callback adds nothing while off", #menuRoot.added == addedBefore)
+check("turned off: the window closes", not window:IsShown() and GI.closed == 2)
 
 -------------------------------------------------------------------------------
 --  The settings preview: the sample roster, never real players
@@ -742,7 +726,6 @@ check("Open Group Inspect on the banner turns it on and opens the window", (func
     banner.open()
     return window:IsShown() and S.Get("groupInspect") == true
 end)())
-check("on again: the menus hooked again", #menus.modified == 6)
 check("in a party the banner counts the group and who runs Naowh Forever", banner.headline():find("Party of 5", 1, true)
     and banner.headline():find("1 runs Naowh Forever", 1, true))
 

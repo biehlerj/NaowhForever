@@ -373,14 +373,6 @@ local function Boot(opts)
                 return 1000 + id
             end,
         },
-        MenuUtil = {
-            CreateContextMenu = function(owner, generator)
-                local root = Menu()
-                root.owner = owner
-                generator(owner, root)
-                s.menu = root
-            end,
-        },
         C_CVar = { GetCVar = function(k) return s.cvars[k] end, SetCVar = function(k, v) s.cvars[k] = v end },
         C_Timer = { After = function(sec, fn) s.timers[#s.timers + 1] = { sec = sec, fn = fn } end },
         hooksecurefunc = function(tbl, name, fn)
@@ -400,6 +392,12 @@ local function Boot(opts)
         "History.lua", "View/Meter.lua", "View/Breakdown.lua", "UI/History.lua", "UI/Menus.lua", "UI/Meter.lua",
         "UI/ImageHelp.lua", "UI/SettingsPage.lua" }
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(owner, generator)
+        local root = Menu()
+        root.owner = owner
+        generator(owner, root)
+        s.menu = root
+    end
     for _, file in ipairs(files) do
         local chunk = assert(loadfile("NaowhForever_DamageMeter/" .. file))
         setfenv(chunk, env)

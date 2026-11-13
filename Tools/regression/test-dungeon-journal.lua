@@ -386,25 +386,7 @@ local function fixture(settings, noBis, language)
         end,
         QuestLogPushQuest = function(index) state.pushed[#state.pushed + 1] = index end,
         Enum = { SendAddonMessageResult = { Success = 0 }, PvPRanks = { Rank_1 = 5 }, UIMapType = { Zone = 3 } },
-        -- A context menu: its entries kept (text and what a click does) for a test to click.
         Menu = { GetManager = function() return { IsAnyMenuOpen = function() return false end } end },
-        MenuUtil = { CreateContextMenu = function(_, build)
-            local entries = {}
-            local root = {
-                CreateTitle = function(_, text) entries.title = text end,
-                CreateDivider = function() end,
-                CreateButton = function(_, text, onClick)
-                    local item = { text = text, click = onClick, enabled = true,
-                        SetEnabled = function(self, on) self.enabled = on end,
-                        SetTooltip = function(self, tip) self.tooltip = tip end,
-                        SetTitleAndTextTooltip = function() end }
-                    entries[#entries + 1] = item
-                    return item
-                end,
-            }
-            build(nil, root)
-            state.menu = entries
-        end },
         C_ChatInfo = {
             InChatMessagingLockdown = function() return state.locked end,
             -- Chat lines sent, kept for a test to read.
@@ -589,6 +571,24 @@ local function fixture(settings, noBis, language)
         local chunk = assert(loadfile(path))
         setfenv(chunk, env)
         chunk()
+    end
+    -- A context menu: its entries kept (text and what a click does) for a test to click.
+    function ns.ContextMenu(_, build)
+        local entries = {}
+        local root = {
+            CreateTitle = function(_, text) entries.title = text end,
+            CreateDivider = function() end,
+            CreateButton = function(_, text, onClick)
+                local item = { text = text, click = onClick, enabled = true,
+                    SetEnabled = function(self, on) self.enabled = on end,
+                    SetTooltip = function(self, tip) self.tooltip = tip end,
+                    SetTitleAndTextTooltip = function() end }
+                entries[#entries + 1] = item
+                return item
+            end,
+        }
+        build(nil, root)
+        state.menu = entries
     end
     return ns, state, S
 end

@@ -8,12 +8,11 @@ this on brings BiS. Open it with:
 
 - `/nf group` or `/nfgroup`, its Top Bar launcher or its minimap button (Settings > Minimap Icons);
 - its key binding (Key Bindings > AddOns > Naowh Forever > Open Group Inspect);
-- Open Group Inspect on its settings page (Group Inspect / Settings);
-- Group Inspect on a party or raid member's right-click menu.
+- Open Group Inspect on its settings page (Group Inspect / Settings).
 
 Off by default (`groupInspect`; the switch at the top of its page, and its switch under Settings >
 Modules).
-While it is off nothing is built, listened to or timed, and the right-click entry is not added.
+While it is off nothing is built, listened to or timed.
 Opening the window turns it on; the scan runs only while the window is open (`GI.Open` /
 `GI.Close`), one inspect at a time, never in combat, and always after the player's own inspect.
 
@@ -99,7 +98,6 @@ NaowhForever_Utilities/GroupInspect/
     Solo.lua         the note while solo, with a link to the preview (GI.UI.SoloNote)
   UI/
     Window.lua       the window: party, raid or a note while solo; opening it starts the scan
-    Menu.lua         Group Inspect on a party or raid member's right-click menu
     SettingsPage.lua its settings page: the banner, Share Your Stats, the live preview (GI.Preview)
                      and its key binding
   README.md          this file
@@ -160,9 +158,9 @@ Answering needs Group Inspect on, Share Your Stats (`groupInspectShare`) and a g
 - Your own stats read nothing while `C_Secrets.ShouldUnitStatsBeSecret()` says they are secret.
 - A version is compared number by number, so `0.5.22-beta` is older than `0.5.24-beta`; an older
   one tints the NF pill.
-- The right-click entry is added with the game's menu extension API, `Menu.ModifyMenu`, on the unit
-  menus tagged `MENU_UNIT_PARTY`, `MENU_UNIT_RAID_PLAYER` and `MENU_UNIT_RAID`, only while the
-  module is on, and removed when it goes off; nothing of the game's menus is changed.
+- It is not on the game's party and raid right-click menus: an entry of ours in the game's menu
+  runs the menu's close tainted, and the game's own entries (raid markers, PvP) are then blocked
+  (`Shared/README.md`, Why).
 - Texts are made once each and kept (`KEPT` of each kind, then started again), so a repaint makes
   no garbage.
 

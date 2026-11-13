@@ -449,6 +449,7 @@ check("with no window open the frame lets go", not input:IsShown() and input.pad
 env.GameTooltip = Region("GameTooltip")
 ns.Hairline = NOTHING
 ns.Shared.Parts.Arrow = function(parent) return parent:CreateTexture() end
+ns.UI = { CloseOnEscape = NOTHING }
 local menus = assert(loadfile("Shared/UI/Menus.lua"))
 setfenv(menus, env)
 menus()

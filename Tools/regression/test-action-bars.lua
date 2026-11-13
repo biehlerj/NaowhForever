@@ -124,10 +124,6 @@ local function World(known)
         },
         C_ActionBar = { GetActionText = function(slot) return w.bars[slot] and w.bars[slot].name end },
         C_EquipmentSet = { GetEquipmentSetID = function() end, PickupEquipmentSet = function() end },
-        MenuUtil = { CreateContextMenu = function(_, build)
-            w.menu = {}
-            build(nil, { CreateButton = function(_, text, fn) w.menu[text] = fn end })
-        end },
         GetActionInfo = function(slot)
             local a = w.bars[slot]
             if a then return a.kind, a.id end
@@ -211,6 +207,10 @@ local function World(known)
     env._G.NaowhForever = ns
     setmetatable(env, { __index = _G })
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(_, build)
+        w.menu = {}
+        build(nil, { CreateButton = function(_, text, fn) w.menu[text] = fn end })
+    end
     for _, path in ipairs(FILES) do
         local chunk = assert(loadfile(path)); setfenv(chunk, env); chunk()
     end

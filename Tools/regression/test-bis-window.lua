@@ -278,10 +278,9 @@ local function Fixture()
         WorldMapFrame = Frame(),
         GameTooltip_Hide = NOTHING,
         UIParent = Frame(),
-        MenuUtil = { CreateContextMenu = NOTHING },
         -- state.menuOpen: a menu is open, and hover cards keep out of its way.
         Menu = { GetManager = function()
-            return { IsAnyMenuOpen = function() return state.menuOpen == true end, OpenMenu = NOTHING }
+            return { IsAnyMenuOpen = function() return state.menuOpen == true end }
         end },
     }, { __index = _G })
     local files = { "Core/Features.lua" }
@@ -293,6 +292,7 @@ local function Fixture()
     for _, path in ipairs(TocFiles("^NaowhForever_BiS/StatWeights/.*%.lua$")) do files[#files + 1] = path end
     for _, path in ipairs(TocFiles("^NaowhForever_BiS/BiS/.*%.lua$")) do files[#files + 1] = path end
     Load(files, env)
+    ns.ContextMenu = NOTHING
     ns.Shared.ItemFacts = {}
     for _, spec in ipairs(ns.BiSData.specs) do
         for slot, ids in pairs(spec.slots) do
@@ -511,7 +511,7 @@ local function Item(text, fn)
     return item
 end
 local root = { CreateTitle = NOTHING, CreateDivider = NOTHING, CreateButton = function(_, text, fn) return Item(text, fn) end }
-env.MenuUtil = { CreateContextMenu = function(_, build) env.wipe(menu); build(nil, root) end }
+ns.ContextMenu = function(_, build) env.wipe(menu); build(nil, root) end
 env.C_ChatInfo = { InChatMessagingLockdown = function() return false end,
     SendChatMessage = function(text, channel, _, to) sent = { text, channel, to } end }
 env.GetChannelList = function() return 1, "General - City", false, 2, "Trade - City", false end
@@ -1037,7 +1037,7 @@ do
     local menuRoot = { CreateDivider = NOTHING, CreateButton = NOTHING,
         CreateTitle = function(_, text) titles[#titles + 1] = text end,
         CreateRadio = function(_, text) radios[#radios + 1] = text end }
-    env.MenuUtil = { CreateContextMenu = function(_, build) build(nil, menuRoot) end }
+    ns.ContextMenu = function(_, build) build(nil, menuRoot) end
     B.Actions.ListMenu()
     check("the menu lists the class's lists, then the spec's own under its heading",
         #titles == 2 and titles[2] == short .. " only" and radios[#radios] == "Solo" and #radios >= 2)

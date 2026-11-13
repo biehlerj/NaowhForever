@@ -68,13 +68,6 @@ local function Fixture()
     env.RAID_CLASS_COLORS = { WARRIOR = { r = 0.78, g = 0.61, b = 0.43 }, MAGE = { r = 0.25, g = 0.78, b = 0.92 } }
     env.GameTooltip = { SetText = function(_, text, r) s.tip = { text = text, r = r } end,
         AddLine = function(_, text) s.tip[#s.tip + 1] = text end }
-    env.MenuUtil = { CreateContextMenu = function(owner, generate)
-        local menu = { owner = owner, buttons = {} }
-        local root = { CreateTitle = function(_, title) menu.title = title end,
-            CreateButton = function(_, text, fn, data) menu.buttons[#menu.buttons + 1] = { text = text, fn = fn, data = data } end }
-        generate(owner, root)
-        s.menus[#s.menus + 1] = menu
-    end }
     env.IsInInstance = function() return s.inside end
 
     local function Unit(token)
@@ -132,6 +125,13 @@ local function Fixture()
         Settings = { Page = function(key) return { Card = function(_, card) s.page, s.card = key, card end } end } }
     env.NaowhForever = ns
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(owner, generate)
+        local menu = { owner = owner, buttons = {} }
+        local root = { CreateTitle = function(_, title) menu.title = title end,
+            CreateButton = function(_, text, fn, data) menu.buttons[#menu.buttons + 1] = { text = text, fn = fn, data = data } end }
+        generate(owner, root)
+        s.menus[#s.menus + 1] = menu
+    end
     Load({ "Core/Features.lua", "NaowhForever_Combat/PvP/PvP.lua", "NaowhForever_Combat/PvP/View/Style.lua",
         "NaowhForever_Combat/PvP/Enemies.lua", "NaowhForever_Combat/PvP/UI/EnemyList.lua",
         "NaowhForever_Combat/PvP/UI/EnemiesPage.lua" }, env)

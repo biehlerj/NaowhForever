@@ -143,7 +143,6 @@ page:Card({
 page:Card({
     id = "binding", name = "Key Binding", order = 30,
     help = "A key that opens Group Inspect.",
-    search = "right-click right click party raid menu",
     rows = {
         { label = "Open Group Inspect", binding = "NAOWHFOREVER_GROUPINSPECT",
           help = "Press this key to open Group Inspect, and again to close it." },

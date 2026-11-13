@@ -116,10 +116,6 @@ local function Load()
     env.SendMailNameEditBox = { SetText = function(_, text) toBox.text = text end }
     env.SendMailSubjectEditBox = { SetFocus = function() end }
     env.SendMailFrame, env.MailFrame = Frame(), Frame()
-    env.MenuUtil = { CreateContextMenu = function(owner, gen)
-        for k in pairs(menu) do menu[k] = nil end
-        gen(owner, root)
-    end }
     env.C_Item = { GetItemInfoInstant = function(itemID)
         local d = ITEMS[itemID]
         return itemID, "Trade Goods", d[3], "", 0, d[1], d[2]
@@ -162,6 +158,10 @@ local function Load()
         end
     end
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(owner, gen)
+        for k in pairs(menu) do menu[k] = nil end
+        gen(owner, root)
+    end
     local chunk = assert(loadfile(path))
     setfenv(chunk, env)
     chunk()

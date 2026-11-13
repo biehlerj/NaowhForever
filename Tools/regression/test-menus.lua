@@ -1,13 +1,12 @@
 -- Run with Lua 5.1 from the repository root: Shared/UI/Menus.lua, every Naowh right-click menu and dropdown, on
--- stubs. With keyboard and mouse it hands the generator to the game's MenuUtil and Menu manager unchanged. Under
--- the Gamepad interface style it opens none of the game's menus (they run the menu's close tainted and the gamepad
--- action bar's protected call is then forbidden): Naowh's own list shows titles, dividers, buttons, submenus with
--- a Back row, radios and checkboxes, keeps the game's responses (a checkbox stays open, a radio or button closes,
--- MenuResponse.Open keeps it open), skips disabled rows, shows a row's tooltip, splits a long list into columns,
--- is made parentless then parented to the owner's top window, and closes on a click elsewhere. It holds the
--- gamepad like a window (B goes back a level, then closes) and a right-click menu opens under the gamepad's
--- focus. Group Inspect adds to the game's unit menus only off the style. No Naowh file but this one calls
--- MenuUtil or Menu.GetManager.
+-- stubs. It opens none of the game's menus (they run the menu's close tainted, and a later protected call such as
+-- the raid marker's SetRaidTarget or the gamepad action bar's is then forbidden): Naowh's own list shows titles,
+-- dividers, buttons, submenus with a Back row, radios and checkboxes, keeps the game's responses (a checkbox stays
+-- open, a radio or button closes, MenuResponse.Open keeps it open), skips disabled rows, shows a row's tooltip,
+-- splits a long list into columns, is made parentless then parented to the owner's top window, and closes on a
+-- click elsewhere. It holds the gamepad like a window (B goes back a level, then closes) and a right-click menu
+-- opens under the gamepad's focus. No Naowh file but this one calls MenuUtil or Menu.GetManager, and none calls
+-- Menu.ModifyMenu.
 local TocFiles = dofile("Tools/regression/toc_files.lua")
 
 local checks = 0
@@ -63,6 +62,7 @@ local env = setmetatable({
         return f
     end,
     GetCursorPosition = function() return 300, 400 end,
+    InCombatLockdown = function() return false end,
     MenuResponse = { Open = 1, Refresh = 2, Close = 3, CloseAll = 4 },
     MenuUtil = {
         CreateContextMenu = function(owner, generator)
@@ -92,6 +92,7 @@ local pad = {}
 local T = { bg = {}, fg = { r = 1, g = 1, b = 1 }, muted = { r = 0.5, g = 0.5, b = 0.5 }, line = {}, accent = {} }
 local ns = {
     THEME = T, L = function(s) return s end,
+    UI = { CloseOnEscape = function(self, key) if key == "ESCAPE" then self:Hide() end end },
     GamepadStandDown = function() return gamepad end,
     PadWindow = function(frame, spec) pad.frame, pad.spec = frame, spec end,
     PadFocus = function() return pad.focus end,
@@ -107,24 +108,11 @@ local chunk = assert(loadfile("Shared/UI/Menus.lua"))
 setfenv(chunk, env)
 chunk()
 
--- Keyboard and mouse: the game's menus, unchanged.
+-- Keyboard and mouse: Naowh's own list.
 local window = Region("Frame")
 window.parent = UIParent
 local owner = Region("Button")
 owner.parent = window
-local function Generator(_, root) root:CreateButton("A", NOTHING) end
-check("a context menu with keyboard and mouse is the game's",
-    ns.ContextMenu(owner, Generator) == "game menu" and game.owner == owner and game.generator == Generator)
-local filled
-check("a dropdown with keyboard and mouse is the game's, under its owner and as tall as asked",
-    ns.DropdownMenu(owner, function(desc) filled = desc end, 300) == "game dropdown"
-    and game.dropOwner == owner and filled == game.desc and game.desc.height == 300
-    and game.anchor[1] == "TOPLEFT" and game.anchor[2] == owner and game.anchor[3] == "BOTTOMLEFT")
-check("nothing of Naowh's own list is made with keyboard and mouse", #made == 0 and not ns.MenuOpen())
-
--- Under the Gamepad interface style: Naowh's own list.
-gamepad = true
-game.contexts, game.opened = 0, 0
 local log = {}
 local checked, picked = false, "b"
 local function Fill(_, root)
@@ -144,7 +132,7 @@ end
 
 local handle = ns.ContextMenu(owner, Fill)
 local list = handle and made[1] and made[1].frame
-check("under the style no game menu opens", game.contexts == 0 and game.opened == 0)
+check("no game menu opens", game.contexts == 0 and game.opened == 0)
 check("the list is made parentless", made[1].parent == nil)
 local parentless = true
 for i = 2, #made do
@@ -155,6 +143,7 @@ check("then parented to the owner's top window", list.parent == window)
 check("it is open, and says so", list:IsShown() and ns.MenuOpen() and handle:IsShown())
 check("it opens at the cursor", list.point and list.point[1] == "TOPLEFT" and list.point[4] == 300 and list.point[5] == 400)
 check("it closes on a click elsewhere only while open", list.events.GLOBAL_MOUSE_DOWN == true)
+check("Escape closes it with the shared window handler", list.scripts.OnKeyDown == ns.UI.CloseOnEscape)
 
 local function Rows()
     local out = {}
@@ -256,6 +245,7 @@ check("its own handle can", not list:IsShown())
 
 -- With the gamepad (GamepadNav.lua): the list holds it, B goes back a level then closes, and a right-click menu
 -- opened by an A press opens under the gamepad's focus.
+gamepad = true
 check("the list holds the gamepad like a window", pad.frame == list and pad.spec.initial and pad.spec.back)
 ns.ContextMenu(owner, Fill)
 check("titles, dividers and disabled rows are not the gamepad's", Row("Title").padSkip and Row("Off").padSkip
@@ -308,28 +298,8 @@ Click("DM 17-26")
 check("picking a dungeon searches it, updates the label and closes the menu",
     search.pick == 1 and bar.dungeon.label == "Dungeon: DM 17-26" and not list:IsShown())
 
--- Group Inspect adds to the game's unit menus only off the style.
-local modified = 0
-local giEnv = setmetatable({
-    Menu = { ModifyMenu = function() modified = modified + 1; return { Unregister = NOTHING } end },
-    hooksecurefunc = function(t, k, fn) local old = t[k]; t[k] = function(...) old(...); fn(...) end end,
-    IsInGroup = function() return true end,
-}, { __index = _G })
-local giNs = { L = ns.L, GamepadStandDown = function() return gamepad end, Apply = NOTHING,
-    QoLSettings = { OnChange = NOTHING }, GroupInspect = { On = function() return true end } }
-giEnv._G = { NaowhForever = giNs }
-local gi = assert(loadfile("NaowhForever_Utilities/GroupInspect/UI/Menu.lua"))
-setfenv(gi, giEnv)
-gi()
-giNs.Apply()
-check("under the style Group Inspect leaves the game's unit menus alone", modified == 0)
-gamepad = false
-giNs.Apply()
-check("with keyboard and mouse it adds itself to them", modified == 3)
-
--- The rule: only Menus.lua opens the game's menus.
+-- The rule: only Menus.lua touches the game's menus, and nothing adds to them.
 local HELPER = "Shared/UI/Menus.lua"
-local MODIFY_OK = "NaowhForever_Utilities/GroupInspect/UI/Menu.lua"
 local offenders = {}
 for _, path in ipairs(TocFiles("%.lua$")) do
     if path ~= HELPER and not path:find("^Libs/") then
@@ -339,12 +309,13 @@ for _, path in ipairs(TocFiles("%.lua$")) do
         if source:find("MenuUtil%s*%.") or source:find("Menu%s*%.%s*GetManager") then
             offenders[#offenders + 1] = path
         end
-        if source:find("Menu%s*%.%s*ModifyMenu") and not (path == MODIFY_OK and source:find("GamepadStandDown")) then
+        if source:find("Menu%s*%.%s*ModifyMenu") then
             offenders[#offenders + 1] = path
         end
     end
 end
-check("no Naowh file but " .. HELPER .. " calls MenuUtil or Menu.GetManager: " .. table.concat(offenders, ", "),
+check("no Naowh file but " .. HELPER .. " calls MenuUtil or Menu.GetManager, and none Menu.ModifyMenu: "
+    .. table.concat(offenders, ", "),
     #offenders == 0)
 
 print(("menus: %d checks passed"):format(checks))

@@ -531,10 +531,10 @@ do
     env.IsModifiedClick = function() return state.modified end
     env.HandleModifiedItemClick = function(link) state.linked = link end
     local menu
-    env.MenuUtil = { CreateContextMenu = function(_, fill)
+    function ns.ContextMenu(_, fill)
         menu = {}
         fill(nil, { CreateTitle = NOTHING, CreateButton = function(_, text, fn) menu[#menu + 1] = { text = text, fn = fn } end })
-    end }
+    end
     ns.Font = function(parent) return Frame(parent) end
     ns.Solid = function(parent) return Frame(parent) end
     ns.Border = function() return { SetColor = NOTHING } end

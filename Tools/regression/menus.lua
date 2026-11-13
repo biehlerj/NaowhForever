@@ -1,6 +1,6 @@
 -- Loads Shared/UI/Menus.lua (ns.ContextMenu, ns.DropdownMenu, ns.MenuOpen) into a test's own ns, for a
--- test whose stub ns does not load Shared.xml. Keyboard and mouse unless the ns has its own
--- GamepadStandDown. The file's globals (MenuUtil, CreateFrame, ...) are looked up in env when called.
+-- test whose stub ns does not load Shared.xml. The file's globals (CreateFrame, UIParent, ...) are looked up
+-- in env when called.
 -- Not a test itself (run-all.sh runs only test*.lua). Run from the repo root:
 --
 --   dofile("Tools/regression/menus.lua")(ns, env)

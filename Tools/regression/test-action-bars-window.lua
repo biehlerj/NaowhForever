@@ -238,11 +238,6 @@ local env = setmetatable({
     C_KeyBindings = { GetBindingContextForAction = function() return 1 end },
     C_Timer = { After = function(_, fn) state.timers[#state.timers + 1] = fn end },
     Menu = { GetManager = function() return { IsAnyMenuOpen = function() return false end } end },
-    MenuUtil = { CreateContextMenu = function(_, build)
-        state.menu = {}
-        build(nil, { CreateButton = function(_, text, fn) state.menu[text] = fn end,
-            CreateTitle = NOTHING, CreateDivider = NOTHING })
-    end },
     GameTooltip = Frame(), GameTooltip_Hide = NOTHING,
     GetActionInfo = ActionInfo,
     GetActionTexture = function(slot) return state.bars[slot] and 135924 end,
@@ -306,6 +301,11 @@ env._G.NaowhForever = ns
 
 Load({ "Shared/Shared.lua", "Shared/Style.lua", "Shared/Decode.lua", "Shared/Encode.lua", "Shared/Game/ActionKeys.lua", "Shared/UI/Parts.lua", "Shared/UI/Menus.lua", "Shared/UI/Marks.lua", "Shared/UI/Text.lua", "Shared/UI/Hud.lua", "Shared/UI/Timer.lua", "Shared/UI/Share.lua", "Shared/UI/CodeModal.lua", "Shared/UI/Panels.lua", "Shared/UI/Window.lua", "Shared/UI/Tabs.lua", "Shared/UI/SettingsCard.lua",
     }, env)
+function ns.ContextMenu(_, build)
+    state.menu = {}
+    build(nil, { CreateButton = function(_, text, fn) state.menu[text] = fn end,
+        CreateTitle = NOTHING, CreateDivider = NOTHING })
+end
 local MODULE = { "Core/Features.lua" }
 for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^NaowhForever_Utilities/ActionBars/.*%.lua$")) do
     if not path:find("SettingsPage%.lua$") then MODULE[#MODULE + 1] = path end

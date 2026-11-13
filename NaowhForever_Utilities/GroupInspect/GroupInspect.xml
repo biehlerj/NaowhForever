@@ -24,6 +24,5 @@
     <Script file="View\Raid.lua"/>
     <Script file="View\Solo.lua"/>
     <Script file="UI\Window.lua"/>
-    <Script file="UI\Menu.lua"/>
     <Script file="UI\SettingsPage.lua"/>
 </Ui>

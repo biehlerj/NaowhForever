@@ -113,7 +113,6 @@ local function Desc()
     function desc.CreateRadio(_, text, isSel, setSel, data)
         Add({ kind = "radio", text = text, on = isSel(data), fn = function() setSel(data) end })
     end
-    function desc.SetScrollMode() end
     return desc
 end
 
@@ -182,18 +181,6 @@ local function Load(account, atlases, files)
             end,
             ApplyLayout = ApplyLayout,
         },
-        MenuUtil = { CreateRootMenuDescription = Desc, CreateContextMenu = function(owner, gen)
-            opened = { owner = owner, desc = Desc() }
-            gen(owner, opened.desc)
-        end },
-        MenuVariants = { GetDefaultMenuMixin = function() return {} end },
-        Menu = { GetManager = function()
-            return { OpenMenu = function(_, owner, desc)
-                opened = { owner = owner, desc = desc }
-                return { IsShown = function() return false end, Close = function() end }
-            end }
-        end },
-        AnchorUtil = { CreateAnchor = function() return {} end },
         InputUtil = { IsGamepadUIEnabled = function() return false end }, IsLoggedIn = function() return true end,
     }, { __index = _G })
     env._G = env
@@ -206,6 +193,15 @@ local function Load(account, atlases, files)
         setfenv(chunk, env)
         chunk("NaowhForever", env.NaowhForever)
         ns = env.NaowhForever
+    end
+    function ns.ContextMenu(owner, gen)
+        opened = { owner = owner, desc = Desc() }
+        gen(owner, opened.desc)
+    end
+    function ns.DropdownMenu(owner, fill)
+        opened = { owner = owner, desc = Desc() }
+        fill(opened.desc)
+        return { IsShown = function() return false end, Close = function() end }
     end
     for _, f in ipairs(frames) do
         if f.events.ADDON_LOADED and f.scripts.OnEvent then f.scripts.OnEvent(f, "ADDON_LOADED", "NaowhForever") end

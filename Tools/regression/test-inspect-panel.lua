@@ -294,7 +294,6 @@ local env = setmetatable({
     EventUtil = { ContinueOnAddOnLoaded = function(name, fn) state.waitingFor, state.onLoaded = name, fn end },
     TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) state.itemTooltip = fn end },
     Enum = { TooltipDataType = { Item = 0 } },
-    MenuUtil = { CreateContextMenu = function(owner, fn) menus[#menus + 1] = { owner = owner, fn = fn } end },
     ITEM_QUALITY_COLORS = { [4] = { hex = "|cffa335ee", r = 0.64, g = 0.21, b = 0.93 } },
     RAID_CLASS_COLORS = { WARRIOR = { r = 0.78, g = 0.61, b = 0.43 } },
     GameTooltip = tooltip,
@@ -356,6 +355,7 @@ check("the TOC loads the inspect panel's files, its settings last",
     and panelFiles[1] == "NaowhForever_BiS/InspectPanel/InspectPanel.lua")
 for _, path in ipairs(panelFiles) do files[#files + 1] = path end
 Load(files, env)
+function ns.ContextMenu(owner, fn) menus[#menus + 1] = { owner = owner, fn = fn } end
 local IP = ns.InspectPanel
 local Test = IP._TheirBiSTest
 ns.Shared.ForeverNew.items[101] = true

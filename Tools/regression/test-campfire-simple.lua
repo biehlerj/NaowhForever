@@ -366,10 +366,6 @@ local function Fixture(settings)
             NumericRuleFormatRounding = { Nearest = 0, Up = 1, Down = 2 },
         },
         Menu = { GetManager = function() return { IsAnyMenuOpen = function() return false end } end },
-        MenuUtil = { CreateContextMenu = function(owner, generator)
-            state.menus = state.menus + 1
-            state.menu = { owner = owner, generator = generator }
-        end },
         GameTooltip = tooltip,
         GameTooltip_Hide = NOTHING,
         UIParent = Frame(),
@@ -378,6 +374,10 @@ local function Fixture(settings)
     local files = TocFiles("^Shared/.*%.lua$")
     for _, file in ipairs(CAMP_FILES) do files[#files + 1] = file end
     Load(files, env)
+    function ns.ContextMenu(owner, generator)
+        state.menus = state.menus + 1
+        state.menu = { owner = owner, generator = generator }
+    end
     state.ns, state.S, state.T, state.values, state.Frame = ns, ns.AuraBuffSettings, T, values, Frame
     state.St = ns.Shared.Style
     function state.fire(event)

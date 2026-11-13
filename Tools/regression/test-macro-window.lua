@@ -223,14 +223,6 @@ local env = setmetatable({
         if t == ns and name == "Apply" then applyHooks[#applyHooks + 1] = fn end
     end,
     InCombatLockdown = function() return false end,
-    MenuUtil = { CreateContextMenu = function(owner, fill)
-        menu = { owner = owner, items = {} }
-        local root = {}
-        function root:CreateTitle(text) menu.items[#menu.items + 1] = { title = text } end
-        function root:CreateButton(text, pick) menu.items[#menu.items + 1] = { text = text, pick = pick } end
-        function root:SetScrollMode(height) menu.scroll = height end
-        fill(owner, root)
-    end },
     IsMouseButtonDown = function() return false end,
     strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end,
     UnitClass = function() return "Mage", "MAGE", 8 end,
@@ -304,6 +296,14 @@ for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^Shared/.*%.lua$
     end
 end
 Load(SHARED_FILES, env)
+function ns.ContextMenu(owner, fill)
+    menu = { owner = owner, items = {} }
+    local root = {}
+    function root:CreateTitle(text) menu.items[#menu.items + 1] = { title = text } end
+    function root:CreateButton(text, pick) menu.items[#menu.items + 1] = { text = text, pick = pick } end
+    function root:SetScrollMode(height) menu.scroll = height end
+    fill(owner, root)
+end
 Load(MACRO_FILES, env)
 ns.Shared.Decode = dofile("Tools/regression/load_decode.lua")(env, true)
 

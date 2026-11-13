@@ -274,7 +274,7 @@ NaowhForever_QoL/
 - The skin's title bar parts are fields of one `Title` table, not locals: the file is close to the 200 locals
   a Lua 5.1 chunk can have.
   The right-click menu is a hook on the window's
-  `OnMouseUp`, made only when Right-Click Menu is on, that opens `MenuUtil.CreateContextMenu` with a checkbox for
+  `OnMouseUp`, made only when Right-Click Menu is on, that opens `ns.ContextMenu` with a checkbox for
   each switch, so a part that was switched off can be switched on from the window.
 - The card's preview (`DamageMeterPreview.lua`) is a mock of the meter on the card's stage (`studio`), not the
   game's own window: the game shows sample bars only inside Edit Mode (`SetIsEditing`), and calling that from an
@@ -1612,7 +1612,7 @@ NaowhForever_QoL/
 - Leveling Pace is Time to Level and XP/h in one text. Time to Level, XP/h and Leveling Pace stay blank until XP comes in this session, never `--` or `0`.
 - The effects (`XPBarFX.lua`, its own file because XPBar.lua sits near the 200-local cap) each have a switch: Shine and Notches are on, as the bar's look; Rested Stripes, Quest XP Pulse, Ready to Level, Level-Up Flash and Hover Breakdown start off. They use the game's own animations (AnimationGroup), so nothing runs per frame: the quest pulse plays once per hand-in, the Ready to Level glow loops only while completed quests cover the rest of the level, and the level-up flash plays once on PLAYER_LEVEL_UP. The quest pulse comes from QUEST_TURNED_IN's XP reward, so kills never pulse. That event and PLAYER_XP_UPDATE come in either order, so the pulse waits for the fill to move, or `PULSE.WAIT` at most (a redraw follows `FX.SETTLE` after the hand-in), and the slice is the reward's width back from where the fill ends: right in either order, and cut at the bar's start when the reward levels you. Hand-ins between two draws add up into one pulse.
 - Hover Breakdown's kills are of your own level, `5 x level + 45` XP each (Classic's formula for a normal mob of your level), counted double while rested XP lasts, so it says "About".
-- The texts are picked on the preview, so their rows are not drawn on the page; they are still declared for the search, the changed count and the card's Reset. A preview spot answers HandlesGlobalMouseEvent so the menu manager does not close its menu before OnMouseDown toggles it.
+- The texts are picked on the preview, so their rows are not drawn on the page; they are still declared for the search, the changed count and the card's Reset.
 - The card's preview draws the bar at its real size, never enlarged, and shrinks it only when it does not fit. Its Quest Hand-In, Ready and Level Up states play the effects, each while its switch is on. An empty spot is a small + that shows only while the mouse is over the stage, placed after the texts so it never covers one. The two Resets live in the preview's right-click menu, as on the Campfire card, which keeps the rows to the settings themselves.
 
 ### Unexplored Areas

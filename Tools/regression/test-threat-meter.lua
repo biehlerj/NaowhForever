@@ -95,7 +95,6 @@ local function fixture(settings, withSettings)
         GetCursorPosition=function() return s.cx,s.cy end,
         wipe=function(t) for k in pairs(t) do t[k]=nil end return t end,
         IsShiftKeyDown=function() return s.shift end,IsControlKeyDown=function() return s.ctrl end,
-        MenuUtil={CreateContextMenu=function(owner,gen) s.menu={owner=owner,gen=gen} end},
     }
     s.newFrame=frame
     env.GameTooltip=frame('Tooltip')
@@ -114,6 +113,7 @@ local function fixture(settings, withSettings)
             Page=function() return {Window=function() end,Card=function(_,c) s.cards[c.id]=c end} end}
     end
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(owner,gen) s.menu={owner=owner,gen=gen} end
     setmetatable(env,{__index=_G})
     local files=TocFiles('^NaowhForever_Combat/ThreatMeter/.*%.lua$')
     table.insert(files,1,'Core/Features.lua')

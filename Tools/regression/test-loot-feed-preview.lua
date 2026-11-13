@@ -125,7 +125,6 @@ local env = setmetatable({
     GetCursorPosition = function() return cx, cy end,
     IsShiftKeyDown = function() return shift end,
     IsControlKeyDown = function() return ctrl end,
-    MenuUtil = { CreateContextMenu = function(owner, gen) menu = { owner = owner, gen = gen } end },
     LOOT_ITEM_SELF_MULTIPLE = "You receive loot: %sx%d.", LOOT_ITEM_SELF = "You receive loot: %s.",
     LOOT_ITEM_PUSHED_SELF_MULTIPLE = "You receive item: %sx%d.", LOOT_ITEM_PUSHED_SELF = "You receive item: %s.",
     GOLD_AMOUNT = "%d Gold", SILVER_AMOUNT = "%d Silver", COPPER_AMOUNT = "%d Copper",
@@ -134,6 +133,7 @@ local env = setmetatable({
 }, { __index = _G })
 env._G = env
 dofile("Tools/regression/menus.lua")(ns, env)
+function ns.ContextMenu(owner, gen) menu = { owner = owner, gen = gen } end
 local settingsFile = assert(loadfile("Shared/Settings/Settings.lua"))
 setfenv(settingsFile, env)
 settingsFile()

@@ -324,15 +324,6 @@ local function Boot(settings, loaded, windows)
             return (loaded and name == ADDON) or s.others[name] == true
         end },
         EventUtil = { ContinueOnAddOnLoaded = function(name, fn) s.waiting[name] = fn end },
-        MenuUtil = { CreateContextMenu = function(owner, generator)
-            local root = { items = {} }
-            function root:CreateTitle(text) self.items[#self.items + 1] = { kind = "title", text = text } end
-            function root:CreateCheckbox(text, isSelected, set)
-                self.items[#self.items + 1] = { kind = "check", text = text, selected = isSelected, set = set }
-            end
-            generator(owner, root)
-            s.menu = root
-        end },
         CreateFrame = function()
             local f = { events = {}, scripts = {}, shown = true }
             function f:RegisterEvent(e) self.events[e] = true end
@@ -347,6 +338,15 @@ local function Boot(settings, loaded, windows)
     env._G = env
     if loaded then env.DamageMeter = meter end
     dofile("Tools/regression/menus.lua")(ns, env)
+    function ns.ContextMenu(owner, generator)
+        local root = { items = {} }
+        function root:CreateTitle(text) self.items[#self.items + 1] = { kind = "title", text = text } end
+        function root:CreateCheckbox(text, isSelected, set)
+            self.items[#self.items + 1] = { kind = "check", text = text, selected = isSelected, set = set }
+        end
+        generator(owner, root)
+        s.menu = root
+    end
     local chunk = assert(loadfile("NaowhForever_QoL/Combat/DamageMeterSkin.lua"))
     setfenv(chunk, env)
     local frames = {}

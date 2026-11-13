@@ -307,7 +307,6 @@ local env = setmetatable({
     },
     ITEM_QUALITY_COLORS = { [3] = { r = 0, g = 0.44, b = 0.87 }, [4] = { r = 0.64, g = 0.21, b = 0.93 } },
     Menu = { GetManager = function() return { IsAnyMenuOpen = function() return false end } end },
-    MenuUtil = { CreateContextMenu = function(owner, generator) menus[#menus + 1] = { owner = owner, fill = generator } end },
     IsMouseButtonDown = function() return false end,
     C_CurrencyInfo = { GetCoinTextureString = function(copper) return tostring(copper) end },
     C_PaperDollInfo = { GetInventorySlotInfoForInvSlot = function(slot) return slot, "empty:" .. slot, false end },
@@ -342,6 +341,7 @@ env._G = env
 --  Loading: nothing made, nothing listened to
 -------------------------------------------------------------------------------
 Load(TocFiles("^Shared/.*%.lua$"), env)
+function ns.ContextMenu(owner, generator) menus[#menus + 1] = { owner = owner, fill = generator } end
 local shared = made
 for _, path in ipairs(TocFiles("^NaowhForever_Utilities/GroupFinder/.*%.lua$")) do
     if path:find("/View/") or path:find("/UI/") then Load({ path }, env) end
