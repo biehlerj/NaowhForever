@@ -49,6 +49,7 @@ local function fixture(withChatUtil, settings, flag)
             local font = frame()
             function font:GetStringWidth() return #(self.text or "") * 6 end
             function font:GetWidth() return state.fontWidth or 400 end
+            function font:SetPoint(_, relativeTo) self.anchor = relativeTo end
             return font
         end,
         FontInset = function(size) return size * 0.075 end,
@@ -378,20 +379,24 @@ do  -- chat, card, tooltip
     s.ns.BadgesCommand("preview naowh")
     check("naowh badge in chat", say(filter, "Me", 903, "Player-1-SELF"):find("BadgeNaowhChat.tga", 1, true))
     enter.fn(enter.owner, {}, "player:Me-Realm:903:SAY", "[Me]")
-    check("naowh card", card.title.text == "Founder" and card.about.text == "Naowh himself"
+    check("naowh card", card.title.text == "" and card.about.text == "Naowh himself"
         and card.since.text == "")
+    check("no title on it: the name moves up under the brand", card.player.anchor == card.brand)
+    check("its preview names the badge by its label",
+        s.printed[#s.printed]:find("Naowh, the Floorpov", 1, true) ~= nil)
     lines = {}
     s.postCalls[1](tooltip, { guid = "Player-1-SELF" })
-    check("naowh tooltip line", lines[1] and lines[1]:find("Naowh, the Founder", 1, true))
+    check("naowh tooltip line", lines[1] and lines[1]:find("Naowh, the Floorpov", 1, true))
     s.ns.BadgesCommand("toast")
     check("naowh toast plays the biggest sound", s.lastSound == 83682
-        and s.api.Toast().title.text == "Founder")
+        and s.api.Toast().title.text == "")
     s.ns.BadgesCommand("preview moderator")
     check("moderator badge in chat", say(filter, "Me", 905, "Player-1-SELF"):find("BadgeModeratorChat.tga", 1, true))
     enter.fn(enter.owner, {}, "player:Me-Realm:905:SAY", "[Me]")
     check("moderator card", card.title.text == "Moderator" and card.since.text == "")
+    check("with a title, the name sits under it", card.player.anchor == card.title)
     local shown = s.api.Toast()
-    shown.life.scripts.OnFinished(shown.life)  -- let the Founder toast finish first
+    shown.life.scripts.OnFinished(shown.life)  -- let the Naowh toast finish first
     s.ns.BadgesCommand("toast")
     check("moderator toast sound: PvP Prestige rank up", s.lastSound == 77003)
     s.ns.BadgesCommand("preview staff")

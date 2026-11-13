@@ -32,7 +32,7 @@ local function Translator(name, language)
 end
 
 local LEADS = {
-    { tier = "naowh", role = "Founder", name = "Naowh" },
+    { tier = "naowh", role = "Floorpov", name = "Naowh" },
     { tier = "developer", role = "Lead Developer", name = "Glyalith" },
 }
 

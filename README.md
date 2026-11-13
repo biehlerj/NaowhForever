@@ -103,7 +103,7 @@ banner starts off, and there's an option to skip the banner for your own guild.
 
 | Badge | Who |
 | --- | --- |
-| Founder (gold) | Naowh |
+| Naowh, the Floorpov (gold) | Naowh |
 | Developer (blue) | The people building Naowh Forever |
 | Moderator (red) | The people keeping the community running |
 | Staff Member (rainbow) | The rest of the team behind Naowh |

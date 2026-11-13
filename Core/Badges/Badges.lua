@@ -71,9 +71,9 @@ end
 
 local TIERS = {
     naowh = {
-        title = "Founder",
+        title = "",
         about = ns.L("Naowh himself"),
-        label = "Naowh, the Founder",
+        label = "Naowh, the Floorpov",
         color = { r = 0xe6 / 255, g = 0xcc / 255, b = 0x80 / 255 },
         chat = MEDIA .. "BadgeNaowhChat.tga",
         large = MEDIA .. "BadgeNaowhLarge.tga",
@@ -213,6 +213,11 @@ local function TitleOf(entry, tier)
     return ns.L(type(entry) == "table" and entry.title or tier.title)
 end
 
+local function NameOf(entry, tier)
+    local title = TitleOf(entry, tier)
+    return title ~= "" and title or tier.label
+end
+
 local function SinceOf(entry)
     local tier = TierOf(entry)
     local since = tier and tier.showsSince and entry.since
@@ -326,10 +331,14 @@ local function OnCardHide(self)
     for i = 1, #self.shines do self.shines[i].sweep:Stop() end
 end
 
+local function PlaceBelow(line, size, above, aboveSize, gap)
+    line:SetPoint("TOPLEFT", above, "BOTTOMLEFT", ns.FontInset(aboveSize) - ns.FontInset(size), -gap)
+end
+
 local function CardLine(frame, size, color, above, aboveSize, gap)
     local line = ns.Font(frame, size, nil, color)
     if above then
-        line:SetPoint("TOPLEFT", above, "BOTTOMLEFT", ns.FontInset(aboveSize) - ns.FontInset(size), -gap)
+        PlaceBelow(line, size, above, aboveSize, gap)
     else
         line:SetPoint("TOPLEFT", CARD.textLeft - ns.FontInset(size), -CARD.textTop)
     end
@@ -372,8 +381,15 @@ local function ShowEntryCard(entry, playerName)
     Paint(card, tier)
     card.mask:SetTexture(tier.large, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     local c = tier.color
-    card.title:SetText(TitleOf(entry, tier))
+    local title = TitleOf(entry, tier)
+    card.title:SetText(title)
     card.title:SetTextColor(c.r, c.g, c.b, 1)
+    card.player:ClearAllPoints()
+    if title == "" then
+        PlaceBelow(card.player, CARD.playerSize, card.brand, CARD.brandSize, CARD.titleGap)
+    else
+        PlaceBelow(card.player, CARD.playerSize, card.title, CARD.titleSize, CARD.titleGap)
+    end
     card.player:SetText(playerName or "")
     card.about:SetText(tier.about)
     local since = SinceOf(entry)
@@ -900,7 +916,7 @@ local function BadgeStatus()
     local entry = guid and not Secret(guid) and roster[guid]
     local tier = TierOf(entry)
     if not tier then return TEXT_STATUS_NONE end
-    local title = TitleOf(entry, tier)
+    local title = NameOf(entry, tier)
     if not entry.patron then return title end
     local state = Confirm.State()
     if state == Confirm.CONFIRMED then return TEXT_STATUS_CONFIRMED:format(title) end
@@ -946,7 +962,7 @@ function ns.BadgesCommand(arg)
     elseif previewTier and TIERS[previewTier] then
         previewEntry = PreviewEntry(previewTier)
         previewGUID = UnitGUID("player")
-        ns.Print(TEXT_PREVIEW_ON:format(TierOf(previewEntry).title))
+        ns.Print(TEXT_PREVIEW_ON:format(NameOf(previewEntry, TierOf(previewEntry))))
     elseif word == "preview off" then
         previewGUID, previewEntry = nil, nil
         ns.Print(TEXT_PREVIEW_OFF)
