@@ -60,7 +60,8 @@ local COUNT_RANGE, FREE_BELOW_RANGE, ICON_RANGE = { 1, 8, 1 }, { 0, 30, 1 }, { 1
 local TEXT_RANGE = St.HUD_TEXT_RANGE
 local MOVER_LABEL = "Bag Space"
 local SETTINGS_PAGE, SETTINGS_CARD = "QoL/Loot & Items", "QoL/Loot & Items:bagSpace"
-local ITEM_CLASS = { CONSUMABLE = 0, REAGENT = 5, PROJECTILE = 6, QUIVER = 11, QUEST = 12, KEY = 13 }
+local ITEM_CLASS = { CONSUMABLE = 0, WEAPON = 2, REAGENT = 5, PROJECTILE = 6, QUIVER = 11, QUEST = 12, KEY = 13 }
+local FISHING_POLE = 20
 local NEED_PATTERNS = { "^(.-):%s*%d+%s*/%s*%d+", "^%d+%s*/%s*%d+%s+(.+)$" }
 local TEXT = {
     HOLDING = ns.L("put down what you are holding first."),
@@ -104,6 +105,15 @@ local PROTECTED_CLASS = {
     [ITEM_CLASS.KEY] = true,
 }
 
+local TOOLS = {
+    [2901] = true, [6206] = true, [259229] = true,
+    [7005] = true, [12709] = true, [269716] = true, [287069] = true,
+    [5956] = true, [281665] = true, [285280] = true, [285281] = true,
+    [6219] = true, [10498] = true, [260811] = true, [282550] = true,
+    [6218] = true, [6339] = true, [11130] = true, [11145] = true, [16207] = true,
+    [9149] = true, [13503] = true,
+}
+
 local frame, unlocked, atMerchant, inCombat, pendingScan, missingInfo, junkFirst, oldFirst
 local pool, picks = {}, {}
 local free, total, fullUntil = 0, 0, 0
@@ -139,10 +149,11 @@ end
 
 local scanIgnored, scanProtect, scanAuction, scanMaxQuality, scanScrap
 
-local function Protected(itemID, classID)
+local function Protected(itemID, classID, subclassID)
     if scanIgnored[itemID] then return true end
     if not scanProtect then return false end
-    if PROTECTED_CLASS[classID] or setItems[itemID] then return true end
+    if PROTECTED_CLASS[classID] or TOOLS[itemID] or setItems[itemID] then return true end
+    if classID == ITEM_CLASS.WEAPON and subclassID == FISHING_POLE then return true end
     return ns.IsBisItem and ns.IsBisItem(itemID) and true or false
 end
 
@@ -268,7 +279,7 @@ local function ScanSlot(n, bag, slot)
     end
     info.itemID, info.stackCount, info.quality = itemID, C_Item.GetStackCount(here), C_Item.GetItemQuality(here)
     info.iconFileID, info.hyperlink = C_Item.GetItemIcon(here), C_Container.GetContainerItemLink(bag, slot)
-    local _, _, _, _, _, classID = GetItemInfoInstant(info.itemID)
+    local _, _, _, _, _, classID, subclassID = GetItemInfoInstant(info.itemID)
     local quality = info.quality or 1
     local name, _, _, _, minLevel, _, _, maxStack, _, _, vendor = GetItemInfo(info.itemID)
     if vendor == nil then
@@ -278,7 +289,7 @@ local function ScanSlot(n, bag, slot)
     NotePartial(bag, slot, info.itemID, info.stackCount or 1, maxStack)
     local scrap = scanScrap ~= nil and vendor > 0 and scanScrap(info.itemID)
     if scrap then scrapSlots = scrapSlots + 1 end
-    if vendor > 0 and quality <= scanMaxQuality and not Protected(info.itemID, classID) then
+    if vendor > 0 and quality <= scanMaxQuality and not Protected(info.itemID, classID, subclassID) then
         n = Offer(n, bag, slot, info, quality, classID, name, minLevel, vendor)
     end
     return n
@@ -1066,8 +1077,8 @@ Settings.Page("QoL/Loot & Items", S):Card({
           help = "An item worth more at the auction house than at a vendor is valued at its auction "
               .. "price, from your last Scan Prices or TradeSkillMaster." },
         { key = "bagSpaceProtect", label = "Protect Needed Items", toggle = true,
-          help = "Never offers reagents, ammo, quest items, keys, items in an equipment set or items "
-              .. "on your BiS list." },
+          help = "Never offers reagents, ammo, quest items, keys, profession tools, items in an equipment set or "
+              .. "items on your BiS list." },
         { label = "Ignore List", button = ShowIgnoreList, buttonText = "Ignore List", always = true,
           help = "Items Bag Space never offers. Search for one, drag one in, or middle-click an icon "
               .. "on the row." },

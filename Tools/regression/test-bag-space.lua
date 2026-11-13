@@ -10,7 +10,7 @@ local f = assert(io.open(arg[1] or "NaowhForever_QoL/Loot/BagSpace.lua", "rb"))
 local source = f:read("*a"); f:close()
 local SHARED = { "Shared/Shared.lua", "Shared/Style.lua", "Shared/UI/Parts.lua", "Shared/UI/Marks.lua", "Shared/UI/Text.lua", "Shared/UI/Hud.lua", "Shared/UI/Timer.lua", "Shared/UI/Share.lua", "Shared/UI/Panels.lua" }
 
--- itemID -> name, quality, required level, max stack, vendor price, class
+-- itemID -> name, quality, required level, max stack, vendor price, class, subclass
 local ITEMS = {
     [1] = { "Small Egg", 1, 0, 20, 4, 7 },
     [2] = { "Coyote Meat", 1, 0, 20, 3, 7 },
@@ -23,6 +23,8 @@ local ITEMS = {
     [9] = { "Tough Jerky", 1, 5, 20, 1, 0 },           -- food ten or more levels below: old
     [10] = { "Linen Cloth", 1, 0, 20, 13, 7 },
     [11] = { "Green Belt", 2, 0, 1, 50, 4 },
+    [2901] = { "Mining Pick", 1, 0, 1, 2, 2, 14 },     -- profession tool: protected
+    [6256] = { "Fishing Pole", 1, 0, 1, 5, 2, 20 },    -- fishing pole: protected
 }
 
 local WHITE = { r = 1, g = 1, b = 1, hex = "|cffffffff" }
@@ -210,7 +212,7 @@ local function Fixture(opts)
                 local d = ITEMS[id]
                 return d[1], nil, d[2], nil, d[3], nil, nil, d[4], nil, nil, d[5]
             end,
-            GetItemInfoInstant = function(id) return id, nil, nil, nil, nil, ITEMS[id][6] end,
+            GetItemInfoInstant = function(id) return id, nil, nil, nil, nil, ITEMS[id][6], ITEMS[id][7] end,
             IsLocked = function(at) return Info(at.bag, at.slot).isLocked end,
             GetStackCount = function(at) return Info(at.bag, at.slot).stackCount end,
             GetItemQuality = function(at) return Info(at.bag, at.slot).quality end,
@@ -401,6 +403,14 @@ do
         bags = { [0] = Bag(16, { { 1, 3 }, { 2, 11 }, { 9, 20 } }) } })
     Check("BiS protected, old food first", t.Row(), "Tough Jerky, Small Egg")
     Check("old flag", t.Button(1).pick.old, true)
+end
+
+-- Profession tools and fishing poles are protected; with Protect Needed Items off they are offered.
+do
+    local t = Fixture({ bags = { [0] = Bag(16, { { 2901, 1 }, { 6256, 1 }, { 1, 3 } }) } })
+    Check("tools protected", t.Row(), "Small Egg")
+    t = Fixture({ settings = { bagSpaceProtect = false }, bags = { [0] = Bag(16, { { 2901, 1 }, { 6256, 1 }, { 1, 3 } }) } })
+    Check("tools offered unprotected", t.Row(), "Mining Pick, Fishing Pole, Small Egg")
 end
 
 -- Ctrl-click deletes; middle-click ignores with the time it happened.

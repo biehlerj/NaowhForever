@@ -963,7 +963,12 @@ NaowhForever_QoL/
   builds a new table per slot: with full bags, the scan after every craft made about 50 KB of garbage.
 - Never offered, whatever they are worth: reagents (class reagents such as Flash Powder and
   candles), projectiles, quivers, quest items and keys (item classes 5, 6, 11, 12 and 13), items
-  in an equipment set and BiS items. You need them, or they free no bag space.
+  in an equipment set, BiS items, fishing poles (weapon subclass 20) and profession tools. You need
+  them, or they free no bag space. The game has no call that says an item is a tool, so `TOOLS`
+  lists the items with a `TotemCategoryID` in Forever's ItemSparse (build 70888): picks, skinning
+  knives, blacksmith hammers, engineering tools, runed rods and the alchemy stones; the shaman
+  totems sell for nothing and are never offered anyway. Tiif asked for this after nearly
+  deleting a Mining Pick.
 - An item's worth is its vendor price, or its auction price when higher (the last Scan Prices,
   else TradeSkillMaster), so an item worth listing sorts behind ones only a vendor wants.
   Anything an unfinished quest in your log still asks for goes last, matched by item name from
