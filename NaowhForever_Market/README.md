@@ -804,7 +804,8 @@ and their share string, and `test-market-search-view.lua` Buy's Watch List and S
 and `test-market-mail.lua` Mailbox Total.
 `test-market-sell-ask.lua` builds the Sell page on stub frames (`market_sell_page.lua`) for Ask Before a Bad Post,
 `test-market-sell-marks.lua` for favourites and hidden items, `test-market-sell-undercut.lua` for Undercut's Percent
-and Fixed Amount and the Starting Bid, and `test-market-sell-past.lua` for your past posts.
+and Fixed Amount and the Starting Bid, `test-market-sell-past.lua` for your past posts, and
+`test-market-sell-chart.lua` for the price chart under the listings in the full window.
 In game, at an auctioneer, with The Market on:
 
 1. Blizzard's window opens as the game draws it, with The Market's panel docked to its right, top to
